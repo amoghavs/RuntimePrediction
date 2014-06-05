@@ -12,10 +12,16 @@ def usage():
 	print "\n\t Usage: StrideBenchmarks.py -c/--config -d \n\t\t -c: file with all the configuration.\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. \n "
 	sys.exit()
 
-def WhiteSpace(Input):
+def RemoveWhiteSpace(Input):
 	temp=re.sub('^\s*','',Input)
 	Output=re.sub('\s*$','',temp)
 	
+	return Output
+
+def RemoveBraces(Input):
+	temp=re.sub('^\s*\(','',Input)
+	Output=re.sub('\)\s*$','',temp)
+	print "\n\t RemoveBraces--Input: "+str(Input)+" tmp: "+str(temp)+" Output "+str(Output)
 	return Output
 	
 # CAUTION: Following subrotuine is written/modified to work only for the last dimension.
@@ -193,7 +199,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     LoopIter='LoopIter'	
     ThisLoop.append('long int '+str(LoopIter)+'=0;')
     TabSpace='\t'
-    ThisForLoop=TabSpace+'for('+str(LoopIter)+'=0; '+str(LoopIter)+' < '+str(ConfigParams['NumIters'])+' ; '+str(LoopIter)+'+=1)'
+    ThisForLoop=TabSpace+'for('+str(LoopIter)+'=0; '+str(LoopIter)+' < '+str(ConfigParams['NumIters'][VarNum])+' ; '+str(LoopIter)+'+=1)'
     ThisLoop.append(ThisForLoop)
     ThisLoop.append(TabSpace+'{')
     
@@ -316,6 +322,7 @@ def main(argv):
 	ConfigParams['init']=[]	
 	ConfigParams['NumStreaminVar']=[]
 	ConfigParams['StrideinStream']=[]
+	ConfigParams['StrideVar']={}
 	
 	LineCount=0;
 	DimNotFound=1;
@@ -329,7 +336,7 @@ def main(argv):
 	NumVars=0
 	NumVarNotFound=1
 	NumStreamsDimsNotFound=1
-	StrideForAllDimsNotFound=1
+	StrideForAllVarsNotFound=1
 	FoundStrideForDims=0
 	LoopIterationsNotFound=1
 	
@@ -376,8 +383,7 @@ def main(argv):
 					       			print "\n\t For StreamDim parameter, the input is not in the appropriate format. Please check! \n"
 					       		sys.exit(0)
 					       	else:
-							CurrStreamDim=re.sub(r'^\s*','',CurrStreamDim)
-							CurrStreamDim=re.sub(r'\s*$','',CurrStreamDim)						       	
+							CurrStreamDim=RemoveWhiteSpace(CurrStreamDim)
 							ConfigParams['NumStreaminVar'].append( int(CurrStreamDim))
 							CurrDim+=1				
 							if debug:
@@ -397,7 +403,7 @@ def main(argv):
 					Iters=re.split(',',LoopLine.group(1))
 					if Iters:
 						for i in range(len(Iters)):
-							ConfigParams['NumIters'].append(int(WhiteSpace(Iters[i])))
+							ConfigParams['NumIters'].append(int(RemoveWhiteSpace(Iters[i])))
 							if debug:
 								print "\n\t Var: "+str(i)+" Loop-iterations: "+str(Iters[i])+"\n"	
 					if(len(ConfigParams['NumIters'])!=ConfigParams['NumVars']):
@@ -406,7 +412,7 @@ def main(argv):
 					else:
 						LineNotProcessed=0
 						LoopIterationsNotFound=0
-						sys.exit()
+						#sys.exit()
 				else:
 					print "\n\t Unable to process loop_iterations parameter! "
 					sys.exit()	
@@ -428,8 +434,7 @@ def main(argv):
 						       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)
 						       	else:
-								CurrSize=re.sub(r'^\s*','',CurrSize)
-								CurrSize=re.sub(r'\s*$','',CurrSize)						       	
+								CurrSize=RemoveWhiteSpace(CurrSize)
 								ConfigParams['size'].append( CurrSize)
 								CurrDim+=1				
 								if debug:
@@ -441,7 +446,7 @@ def main(argv):
 						else:
 							SizeNotFound=0
 
-			if StrideForAllDimsNotFound:
+			if StrideForAllVarsNotFound:
 				MatchObj=re.match(r'\s*\#stride',CurrLine)
 				if MatchObj:
 					FindDim=re.match(r'\s*\#stride(\d+)+',CurrLine)
@@ -463,8 +468,7 @@ def main(argv):
 							       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
 							       		sys.exit(0)						
 								else:
-									CurrStride=re.sub(r'^\s*','',CurrStride)
-									CurrStride=re.sub(r'\s*$','',CurrStride)							
+									CurrStride=RemoveWhiteSpace(CurrStride)
 									StrideInThisDim.append(int(CurrStride));
 									Count+=1				
 									if debug:
@@ -477,9 +481,81 @@ def main(argv):
 								FoundStrideForDims+=1
 								if(FoundStrideForDims==ConfigParams['NumVars']):
 									StrideNotFound=0	
-									StrideForAllDimsNotFound=0
+									#StrideForAllVarsNotFound=0
 									if debug:
 										print "\n\t Required stride for each stream in each dimension has been found!!! \n"
+					else:
+						FindOperations=re.match(r'\s*\#strideoperations_var(\d+)*_(\d+)*\s*\<(.*)\>',CurrLine)
+						if FindOperations:
+							print "\n\t stride-operations detected for var: "+str(FindOperations.group(1))+" expression: "+str(FindOperations.group(3))					
+							CurrVar=int(RemoveWhiteSpace(FindOperations.group(1)))	
+							CurrStream=int(RemoveWhiteSpace(FindOperations.group(2)))
+							CurrExprn=RemoveWhiteSpace(FindOperations.group(3))
+							if not(CurrVar in (ConfigParams['StrideVar'])):
+								ConfigParams['StrideVar'][CurrVar]={}
+								
+							if CurrStream in (ConfigParams['StrideVar'][CurrVar]):
+								print "\n\t ERROR:Conflicting statement found for stride and it's operations for variable "+str(CurrVar)+" and stream is "+str(CurrStream)
+								sys.exit()
+							else:
+								ConfigParams['StrideVar'][CurrVar][CurrStream]={}
+							ExprnBreakdown=re.split(';',CurrExprn)
+							if ExprnBreakdown:
+								print "\n\t ExprnBreakdown -- "+str(ExprnBreakdown)
+								ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']=int(RemoveWhiteSpace(ExprnBreakdown[0]))
+								ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']=int(RemoveWhiteSpace(ExprnBreakdown[1]))
+								NumOperands=len(ExprnBreakdown)-3
+								if(ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']!=NumOperands):
+									print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands'])+" number of operands and have only "+str(NumOperands)+" operands provided!"
+									print "\n\t CurrExprn: "+str(ExprnBreakdown)
+									sys.exit()
+								else:
+									ExprnOperations=re.split(',',ExprnBreakdown[2])
+									if ExprnOperations:
+										ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']=[]
+										for CurrOperation in ExprnOperations:
+											ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(CurrOperation)
+											print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
+									else:
+										print "\n\t ERROR: Unable to extract operations b/n operands  of stream "+str(CurrStream)+" and variable "+str(CurrVar)
+									ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands']={}
+									for i in range(NumOperands):
+										ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]={}
+										BracesRemoved=RemoveBraces(ExprnBreakdown[i+3])
+										CurrOperand=re.split(':',BracesRemoved)
+										print "\n\t CurrOperand: -- "+str(CurrOperand)
+										if CurrOperand:
+											ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands']=int(RemoveWhiteSpace(CurrOperand[0]))
+											CurrOperandOperations=re.split(',',CurrOperand[1])
+											if CurrOperandOperations:
+												ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations']=[]
+												for CurrOperation in CurrOperandOperations:
+													ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations'].append(CurrOperation)
+													print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperand "+str(i)+" CurrOperation "+str(CurrOperation)
+												IntraOperands=re.split(',',CurrOperand[2])
+												if IntraOperands:
+													ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operands']=[]
+													for CurrOperand in IntraOperands:
+														ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operands'].append(CurrOperand)
+														print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperand "+str(i)+" CurrIntraOperand "+str(CurrOperand)
+												NumIntraOperands=len(IntraOperands)		
+												NumOperations=len(CurrOperandOperations)
+												if(NumIntraOperands !=ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands']):
+													print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands'])+" intraoperands, while provided: "+str(NumIntraOperands)+" for operand: "+str(i)+" stream "+str(CurrStream)+" var "+str(CurrVar)
+													sys.exit()
+												if( NumOperations != ( ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands']-1)):
+													if( not ( (NumOperations==1) and (ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations'][0]=='0') ) ):
+														print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands'])+" operations, while provided: "+str(NumIntraOperands)+" for operand: "+str(i)+" stream "+str(CurrStream)+" var "+str(CurrVar)
+														print "\n\t Operations: "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations'])
+														sys.exit()
+														
+											else:
+												print "\n\t Error in extracting operations for operand: "+str(CurrOperand)+" of stream "+str(CurrStream)+" and variable "+str(CurrVar)
+											
+								
+							else:
+								print "\n\t Not able to extract the expression for var: "+str(CurrVar)+" and stream "+str(CurrStream)
+								sys.exit()	
 							
 			if AllocNotFound:
 				MatchObj=re.match(r'\s*\#alloc',CurrLine)
@@ -496,8 +572,7 @@ def main(argv):
 						       			print "\n\t For size parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)						
 							else:	
-								CurrAlloc=re.sub(r'^\s*','',CurrAlloc)
-								CurrAlloc=re.sub(r'\s*$','',CurrAlloc)					
+								CurrAlloc=RemoveWhiteSpace(CurrAlloc)
 								ConfigParams['alloc'].append(CurrAlloc);
 								CurrDim+=1				
 								if debug:
@@ -570,8 +645,9 @@ def main(argv):
 		
 	
 	#Tabs: 1		
+	StrideForAllVarsNotFound=0
 	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0)):
-		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions "	
+		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions. But \"StrideForAllVarsNotFound\" is forcefully reset!"	
 		InitAlloc=[]
 		LibAlloc=[]
 		ConfigParams['indices']=[]
@@ -740,6 +816,12 @@ def main(argv):
 		
 		StreamString+=str(ConfigParams['NumStreaminVar'][ConfigParams['NumVars']-1])
 		
+		IterString='_'
+		for i in range(ConfigParams['NumVars']-1):
+			IterString+=str(ConfigParams['NumIters'][i])+'_'
+		
+		IterString+=str(ConfigParams['NumIters'][ConfigParams['NumVars']-1])
+		
 		DSString=''
 		for i in range(ConfigParams['NumVars']):
 			DSString+=str(ConfigParams['datastructure'][i])
@@ -749,7 +831,7 @@ def main(argv):
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "
 		sys.exit(0)
 	
-	SrcFileName='StrideBenchmarks_Iters'+str(ConfigParams['NumIters'])+'_'+str(ConfigParams['NumVars'])+"vars"+"_DS_"+str(DSString)+'_alloc_'+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_stride_'+str(StrideString)+'.c'
+	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_'+str(ConfigParams['NumVars'])+"vars"+"_DS_"+str(DSString)+'_alloc_'+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_stride_'+str(StrideString)+'.c'
 	WriteFile=open(SrcFileName,'w')			
 	InitLoop=[]
 	for VarNum in range(ConfigParams['NumVars']):
