@@ -312,7 +312,7 @@ def main(argv):
 	ConfigParams['Dims']=0
 	ConfigParams['NumVars']=0
 	ConfigParams['NumStreams']=0
-	ConfigParams['NumIters']=0 #[]
+	ConfigParams['NumIters']=[]
 	ConfigParams['init']=[]	
 	ConfigParams['NumStreaminVar']=[]
 	ConfigParams['StrideinStream']=[]
@@ -391,17 +391,26 @@ def main(argv):
 		if LoopIterationsNotFound: #loop_iterations	
 			MatchObj=re.match(r'\s*\#loop\_iterations',CurrLine)
 			if MatchObj:
-				#LoopLine=re.match(r'\s*\#loop\_iterations_dim\s*(\d+)*',CurrLine)
-				LoopLine=re.match(r'\s*\#loop\_iterations\s*(\d+)*',CurrLine)
-				if DimsLine:
-					#SearchingDim=int(WhiteSpace(LoopLine.group(1))
-					NumIters=int(LoopLine.group(1))
-					ConfigParams['NumIters']=int(NumIters)
-					if debug:
-						print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
-					LineNotProcessed=0
-					LoopIterationsNotFound=0
-							
+				#LoopLine=re.match(r'\s*\#loop\_iterations_dim(\d+)*\s+(\d+)*',CurrLine)
+				LoopLine=re.match(r'\s*\#loop\_iterations(.*)',CurrLine)
+				if LoopLine:
+					Iters=re.split(',',LoopLine.group(1))
+					if Iters:
+						for i in range(len(Iters)):
+							ConfigParams['NumIters'].append(int(WhiteSpace(Iters[i])))
+							if debug:
+								print "\n\t Var: "+str(i)+" Loop-iterations: "+str(Iters[i])+"\n"	
+					if(len(ConfigParams['NumIters'])!=ConfigParams['NumVars']):
+						print "\n\t Number of iterations for nested loops is specified for "+str(len(ConfigParams['NumIters']))+" variables, expected for "+str(ConfigParams['NumVars'])
+						sys.exit()
+					else:
+						LineNotProcessed=0
+						LoopIterationsNotFound=0
+						sys.exit()
+				else:
+					print "\n\t Unable to process loop_iterations parameter! "
+					sys.exit()	
+					
 		else:
 	
 			if SizeNotFound:
