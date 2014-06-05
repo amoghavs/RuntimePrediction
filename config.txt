@@ -1,0 +1,9 @@
+#vars 2
+#dims 3
+#StreamDims 2,3
+#stride0 2,1
+#stride1 2,3,2
+#size 20,20,200
+#allocation d,s
+#init index0*2,index1*3
+#datastructure f,f
