@@ -186,8 +186,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	   	IndexIncr+=CurrIndexIncr
 	   	IndexDecl+='long int '+str(index)+'=0;'
 	   	IndexInit+=','+str(index)+'=0'
-	   	if debug:
-	   		print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
+	   	#if debug:
+	   	#	print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
 	   	StrideIndex.append(str(index))
 
     ThisLoop.append(CurrAccumVarDecl)		   	
@@ -339,6 +339,7 @@ def main(argv):
 	StrideForAllVarsNotFound=1
 	FoundStrideForDims=0
 	LoopIterationsNotFound=1
+	StrideExtracted=[]
 	
 	# Tabs: 1
 	for CurrLine in ConfigContents:
@@ -363,6 +364,8 @@ def main(argv):
 				if DimsLine:
 					NumVars=int(DimsLine.group(1))
 					ConfigParams['NumVars']=NumVars
+					for i in range(NumVars):
+						StrideExtracted.append(0)
 					if debug:
 						print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
 					LineNotProcessed=0
@@ -371,6 +374,9 @@ def main(argv):
 		if NumStreamsDimsNotFound:
 			MatchObj=re.match(r'\s*\#StreamDims',CurrLine)
 			if MatchObj:
+				if NumVarNotFound:
+					print "\n\t ERROR: Expected to determine the number of variables before extracting stream for different variables. "
+					sys.exit()
 				tmp=re.split(' ',CurrLine)
 				NumStreaminVar=re.split(',',tmp[1])
 				if NumStreaminVar:
@@ -393,6 +399,13 @@ def main(argv):
 						print "\n\t The StreamDim parameter is not specified for each dimension. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions speciied is "+str(ConfigParams['Dims'])+"\n";
 						sys.exit(0)
 					else:
+						
+						for CurrVar in range(ConfigParams['NumVars']):
+							ThisArray=[]
+							for i in range(ConfigParams['NumStreaminVar'][CurrVar]):
+								ThisArray.append(0)
+							print"\n\t Var: "+str(CurrVar)+" ThisArray: "+str(ThisArray)
+							ConfigParams['StrideinStream'].append(ThisArray)	
 						NumStreamsDimsNotFound=0	
 		if LoopIterationsNotFound: #loop_iterations	
 			MatchObj=re.match(r'\s*\#loop\_iterations',CurrLine)
@@ -451,7 +464,7 @@ def main(argv):
 				if MatchObj:
 					FindDim=re.match(r'\s*\#stride(\d+)+',CurrLine)
 					SearchingDim=0
-					if FindDim:
+					if(FindDim):
 						if debug:
 							print "\n\t Found this dim: "+str(FindDim.group(1))
 						SearchingDim=int(FindDim.group(1))
@@ -477,7 +490,8 @@ def main(argv):
 								print "\n\t The stride parameter is not specified for specified number of streams in "+str(ConfigParams['NumStreaminVar'][SearchingDim])+" in variable "+str(SearchingDim)+", it is specified only for "+str(Count)+ " streams. "
 								sys.exit(0)
 							else:
-								ConfigParams['StrideinStream'].append(StrideInThisDim)
+								#ConfigParams['StrideinStream'].append(StrideInThisDim)
+								print "WARNING: ConfigParams['StrideinStream'] is not updated in traditional method!! "
 								FoundStrideForDims+=1
 								if(FoundStrideForDims==ConfigParams['NumVars']):
 									StrideNotFound=0	
@@ -503,6 +517,7 @@ def main(argv):
 							if ExprnBreakdown:
 								print "\n\t ExprnBreakdown -- "+str(ExprnBreakdown)
 								ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']=int(RemoveWhiteSpace(ExprnBreakdown[0]))
+								ConfigParams['StrideinStream'][CurrVar][CurrStream]=1 #ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']
 								ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']=int(RemoveWhiteSpace(ExprnBreakdown[1]))
 								NumOperands=len(ExprnBreakdown)-3
 								if(ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']!=NumOperands):
@@ -548,9 +563,11 @@ def main(argv):
 														print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands'])+" operations, while provided: "+str(NumIntraOperands)+" for operand: "+str(i)+" stream "+str(CurrStream)+" var "+str(CurrVar)
 														print "\n\t Operations: "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations'])
 														sys.exit()
-														
 											else:
 												print "\n\t Error in extracting operations for operand: "+str(CurrOperand)+" of stream "+str(CurrStream)+" and variable "+str(CurrVar)
+									StrideExtracted[CurrVar]+=1 #CAUTION: Risking the assumption that all other safety check in place to directly update the extracted count by 1.
+									print "\n\t -*- CurrVar "+str(CurrVar)+" StrideExtracted: "+str(StrideExtracted[CurrVar])+" -- "
+												
 											
 								
 							else:
@@ -644,7 +661,10 @@ def main(argv):
 				print "\n\t Info is not processed in line: "+str(LineCount)+"\n";
 		
 	
-	#Tabs: 1		
+	#Tabs: 1	
+	for CurrVar in range(len(StrideExtracted)):
+		print "\n\t Var: "+str(CurrVar)+" expected stream expression for "+str(ConfigParams['NumStreaminVar'][CurrVar])+" and have extracted "+str(StrideExtracted[CurrVar])	
+		
 	StrideForAllVarsNotFound=0
 	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0)):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions. But \"StrideForAllVarsNotFound\" is forcefully reset!"	
