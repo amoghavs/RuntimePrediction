@@ -237,7 +237,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    LHSindices=''
 	    RHSindices=''
 	    indices=''
-	    RHSExprnPerStream[CurrStream]=[]
+	    
 	    for j in range(NumDims):
 		if(j==StrideDim):
 			#RHSindices+='['+str(ConfigParams['IndirVar'][VarNum][CurrStream])+'['+str(ConfigParams['indices'][j])+'] ]'
@@ -252,107 +252,29 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		
 	    #for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 	    StreamVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)
-	    
 
-	    """
-
-FindOperations=re.match(r'\s*\#strideoperations_var(\d+)*_(\d+)*\s*\<(.*)\>',CurrLine)
-if FindOperations:
-	if debug:
-		print "\n\t stride-operations detected for var: "+str(FindOperations.group(1))+" expression: "+str(FindOperations.group(3))					
-	CurrVar=int(RemoveWhiteSpace(FindOperations.group(1)))	
-	CurrStream=int(RemoveWhiteSpace(FindOperations.group(2)))
-	CurrExprn=RemoveWhiteSpace(FindOperations.group(3))
-	if not(CurrVar in (ConfigParams['StrideVar'])):
-		ConfigParams['StrideVar'][CurrVar]={}
-		
-	if CurrStream in (ConfigParams['StrideVar'][CurrVar]):
-		print "\n\t ERROR:Conflicting statement found for stride and it's operations for variable "+str(CurrVar)+" and stream is "+str(CurrStream)
-		sys.exit()
-	else:
-		ConfigParams['StrideVar'][CurrVar][CurrStream]={}
-	ExprnBreakdown=re.split(';',CurrExprn)
-	if ExprnBreakdown:
-		if debug:
-			print "\n\t ExprnBreakdown -- "+str(ExprnBreakdown)
-		ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']=int(RemoveWhiteSpace(ExprnBreakdown[0]))
-		ConfigParams['StrideinStream'][CurrVar][CurrStream]=ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']
-		ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']=int(RemoveWhiteSpace(ExprnBreakdown[1]))
-		NumOperands=len(ExprnBreakdown)-3
-		if(ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']!=NumOperands):
-			print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands'])+" number of operands and have only "+str(NumOperands)+" operands provided!"
-			print "\n\t CurrExprn: "+str(ExprnBreakdown)
-			sys.exit()
-		else:
-			ExprnOperations=re.split(',',ExprnBreakdown[2])
-			if ExprnOperations:
-				ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']=[]
-				for CurrOperation in ExprnOperations:
-					ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(CurrOperation)
-					if debug:
-print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
-			else:
-				print "\n\t ERROR: Unable to extract operations b/n operands  of stream "+str(CurrStream)+" and variable "+str(CurrVar)
-			ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands']={}
-			for i in range(NumOperands):
-				ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]={}
-				BracesRemoved=RemoveBraces(ExprnBreakdown[i+3])
-				CurrOperand=re.split(':',BracesRemoved)
-				if debug:
-					print "\n\t CurrOperand: -- "+str(CurrOperand)
-				if CurrOperand:
-					ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands']=int(RemoveWhiteSpace(CurrOperand[0]))
-					CurrOperandOperations=re.split(',',CurrOperand[1])
-					if CurrOperandOperations:
-						ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations']=[]
-						for CurrOperation in CurrOperandOperations:
-							ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations'].append(CurrOperation)
-							if debug:
-								print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperand "+str(i)+" CurrOperation "+str(CurrOperation)
-						IntraOperands=re.split(',',CurrOperand[2])
-						if IntraOperands:
-							ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operands']=[]
-							for CurrOperand in IntraOperands:
-								ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operands'].append(CurrOperand)
-								if debug:
-									print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperand "+str(i)+" CurrIntraOperand "+str(CurrOperand)
-						NumIntraOperands=len(IntraOperands)		
-						NumOperations=len(CurrOperandOperations)
-						if(NumIntraOperands !=ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands']):
-							print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands'])+" intraoperands, while provided: "+str(NumIntraOperands)+" for operand: "+str(i)+" stream "+str(CurrStream)+" var "+str(CurrVar)
-							sys.exit()
-						if( NumOperations != ( ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands']-1)):
-							if( not ( (NumOperations==1) and (ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations'][0]=='0') ) ):
-								print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands'])+" operations, while provided: "+str(NumIntraOperands)+" for operand: "+str(i)+" stream "+str(CurrStream)+" var "+str(CurrVar)
-								print "\n\t Operations: "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['Operations'])
-								sys.exit()
-					else:
-						print "\n\t Error in extracting operations for operand: "+str(CurrOperand)+" of stream "+str(CurrStream)+" and variable "+str(CurrVar)
-									StrideExtracted[CurrVar]+=1 #CAUTION: Risking the assumption that all other safety check in place to directly update the extracted count by 1.
-			print "\n\t -*- CurrVar "+str(CurrVar)+" StrideExtracted: "+str(StrideExtracted[CurrVar])+" -- "
-						
-
-"""	    
-	    # CAUTION/TODO: Should consolidate which debug statements to retain for master branch! 
-	    LHSOperands=[]
+	    RHSExprnPerStream[CurrStream]=[]	
 	    IndexChangeForBound=[]
 	    for	CurrOperand in range(ConfigParams['StrideVar'][VarNum][CurrStream]['NumOperands']):
 	    	IntraOperands=ConfigParams['StrideVar'][VarNum][CurrStream]['Operands']
 	    	#IntraOperations=ConfigParams['StrideVar'][VarNum][CurrStream]['Operations']
 	    	IndexChangeforBoundforOperand=[]
 	    	LHSIntraOperandsForOperand=[]
-	    	print "\n\t CurrVar: "+str(VarNum)+" CurrOperand: "+str(CurrOperand)+" which needs "+str(IntraOperands[CurrOperand]['NumOperands'])+" operands which have operations "+str(IntraOperands[CurrOperand]['Operations'])
+	    	if debug:
+	    		print "\n\t CurrVar: "+str(VarNum)+" CurrOperand: "+str(CurrOperand)+" which needs "+str(IntraOperands[CurrOperand]['NumOperands'])+" operands which have operations "+str(IntraOperands[CurrOperand]['Operations'])
 	    	NumOperations=len(IntraOperands[CurrOperand]['Operations'])
 	    	#if(IntraOperands[CurrOperand]['NumOperands']==1):
 	    	for CurrIntraOperand in (IntraOperands[CurrOperand]['Operands']):
 	    		# CAUTION: In present shape only a constant number is accepted, systematic way of generating other constants should be accepted, it'd help if they are parameterized/not-case-specific.
 	    		if(CurrIntraOperand[0]=='='):
-	    			print "\n\t ConstVar should be inserted!! "
-	    			RHSExprn='ConstVar_Stream'+str(CurrStream)
+	    			if debug:
+	    				print "\n\t ConstVar should be inserted!! "
+	    			RHSExprn='Const_Var'+str(VarNum)+'_Stream'+str(CurrStream)
 	    			RHSExprnPerStream[CurrStream].append(RHSExprn)
 	    			ShouldDeclareVars.append(RHSExprn)
 	    		else:
-	    			print "\n\t Operand: "+str(CurrIntraOperand)
+	    			if debug:
+	    				print "\n\t Operand: "+str(CurrIntraOperand)
 	    			BreakdownFromIdx=re.match('\s*([ijkl])(.*)',CurrIntraOperand)
 	    			StreamDim=-1
 	    			if BreakdownFromIdx:
@@ -360,30 +282,27 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    				IndexChange=RemoveWhiteSpace(BreakdownFromIdx.group(2))
 	    				if(BreakdownFromIdx.group(1)=='i'):
 	    						StreamDim=NumDims-1
-		    					print "\n\t Need to manipulate (InnerMost_loop) by index "+str(IndexChange)#+"  --> "+str(ThusOperand)
 	    				elif(BreakdownFromIdx.group(1)=='j'):
 	    					if(ConfigParams['Dims']>1):
 	    						StreamDim=NumDims-2
-	    						print "\n\t Need to manipulate (InnerMost_loop-1) "+str(IndexChange)
 	    					else:
 	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-1), where as #dimensions are "+str(ConfigParams['Dims'])
 	    						sys.exit()
 	    				elif(BreakdownFromIdx.group(1)=='k'):
 	    					if(ConfigParams['Dims']>2):
-	    						print "\n\t Need to manipulate (InnerMost_loop-2) "+str(IndexChange)
 	    						StreamDim=NumDims-3
 	    					else:
 	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-2), where as #dimensions are "+str(ConfigParams['Dims'])
 	    						sys.exit()	    						
 	    				elif(BreakdownFromIdx.group(1)=='l'):
 	    					if(ConfigParams['Dims']>3):
-	    						print "\n\t Need to manipulate (InnerMost_loop-3) "+str(IndexChange)
 	    						StreamDims=NumDims-4
-	    						
 	    					else:
 	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-3), where as #dimensions are "+str(ConfigParams['Dims'])
 	    						sys.exit()	
 
+					if debug:
+						print "\n\t Need to manipulate (InnerMost_loop- "+str(NumDims-StreamDim+1)+") and IndexChange: "+str(IndexChange)
 	    				AppendIndexChange=''
 	    				IndexChangeBreakdown={}
 	    				if(IndexChange):
@@ -409,7 +328,8 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    					AppendIndexChange=0
 	    				IndexChangeforBoundforOperand.append((StreamDim,IndexChangeBreakdown))
 	    				LHSIntraOperandsForOperand.append(ThusOperand)
-	    				print "\n\t Hence the indices should be "+str(ThusOperand)+" push-indices: "+str(PushIndexChange)+" AppendIndexChange "+str(AppendIndexChange)
+	    				if debug:
+	    					print "\n\t Hence the indices should be "+str(ThusOperand)+" push-indices: "+str(PushIndexChange)+" AppendIndexChange "+str(AppendIndexChange)
 	    			else:
 	    				print "\n\t ERROR: Operand requested is neither of 'ijkl'. Use debug for tracking the location of error "
 	    				sys.exit()     						
@@ -417,37 +337,35 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 			RHSExprn=''	    	
 		    	for ThisOperand in range(len(LHSIntraOperandsForOperand)-1):
 		    		RHSExprn+=LHSIntraOperandsForOperand[ThisOperand]+str(IntraOperands[CurrOperand]['Operations'][iIter])
-		    		
-		    		print "\n\t Operand "+str(LHSIntraOperandsForOperand[ThisOperand])+" Operation: "+str(IntraOperands[CurrOperand]['Operations'][iIter])
+		    		if debug:
+		    			print "\n\t Operand "+str(LHSIntraOperandsForOperand[ThisOperand])+" Operation: "+str(IntraOperands[CurrOperand]['Operations'][iIter])
 			    	iIter+=1
 		    	if(len(LHSIntraOperandsForOperand)):
 		    		RHSExprn+=LHSIntraOperandsForOperand[len(LHSIntraOperandsForOperand)-1]
 		    	RHSExprnPerStream[CurrStream].append(RHSExprn)
-		    	print "\n\t RHSExprn: "+str(RHSExprn)
+		    	if debug:
+		    		print "\n\t RHSExprn: "+str(RHSExprn)
 		
-	    	IndexChangeForBound.append(IndexChangeforBoundforOperand)			
-	    	LHSOperands.append(LHSIntraOperandsForOperand)	
+	    	IndexChangeForBound.append(IndexChangeforBoundforOperand)				
 	    		#print "\n\t 
 
-	    iIter=-1;jIter=-1
+
 	    CurrStreamIndexChangeConsolidation={}
 	    CurrStreamIndexChangeFinal={}
 	    for CurrDim in range(NumDims):
 		CurrStreamIndexChangeConsolidation[CurrDim]=[]	    			
 		CurrStreamIndexChangeFinal[CurrDim]={}
+
 	    for CurrOperand in (IndexChangeForBound):
-	    	iIter+=1
-	    	jIter=-1
 	    	for CurrIndexChange in (CurrOperand):
-	    		jIter+=1
 	    		CurrStreamIndexChangeConsolidation[CurrIndexChange[0]].append(CurrIndexChange[1])
-	    		#print "\n\t iIter: "+str(iIter)+" Belongs to dimension: "+str(CurrIndexChange[0])+" and Index is: "+str(CurrIndexChange[1])+" var: "+str(LHSOperands[iIter][jIter])
 
 	    for CurrDim in range(NumDims):
 	    	CurrStreamIndexChangeFinal[CurrDim]['Init']=0
 	    	CurrStreamIndexChangeFinal[CurrDim]['Final']=0
 	    	for CurrIndexChange in (CurrStreamIndexChangeConsolidation[CurrDim]):
-	    		print "\n\t Dim: "+str(CurrDim)+" IndexChange: "+str(CurrIndexChange)
+	    		if debug:
+	    			print "\n\t Dim: "+str(CurrDim)+" IndexChange: "+str(CurrIndexChange)
 	    		if(CurrIndexChange):
 		    		if(CurrIndexChange['Sign']=='-'):
 		    			if( CurrStreamIndexChangeFinal[CurrDim]['Init'] < CurrIndexChange['Delta'] ):
@@ -469,11 +387,14 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	    
     	for CurrExprn in (RHSExprnPerStream[CurrStream]):
-    		print "\n\t CurrStream: "+str(CurrStream)+" RHSExprn: "+str(CurrExprn)
+    		if debug:
+    			print "\n\t CurrStream: "+str(CurrStream)+" RHSExprn: "+str(CurrExprn)
     	for CurrDim in range(NumDims):
-    		print "\n\t Dim: "+str(CurrDim)+" IndexChange "+str(CurrStreamIndexChangeFinal[CurrDim])
+    		if debug:
+    			print "\n\t Dim: "+str(CurrDim)+" IndexChange "+str(CurrStreamIndexChangeFinal[CurrDim])
     for CurrDeclareVar in (ShouldDeclareVars):
-        print "\n\t ShouldDeclareVars: "+str(CurrDeclareVar)+" --"	    	    
+        if debug:
+        	print "\n\t ShouldDeclareVars: "+str(CurrDeclareVar)+" --"	    	    
     
     for k in range(NumDims+1): # NumDims+1 since we are looping over the loops! 
     	TabSpace='\t'
@@ -799,7 +720,8 @@ def main(argv):
 											else:
 												print "\n\t Error in extracting operations for operand: "+str(CurrOperand)+" of stream "+str(CurrStream)+" and variable "+str(CurrVar)
 									StrideExtracted[CurrVar]+=1 #CAUTION: Risking the assumption that all other safety check in place to directly update the extracted count by 1.
-									print "\n\t -*- CurrVar "+str(CurrVar)+" StrideExtracted: "+str(StrideExtracted[CurrVar])+" -- "
+									if debug:
+										print "\n\t -*- CurrVar "+str(CurrVar)+" StrideExtracted: "+str(StrideExtracted[CurrVar])+" -- "
 												
 											
 								
@@ -894,13 +816,18 @@ def main(argv):
 				print "\n\t Info is not processed in line: "+str(LineCount)+"\n";
 		
 	
-	#Tabs: 1	
+	#Tabs: 1
+	AllStridesAvailable=0
 	for CurrVar in range(len(StrideExtracted)):
-		print "\n\t Var: "+str(CurrVar)+" expected stream expression for "+str(ConfigParams['NumStreaminVar'][CurrVar])+" and have extracted "+str(StrideExtracted[CurrVar])	
+		if debug:
+			print "\n\t Var: "+str(CurrVar)+" expected stream expression for "+str(ConfigParams['NumStreaminVar'][CurrVar])+" and have extracted "+str(StrideExtracted[CurrVar])	
+		if(ConfigParams['NumStreaminVar'][CurrVar] == StrideExtracted[CurrVar] ):
+			AllStridesAvailable+=1
 		
-	StrideForAllVarsNotFound=0
+	if(AllStridesAvailable==ConfigParams['Dims']):
+		StrideForAllVarsNotFound=0
 	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0)):
-		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions. But \"StrideForAllVarsNotFound\" is forcefully reset!"	
+		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
 		LibAlloc=[]
 		ConfigParams['indices']=[]
@@ -1056,7 +983,8 @@ def main(argv):
 			StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		StrideString+=str(ConfigParams['StrideinStream'][index][(ConfigParams['NumStreaminVar'][index]-1)])
 			
-		print "\n\t StrideString: "+str(StrideString)
+		if debug:
+			print "\n\t StrideString: "+str(StrideString)
 		#sys.exit()
 			
 		alloc_str=''
@@ -1079,7 +1007,8 @@ def main(argv):
 		for i in range(ConfigParams['NumVars']):
 			DSString+=str(ConfigParams['datastructure'][i])
 					
- 		print "\n\t -- DSString: "+str(DSString)+" -- "				
+ 		if debug:
+ 			print "\n\t -- DSString: "+str(DSString)+" -- "				
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "
 		sys.exit(0)
