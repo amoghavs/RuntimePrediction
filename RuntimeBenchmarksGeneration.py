@@ -230,11 +230,14 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     MaxstrideDimNotFound=1	
     eqn=''
     BoundsChangePerStream={}
+    RHSExprnPerStream={}
+    ShouldDeclareVars=[]
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
 	    LHSindices=''
 	    RHSindices=''
 	    indices=''
+	    RHSExprnPerStream[CurrStream]=[]
 	    for j in range(NumDims):
 		if(j==StrideDim):
 			#RHSindices+='['+str(ConfigParams['IndirVar'][VarNum][CurrStream])+'['+str(ConfigParams['indices'][j])+'] ]'
@@ -329,10 +332,8 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 			print "\n\t -*- CurrVar "+str(CurrVar)+" StrideExtracted: "+str(StrideExtracted[CurrVar])+" -- "
 						
 
-
-
 """	    
-		# CAUTION/TODO: Should consolidate which debug statements to retain for master branch! 
+	    # CAUTION/TODO: Should consolidate which debug statements to retain for master branch! 
 	    LHSOperands=[]
 	    IndexChangeForBound=[]
 	    for	CurrOperand in range(ConfigParams['StrideVar'][VarNum][CurrStream]['NumOperands']):
@@ -347,6 +348,9 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    		# CAUTION: In present shape only a constant number is accepted, systematic way of generating other constants should be accepted, it'd help if they are parameterized/not-case-specific.
 	    		if(CurrIntraOperand[0]=='='):
 	    			print "\n\t ConstVar should be inserted!! "
+	    			RHSExprn='ConstVar_Stream'+str(CurrStream)
+	    			RHSExprnPerStream[CurrStream].append(RHSExprn)
+	    			ShouldDeclareVars.append(RHSExprn)
 	    		else:
 	    			print "\n\t Operand: "+str(CurrIntraOperand)
 	    			BreakdownFromIdx=re.match('\s*([ijkl])(.*)',CurrIntraOperand)
@@ -409,17 +413,18 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    			else:
 	    				print "\n\t ERROR: Operand requested is neither of 'ijkl'. Use debug for tracking the location of error "
 	    				sys.exit()     						
-	    	iIter=0
-		LHSExprn=''	    	
-	    	for ThisOperand in range(len(LHSIntraOperandsForOperand)-1):
-	    		LHSExprn+=LHSIntraOperandsForOperand[ThisOperand]+str(IntraOperands[CurrOperand]['Operations'][iIter])
-	    		
-	    		print "\n\t Operand "+str(LHSIntraOperandsForOperand[ThisOperand])+" Operation: "+str(IntraOperands[CurrOperand]['Operations'][iIter])
-		    	iIter+=1
-	    	if(len(LHSIntraOperandsForOperand)):
-	    		LHSExprn+=LHSIntraOperandsForOperand[len(LHSIntraOperandsForOperand)-1]
-	    	print "\n\t LHSExprn: "+str(LHSExprn)
-
+		    	iIter=0
+			RHSExprn=''	    	
+		    	for ThisOperand in range(len(LHSIntraOperandsForOperand)-1):
+		    		RHSExprn+=LHSIntraOperandsForOperand[ThisOperand]+str(IntraOperands[CurrOperand]['Operations'][iIter])
+		    		
+		    		print "\n\t Operand "+str(LHSIntraOperandsForOperand[ThisOperand])+" Operation: "+str(IntraOperands[CurrOperand]['Operations'][iIter])
+			    	iIter+=1
+		    	if(len(LHSIntraOperandsForOperand)):
+		    		RHSExprn+=LHSIntraOperandsForOperand[len(LHSIntraOperandsForOperand)-1]
+		    	RHSExprnPerStream[CurrStream].append(RHSExprn)
+		    	print "\n\t RHSExprn: "+str(RHSExprn)
+		
 	    	IndexChangeForBound.append(IndexChangeforBoundforOperand)			
 	    	LHSOperands.append(LHSIntraOperandsForOperand)	
 	    		#print "\n\t 
@@ -454,13 +459,22 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    
 	    BoundsChangePerStream[CurrStream]=CurrStreamIndexChangeFinal
 	    eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[CurrStream]+' + '+str(StreamVar)+RHSindices+';'
-	    #eqn="\t"+TabSpace+AccumVar[CurrStream]+'+='+str(StreamVar)+RHSindices+';'
+ 	    #eqn="\t"+TabSpace+AccumVar[CurrStream]+'+='+str(StreamVar)+RHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
+
+	    	
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
     	    ThisLoop.append(eqn)
 
-    	    	    
+    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	    
+    	for CurrExprn in (RHSExprnPerStream[CurrStream]):
+    		print "\n\t CurrStream: "+str(CurrStream)+" RHSExprn: "+str(CurrExprn)
+    	for CurrDim in range(NumDims):
+    		print "\n\t Dim: "+str(CurrDim)+" IndexChange "+str(CurrStreamIndexChangeFinal[CurrDim])
+    for CurrDeclareVar in (ShouldDeclareVars):
+        print "\n\t ShouldDeclareVars: "+str(CurrDeclareVar)+" --"	    	    
+    
     for k in range(NumDims+1): # NumDims+1 since we are looping over the loops! 
     	TabSpace='\t'
     	for l in range(NumDims-k):
