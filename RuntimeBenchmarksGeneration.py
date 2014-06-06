@@ -334,8 +334,10 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    # #strideoperations_var0_0 <1;3;(+,-);(1:0:ConstVar);(2:*:0,-1);(3:+,-:0,+1,-1)>
 	    # ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]['NumOperands']
 	    LHSOperands=[]
+	    IndexChangeForBound=[]
 	    for	CurrOperand in range(ConfigParams['StrideVar'][VarNum][CurrStream]['NumOperands']):
 	    	IntraOperands=ConfigParams['StrideVar'][VarNum][CurrStream]['Operands']
+	    	IndexChangeforBoundforOperand=[]
 	    	print "\n\t CurrVar: "+str(VarNum)+" CurrOperand: "+str(CurrOperand)+" which needs "+str(IntraOperands[CurrOperand]['NumOperands'])+" operands which have operations "+str(IntraOperands[CurrOperand]['Operations'])
 	    	NumOperations=len(IntraOperands[CurrOperand]['Operations'])
 	    	#if(IntraOperands[CurrOperand]['NumOperands']==1):
@@ -346,27 +348,16 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    		else:
 	    			print "\n\t Operand: "+str(CurrIntraOperand)
 	    			BreakdownFromIdx=re.match('\s*([ijkl])(.*)',CurrIntraOperand)
+	    			StreamDim=-1
 	    			if BreakdownFromIdx:
 	    				#print "\n\t Requesting indices "+str(BreakdownFromIdx.group(1))+" extra "+str(BreakdownFromIdx.group(2)) 
 	    				IndexChange=RemoveWhiteSpace(BreakdownFromIdx.group(2))
-	    				AppendIndexChange=''
-	    				if(IndexChange):
-		    				BreakIndexChange=re.match('\s*([\+])\s*(\d+)*',IndexChange)
-		    				if BreakIndexChange:
-		    					AppendIndexChange=BreakIndexChange.group(1)+str(BreakIndexChange.group(2))	
-		    				else:
-		    					print "\n\t ERROR: Unable to decode index change. Use debug to locate the source of error" 
-		    					sys.exit()
-
 	    				if(BreakdownFromIdx.group(1)=='i'):
-	    					OperandIndices=''
-	    					for i in range(NumDims-1):
-	    						OperandIndices+='['+str(ConfigParams['indices'][i])+']'
-	    					OperandIndices+='['+str(ConfigParams[indices][NumDims-1])+str(AppendIndexChange)+']'
-	    					ThusOperand=str(StreamVar)+str(OperandIndices)
-	    					print "\n\t Need to manipulate (InnerMost_loop) by index "+str(IndexChange)+"  --> "+str(ThusOperand)
+	    						StreamDim=NumDims-1
+		    					print "\n\t Need to manipulate (InnerMost_loop) by index "+str(IndexChange)#+"  --> "+str(ThusOperand)
 	    				elif(BreakdownFromIdx.group(1)=='j'):
 	    					if(ConfigParams['Dims']>1):
+	    						StreamDim=NumDims-2
 	    						print "\n\t Need to manipulate (InnerMost_loop-1) "+str(IndexChange)
 	    					else:
 	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-1), where as #dimensions are "+str(ConfigParams['Dims'])
@@ -374,21 +365,48 @@ print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperati
 	    				elif(BreakdownFromIdx.group(1)=='k'):
 	    					if(ConfigParams['Dims']>2):
 	    						print "\n\t Need to manipulate (InnerMost_loop-2) "+str(IndexChange)
+	    						StreamDim=NumDims-3
 	    					else:
 	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-2), where as #dimensions are "+str(ConfigParams['Dims'])
 	    						sys.exit()	    						
 	    				elif(BreakdownFromIdx.group(1)=='l'):
 	    					if(ConfigParams['Dims']>3):
 	    						print "\n\t Need to manipulate (InnerMost_loop-3) "+str(IndexChange)
+	    						StreamDims=NumDims-4
+	    						
 	    					else:
 	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-3), where as #dimensions are "+str(ConfigParams['Dims'])
 	    						sys.exit()	
+
+	    				AppendIndexChange=''
+	    				if(IndexChange):
+		    				BreakIndexChange=re.match('\s*([\+\-])\s*(\d+)*',IndexChange)
+		    				if BreakIndexChange:
+		    					AppendIndexChange=BreakIndexChange.group(1)+str(BreakIndexChange.group(2))	
+		    				else:
+		    					print "\n\t ERROR: Unable to decode index change. Likely that the index change term was not of the form \"+-number\". Use debug to locate the source of error" 
+		    					sys.exit()
+
+
+    					OperandIndices=''
+	    				for i in range(NumDims):
+	    					if(i==StreamDim):
+	    						PushIndexChange=str(ConfigParams['indices'][i])+str(AppendIndexChange)	
+	    						OperandIndices+='['+str(PushIndexChange)+']'	
+	    					else:
+	    						OperandIndices+='['+str(ConfigParams['indices'][i])+']'
+	    				ThusOperand=str(StreamVar)+str(OperandIndices)
+	    				IndexChangeforBoundforOperand.append(PushIndexChange)
+	    				print "\n\t Hence the indices should be "+str(ThusOperand)+" push-indices: "+str(PushIndexChange)+" AppendIndexChange "+str(AppendIndexChange)
 	    			else:
 	    				print "\n\t ERROR: Operand requested is neither of 'ijkl'. Use debug for tracking the location of error "
 	    				sys.exit()     						
-	    				
+	    	IndexChangeForBound.append(IndexChangeforBoundforOperand)			
 	    		
 	    		#print "\n\t 
+	    for CurrOperand in (IndexChangeForBound):
+	    	for CurrIndexChange in (CurrOperand):
+	    		print "\n\t --*-- "+str(CurrIndexChange)
 	    
 	    
 	    eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[CurrStream]+' + '+str(StreamVar)+RHSindices+';'
