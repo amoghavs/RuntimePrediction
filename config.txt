@@ -14,6 +14,6 @@
 
 #strideoperations_var1 (stride;Num-of-operands/operations;(operations b/n "Num-of-operands");(number-of-operands,operations,operands))
 #strideoperations_var0_0 <1;3;(+,-);(1:0:=3);(3:+,-:i,i+1,i-1);(2:*:i,i-1)>
-#strideoperations_var0_1 <1;3;(+,-);(1:0:=3);(2:*:i,i-1);(3:+,-:i,i+1,i-1)>
+#strideoperations_var0_1 <1;3;(+,-);(1:0:j-1);(2:*:i,j-3);(3:+,-:i,i+4,i-1)>
 #strideoperations_var1_0 <1;3;(+,-);(1:0:=3);(3:+,-:i,i+1,i-1);(2:*:i,i-1)>
 #strideoperations_var2_0 <1;3;(+,-);(1:0:j-1);(2:*:i,i-1);(3:+,-:i,i+1,i-1)>
