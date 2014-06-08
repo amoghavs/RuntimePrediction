@@ -201,11 +201,31 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	for CurrIntraOperand in (IntraOperands[CurrOperand]['Operands']):
 	    		# CAUTION/LIMITATION: In present shape only a constant number is accepted, systematic way of generating other constants should be accepted, it'd help if they are parameterized/not-case-specific.
 	    		if(CurrIntraOperand[0]=='='):
-	    			if debug:
-	    				print "\n\t ConstVar should be inserted!! "
+	    			#if debug:
 	    			RHSExprn='Const_Var'+str(VarNum)+'_Stream'+str(CurrStream)
+	    			ExtractNumber=re.match('\s*\=(.*)',CurrIntraOperand)
+	    			if debug:
+	    				print "\n\t CurrIntraOperand: "+str(CurrIntraOperand)
+	    			if ExtractNumber:
+	    				NumberCheck=re.match('\s*(\d+)*\.(\d+)*',ExtractNumber.group(1))
+	    				if NumberCheck:
+	    					DeclareVar='double '+str(RHSExprn)+str(CurrIntraOperand)+';'
+	    				else:
+	    					IntCheck=re.match('\s*(\d+)*',ExtractNumber.group(1))
+	    					if IntCheck:
+	    						DeclareVar='long int '+str(RHSExprn)+str(CurrIntraOperand)+';'
+	    					else:
+	    						print "\n\t ERROR: Const-var does not have number! Use debug to locate the error! \n"
+	    						sys.exit()
+	    			else:
+	    				print "\n\t ERROR: Const var does not have equal symbol! Use debug to locate the error! \n "
+	    				sys.exit()
+
+	    			if debug:
+	    				print "\n\t ConstVar should be inserted!! "+str(CurrIntraOperand)+" RHSExprn: "+str(RHSExprn)
+
 	    			LHSIntraOperandsForOperand.append(RHSExprn)
-	    			ShouldDeclareVars.append(RHSExprn)
+	    			ShouldDeclareVars.append(DeclareVar)
 	    		else:
 	    			if debug:
 	    				print "\n\t Operand: "+str(CurrIntraOperand)
@@ -295,13 +315,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	#print "\n\t CurrOperand: "+str(CurrOperand)
 	    	for CurrIndexChange in (CurrOperand):
 	    		CurrStreamIndexChangeConsolidation[CurrIndexChange[0]].append(CurrIndexChange[1])
-	    		print "\n\t CurrIndexChange: "+str( CurrIndexChange)
 
 	    for CurrDim in range(NumDims):
 	    	CurrStreamIndexChangeFinal[CurrDim]['Init']=0
 	    	CurrStreamIndexChangeFinal[CurrDim]['Final']=0
 	    	for CurrIndexChange in (CurrStreamIndexChangeConsolidation[CurrDim]):
-	    		print "\n\t Dim: "+str(CurrDim)+" IndexChange: "+str(CurrIndexChange) 
+	    		#print "\n\t Dim: "+str(CurrDim)+" IndexChange: "+str(CurrIndexChange) 
 	    		if(CurrIndexChange):
 						if(CurrIndexChange['Sign']=='-'):
 							if( CurrStreamIndexChangeFinal[CurrDim]['Init'] < CurrIndexChange['Delta'] ):
@@ -309,9 +328,6 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 						elif(CurrIndexChange['Sign']=='+'):
 							if( CurrStreamIndexChangeFinal[CurrDim]['Final'] < CurrIndexChange['Delta'] ):
 								CurrStreamIndexChangeFinal[CurrDim]['Final']=CurrIndexChange['Delta']
-	    for Duh in range(NumDims):
-	    	print "\n\t Dim: "+str(Duh)
-	    #sys.exit()
 	    
 	    BoundsChangePerStream[CurrStream]=CurrStreamIndexChangeFinal
 	    #eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[CurrStream]+' + '+str(StreamVar)+RHSindices+';'
@@ -321,7 +337,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
-    	    ThisLoop.append(eqn)
+
     FinalStreamIndexChange={} 	    
     if(ConfigParams['NumStreaminVar'][VarNum]>1):
     	for CurrDim in range(NumDims):
@@ -335,8 +351,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    			FinalStreamIndexChange[CurrDim]['Init'] = BoundsChangePerStream[CurrStream][CurrDim]['Init']
 	    		if(FinalStreamIndexChange[CurrDim]['Final'] < BoundsChangePerStream[CurrStream][CurrDim]['Final']):
 	    			FinalStreamIndexChange[CurrDim]['Final'] = BoundsChangePerStream[CurrStream][CurrDim]['Final']
-	    		#if debug:
-	    		print "\n\t Dim: "+str(CurrDim)+" IndexChange "+str(BoundsChangePerStream[CurrStream][CurrDim])+" FinalStreamIndexChange[CurrDim] "+str(FinalStreamIndexChange[CurrDim])
+	    		if debug:
+	    			print "\n\t Dim: "+str(CurrDim)+" IndexChange "+str(BoundsChangePerStream[CurrStream][CurrDim])+" FinalStreamIndexChange[CurrDim] "+str(FinalStreamIndexChange[CurrDim])
     else:
     	FinalStreamIndexChange=BoundsChangePerStream[ConfigParams['NumStreaminVar'][VarNum]-1] #['Init'] #CAUTION: "ConfigParams['NumStreaminVar'][VarNum]=1, hence accessing CurrStream=0 here.
     RHSExprnPerStream={}	
@@ -353,6 +369,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	for CurrDim in range(NumDims):
     		if debug:
     			print "\n\t -- Dim: "+str(CurrDim)+" IndexChange "+str(BoundsChangePerStream[CurrStream][CurrDim])
+    
     for CurrDeclareVar in (ShouldDeclareVars):
         if debug:
         	print "\n\t ShouldDeclareVars: "+str(CurrDeclareVar)+" --"	    	    
@@ -387,7 +404,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				
 				if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 					LargestIndexNotFound=0
-					bounds= '((' + str(ConfigParams['size'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['StrideinStream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+')'   	
+					bounds= '((' + str(ConfigParams['size'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['StrideinStream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  	
 					BoundForDim.append(str(bounds))#BoundForDim.insert(0,str(bounds))
 					CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
 					IndexIncr=str(CurrIndexIncr)+str(IndexIncr)    	
@@ -425,6 +442,13 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     
     LoopIter='LoopIter'	
     ThisLoop.append('long int '+str(LoopIter)+'=0;')
+
+    for CurrDeclareVar in (ShouldDeclareVars):
+        #if debug:
+        print "\n\t ShouldDeclareVars: "+str(CurrDeclareVar)+" --"	    	    
+        #VarDeclareExprn='long int'+str(CurrDeclareVar)
+        ThisLoop.append(CurrDeclareVar)
+    
     TabSpace='\t'
     ThisForLoop=TabSpace+'for('+str(LoopIter)+'=0; '+str(LoopIter)+' < '+str(ConfigParams['NumIters'][VarNum])+' ; '+str(LoopIter)+'+=1)'
     ThisLoop.append(ThisForLoop)
@@ -444,7 +468,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		elif(j!=StrideDim):
 			#RHSindices+='['+str(ConfigParams['indices'][j])+']'	
 			#ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+	str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+str(InitForDim[j])+'; '+	str(ConfigParams['indices'][j])+' <= '+str(BoundForDim[j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+str(InitForDim[j])+'; '+	str(ConfigParams['indices'][j])+' < '+str(BoundForDim[j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 		
 		TabSpace='\t\t'
 		for k in range(j):
@@ -468,8 +492,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			LHSVariableCurrStream+='['+str(LHSIndicesPerStream[CurrStream][CurrDim])+']'
 		#print "\n\t CurrStream: "+str(CurrStream)+" Var: "+str(LHSVariableCurrStream)
 		#print "\n\t RHSExprnPerOperand: "+str(RHSExprnPerStream[CurrStream])
-		StreamExprn=LHSVariableCurrStream+'='+str(RHSExprnPerStream[CurrStream])
-		print "\n\t StreamExprn: "+str(StreamExprn)
+		StreamExprn=LHSVariableCurrStream+'='+str(RHSExprnPerStream[CurrStream])+';'
+		if debug:
+			print "\n\t StreamExprn: "+str(StreamExprn)
 		ThisLoop.append(StreamExprn)
     
     for k in range(NumDims+1): # NumDims+1 since we are looping over the loops! 
