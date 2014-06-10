@@ -144,12 +144,10 @@ def main():
  	IterationsCombination(LoopIterations,StartIdx,CurrVar,NumVars,Prefix,OutputSet)
  	for CurrSetIterations in OutputSet:
  		print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" len(OutputSet): "+str(len(OutputSet))
- 	sys.exit()
-   		
-	for CurrLoopIterExponent in (LoopIterations[NumVarsLessOne]):
-		CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
-		print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
-		#MasterSWStats.write("\n\n\t ################################ \n\n");
+ 	#sys.exit()
+   	for CurrSetIterations in OutputSet:	
+	   	print "\n\t CurrSetIterations: "+str(CurrSetIterations)
+ 		#MasterSWStats.write("\n\n\t ################################ \n\n");
  		for NumDims in range(Min['Dims'],Max['Dims']+1):
 			SizeString=''
 			SizeName=''				
@@ -163,7 +161,7 @@ def main():
 					else:
 						IncrementLastDim+=1					
 			
-				print "\n\t NumDims: "+str(NumDims)+" Each Dim Base: "+str(EachDimBase)+" IncrementLastDim: "+str(IncrementLastDim)
+				print "\n\t NumDims: "+str(NumDims)+" Each Dim Base: "+str(EachDimBase)+" IncrementLastDim: "+str(IncrementLastDim)+" CurrSetIterations: "+str(CurrSetIterations)
 				EachDimSize=int(2**EachDimBase)
 				for i in range(NumDims-2):
 					SizeString=str(EachDimSize)+','+str(SizeString)
