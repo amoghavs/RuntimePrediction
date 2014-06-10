@@ -80,7 +80,9 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
 	
     	for j in range(NumForLoops):
     		if(j==NumForLoops-1):
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['StrideinStream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			#ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['StrideinStream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+			
 		else:
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
 		
@@ -404,9 +406,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				
 				if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 					LargestIndexNotFound=0
-					bounds= '((' + str(ConfigParams['size'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['StrideinStream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  	
+					bounds= '((' + str(ConfigParams['size'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  	
 					BoundForDim.append(str(bounds))#BoundForDim.insert(0,str(bounds))
-					CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
+					CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['GlobalVar']['Stream'][VarNum][i])
 					IndexIncr=str(CurrIndexIncr)+str(IndexIncr)    	
 					if debug:
 						print "\n\t The boss is here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
@@ -415,10 +417,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				else:
 					index=str('StreamIndex'+str(i))
 					IndicesForStream.append(index)
-					bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['StrideinStream'][VarNum][i])+')'      	
+					bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+')'      	
 					#print "\n\t CurrStream: "+str(i)+" bounds: "+str(bounds)
 				   	#BoundForDim.append(str(bounds))
-					CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['StrideinStream'][VarNum][i])
+					CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['GlobalVar']['Stream'][VarNum][i])
 					IndexIncr+=CurrIndexIncr
 					IndexDecl+='long int '+str(index)+'='+str(FinalStreamIndexChange[StrideDim]['Init'])+';'
 					IndexInit+=','+str(index)+'=0'
@@ -450,7 +452,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
         ThisLoop.append(CurrDeclareVar)
     
     TabSpace='\t'
-    ThisForLoop=TabSpace+'for('+str(LoopIter)+'=0; '+str(LoopIter)+' < '+str(ConfigParams['NumIters'][VarNum])+' ; '+str(LoopIter)+'+=1)'
+    # ConfigParams['GlobalVar']['NumItersDecl']
+    ThisForLoop=TabSpace+'for('+str(LoopIter)+'=0; '+str(LoopIter)+' < '+str(ConfigParams['GlobalVar']['NumIters'][VarNum])+' ; '+str(LoopIter)+'+=1)'
     ThisLoop.append(ThisForLoop)
     ThisLoop.append(TabSpace+'{')
     
@@ -514,11 +517,11 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     return ThisLoop
 
 def WriteArray(Array,File):
-	File.write("\n\n")
+	File.write("\n")
 	for i in range(len(Array)):
 		File.write("\n\t "+str(Array[i])+"\n")
 		
-	File.write("\n")	
+	#File.write("\n")	
 
 
 def main(argv):
@@ -975,6 +978,34 @@ def main(argv):
 				print "\n\t For dim "+str(CurrDim)+" largest stride requested for any stream is "+str(largest)
 		
 		#sys.exit()
+###
+
+		ConfigParams['GlobalVar']={}
+		ConfigParams['GlobalVar']['NumIters']=[]
+		ConfigParams['GlobalVar']['NumItersDecl']=[]
+		for i in range(ConfigParams['NumVars']):
+			CurrVarNumLoopVar='NumLoops_Var'+str(i)
+			CurrVarNumLoopVarDecl='long int '+str(CurrVarNumLoopVar)+' = '+str(ConfigParams['NumIters'][i])+' ;'
+			#print "\n\t CurrVar: "+str(i)+" CurrVarNumLoopVar: "+str(CurrVarNumLoopVar)+" CurrVarNumLoopVarDecl "+str(CurrVarNumLoopVarDecl)
+			ConfigParams['GlobalVar']['NumIters'].append(CurrVarNumLoopVar)
+			ConfigParams['GlobalVar']['NumItersDecl'].append(CurrVarNumLoopVarDecl)
+
+		ConfigParams['GlobalVar']['Stream']={}	
+		ConfigParams['GlobalVar']['Stream']['StrideVarDecl']=[]				
+		for index in range(ConfigParams['NumVars']):
+			ConfigParams['GlobalVar']['Stream'][index]=[]
+			
+			print "\n -- NumStreams: "+str(ConfigParams['NumStreaminVar'][index])
+			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
+				StrideVar='StrideVar'+str(index)+"_Stream"+str(CurrStream)
+				StrideVarDecl='int '+str(StrideVar)+' = '+str(ConfigParams['StrideinStream'][index][CurrStream])+' ;'
+				ConfigParams['GlobalVar']['Stream'][index].append(StrideVar)
+				ConfigParams['GlobalVar']['Stream']['StrideVarDecl'].append(StrideVarDecl)
+				print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
+				print "\t\t Var: "+str(StrideVar)+" StrideVarDecl "+str(StrideVarDecl)
+
+
+###
 		
 		for index in range(ConfigParams['NumVars']):
 				VarDeclStmt=[]
@@ -1017,7 +1048,7 @@ def main(argv):
 							print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 						DynAlloc.append(VarDecl)
 						if(ConfigParams['Dims']==1):
-							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+'*'+str(ConfigParams['StrideinStream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		
+							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+'*'+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		
 						else:
 							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][0]+' * sizeof('+datatype+suffix+'))'+';'
 				
@@ -1047,7 +1078,8 @@ def main(argv):
 							for CurrStream in range(ConfigParams['NumStreaminVar'][index]):  
 								var=' Var'+str(index)+'_Stream'+str(CurrStream) 
 								if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
-									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['StrideinStream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		
+									#MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['StrideinStream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		# ConfigParams['GlobalVar']['Stream'][index]['StrideVar']
+									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'
 								else:
 									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
 								DynAlloc.append(MallocEqn)
@@ -1084,10 +1116,12 @@ def main(argv):
 		StrideString=''
 		for index in range(ConfigParams['NumVars']-1):
 			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
+				#print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
 				StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		
 		index=ConfigParams['NumVars']-1
 		for CurrStream in range(ConfigParams['NumStreaminVar'][index]-1):
+			#print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
 			StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		StrideString+=str(ConfigParams['StrideinStream'][index][(ConfigParams['NumStreaminVar'][index]-1)])
 			
@@ -1106,9 +1140,9 @@ def main(argv):
 		StreamString+=str(ConfigParams['NumStreaminVar'][ConfigParams['NumVars']-1])
 		
 		IterString='_'
+			
 		for i in range(ConfigParams['NumVars']-1):
 			IterString+=str(ConfigParams['NumIters'][i])+'_'
-		
 		IterString+=str(ConfigParams['NumIters'][ConfigParams['NumVars']-1])
 		
 		DSString=''
@@ -1157,6 +1191,9 @@ def main(argv):
 	print "\n\t Source file name: "+str(SrcFileName)+"\n"		
 	
 	WriteArray(LibAlloc,WriteFile)	
+	WriteArray(ConfigParams['GlobalVar']['NumItersDecl'],WriteFile)
+	WriteArray(ConfigParams['GlobalVar']['Stream']['StrideVarDecl'],WriteFile)
+	
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)
 	
