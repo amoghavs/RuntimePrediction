@@ -80,7 +80,6 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
 	
     	for j in range(NumForLoops):
     		if(j==NumForLoops-1):
-			#ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['StrideinStream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
 			
 		else:
@@ -324,12 +323,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	for CurrIndexChange in (CurrStreamIndexChangeConsolidation[CurrDim]):
 	    		#print "\n\t Dim: "+str(CurrDim)+" IndexChange: "+str(CurrIndexChange) 
 	    		if(CurrIndexChange):
-						if(CurrIndexChange['Sign']=='-'):
-							if( CurrStreamIndexChangeFinal[CurrDim]['Init'] < CurrIndexChange['Delta'] ):
-								CurrStreamIndexChangeFinal[CurrDim]['Init']=CurrIndexChange['Delta']
-						elif(CurrIndexChange['Sign']=='+'):
-							if( CurrStreamIndexChangeFinal[CurrDim]['Final'] < CurrIndexChange['Delta'] ):
-								CurrStreamIndexChangeFinal[CurrDim]['Final']=CurrIndexChange['Delta']
+				if(CurrIndexChange['Sign']=='-'):
+					if( CurrStreamIndexChangeFinal[CurrDim]['Init'] < CurrIndexChange['Delta'] ):
+						CurrStreamIndexChangeFinal[CurrDim]['Init']=CurrIndexChange['Delta']
+					elif(CurrIndexChange['Sign']=='+'):
+						if( CurrStreamIndexChangeFinal[CurrDim]['Final'] < CurrIndexChange['Delta'] ):
+							CurrStreamIndexChangeFinal[CurrDim]['Final']=CurrIndexChange['Delta']
 	    
 	    BoundsChangePerStream[CurrStream]=CurrStreamIndexChangeFinal
 	    #eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[CurrStream]+' + '+str(StreamVar)+RHSindices+';'
@@ -1078,7 +1077,6 @@ def main(argv):
 							for CurrStream in range(ConfigParams['NumStreaminVar'][index]):  
 								var=' Var'+str(index)+'_Stream'+str(CurrStream) 
 								if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
-									#MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['StrideinStream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		# ConfigParams['GlobalVar']['Stream'][index]['StrideVar']
 									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * '+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'
 								else:
 									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['size'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		

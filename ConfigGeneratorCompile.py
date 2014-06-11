@@ -69,11 +69,48 @@ def IterationsCombination(LoopIterations,StartIdx,CurrVar,NumVars,Prefix,OutputS
 			IterationsCombination(LoopIterations,StartIdx,CurrVar+1,NumVars,Prefix,OutputSet)
 			StartIdx+=1
 			#print "\n\t 2. StartIdx: "+str(StartIdx)+" CurrVar: "+str(CurrVar)+" Prefix: "+str(Prefix)+" len(LoopIterations[CurrVar]) "+str(len(LoopIterations[CurrVar]))
-			
 
+
+"""
+
+	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
+	Max['NumOperands']=[2,2,1]
+	Min['NumOperands']=[1,1,1]
+	Operations={}
+	Operations['MainOperations']=['+','-','*','/']
+
+	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
+	Max['NumIntraOperands']=[[2,1],[1,3],[1]]
+	Min['NumIntraOperands']=[[1,1],[1,2],[1]]
+	Operations['IntraOperations']=Operations['MainOperations']
+	
+	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. 
+	Max['IntraOperandDelta']=[(+1;-2;0) , ( +2,+3,+4) , (0,0,0) ]
+	Min['IntraOperandDelta']=[ (0;-3;0) , ( +2,+3,+4) , (0,0,0) ]
+	
+	Max['Constant']=10
+	Min['Constant']=2
+	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
+
+
+"""
+			
+def PerStreamConfig(ResultString,Max,Min,Operations):
+	print "\n\t In PerStreamConfig "
+	StreamConfigResults=[]
+	
+	NumOperands=[]
+	NumVars=(Max['Vars']-Min['Vars']+1)
+	for CurrVar in range(NumVars):
+		
+	Max['NumOperands']
+	return	StreamConfigResults	
+	
+	
+	
 def main():
 
-        Max={}
+        Max={} #; Ensure Max is less than or equal to Min. 
         Min={}
         Max['Vars']=3
         Min['Vars']=1
@@ -94,6 +131,24 @@ def main():
         Dim0Size=2**(MbyteSize-8)
         HigherDimSize= MaxSize/ Dim0Size
 
+	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
+	Max['NumOperands']=[2,2,1]
+	Min['NumOperands']=[1,1,1]
+	Operations={}
+	Operations['MainOperations']=['+','-','*','/']
+
+	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
+	Max['NumIntraOperands']=[[2,1],[1,3],[1]]
+	Min['NumIntraOperands']=[[1,1],[1,2],[1]]
+	Operations['IntraOperations']=Operations['MainOperations']
+	
+	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. 
+	Max['IntraOperandDelta']=[(+1,-2,0) , ( +2,+3,+4) , (0,0,0) ]
+	Min['IntraOperandDelta']=[ (0,-3,0) , ( +2,+3,+4) , (0,0,0) ]
+	
+	Max['Constant']=10
+	Min['Constant']=2
+	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
 	
 	ScriptUniqueID=''
 	if(len(Alloc)==1):
@@ -193,6 +248,7 @@ def main():
 				StrideString=''
 				StrideName=''
 				print "\n\t This is the length of ResultString: "+str(len(ResultString))
+				StreamConfigResults=PerStreamConfig(ResultString,Max,Min,Operations)
 					
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
