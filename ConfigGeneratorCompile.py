@@ -85,9 +85,9 @@ def IterationsCombination(LoopIterations,NumVars):
 
 """
 			
-def PerStreamConfig(ResultString,Max,Min,Operations):
+def PerStreamConfig(Max,Min,Operations):
 	print "\n\t In PerStreamConfig "
-	StreamConfigResults={}
+	StreamConfig={}
 	
 	NumOperands=[]
 	NumVars=(Max['Vars']-Min['Vars']+1)
@@ -135,7 +135,7 @@ def PerStreamConfig(ResultString,Max,Min,Operations):
 		print "\n\t ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)+" len(RequiredNumOperandsRange[CurrVar]): "+str(len(RequiredNumOperandsRange[i]))
 		
 	print "\n\t len(NumOperandsSet): "+str(len(NumOperandsSet))+" ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)		
-	StreamConfigResults['NumOperandsSet']=NumOperandsSet
+	StreamConfig['NumOperandsSet']=NumOperandsSet
 	
 	MainOperationsSet={}
 	if(Operations['PermutationsFlag']['MainOperations']):
@@ -162,11 +162,59 @@ def PerStreamConfig(ResultString,Max,Min,Operations):
 		print "\n\t Will NOT start permutating for the sake of MainOperations "			
 		MainOperationsSet['Default']=(Operations['MainOperations'])
 
-	#for CurrVar in range(NumVars):
+	NumIntraOperandsRange={}
+	MaxIntraNumOperands=0
+	for CurrVar in range(NumVars):
+		NumIntraOperandsRange[CurrVar]={}
+		print "\n\t CurrVar: "+str(CurrVar)
+		for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
+			MinVal=Min['NumIntraOperands'][CurrVar][CurrOperand]
+			MaxVal=Max['NumIntraOperands'][CurrVar][CurrOperand]
+			Temp=[]
+			if(MaxVal > MaxIntraNumOperands):
+				MaxIntraNumOperands=MaxVal
+			for CurrVal in range(MinVal,MaxVal+1):
+				Temp.append(CurrVal)
+				#print "\n\t CurrVal: "+str(CurrVal)+" Temp: "+str(Temp)
+			NumIntraOperandsRange[CurrVar][CurrOperand]=Temp
 		
+	StreamConfig['NumIntraOperandsRange']=NumIntraOperandsRange
+
+	IntraOperationsSet={}
+	if(Operations['PermutationsFlag']['IntraOperations']):
+		print "\n\t Will start permutating now for the sake of MainOperations "
+		CurrIntraNumOperationsSet=[]
+		Temp=[]
+		CurrIntraNumOperationsSet.append(Temp)
+		TempCurrIntraNumOperationsSet=[]
+		
+		for CurrNumOperations in range(1,MaxIntraNumOperands): # CAUTION: Where 
+			for CurrIntraOperationsSet in CurrIntraNumOperationsSet:
+				for CurrIntraOperations in Operations['IntraOperations']:
+					Temp=[]
+					Temp=copy.deepcopy(CurrIntraOperationsSet)
+					Temp.append(CurrIntraOperations)
+					TempCurrIntraNumOperationsSet.append(Temp)
+					#print "\n\t Temp: "+str(Temp)+" len(TempCurrNumOperationsSet): "+str(len(TempCurrIntraNumOperationsSet))
+
+			CurrIntraNumOperationsSet=copy.deepcopy(TempCurrIntraNumOperationsSet)
+			TempCurrIntraNumOperationsSet=[]
+			IntraOperationsSet[CurrNumOperations]= CurrIntraNumOperationsSet # CAUTION/WARNING: Assuming that the CurrNumOperations!=0 will access this dictionary, since that is an illegal case.
+			print "\n\t CurrNumOperations: "+str(CurrNumOperations)+" len(CurrNumOperationsSet): "+str(len(CurrIntraNumOperationsSet))
+		print "\n\t MaxIntraNumOperands: "+str(MaxIntraNumOperands)
+	else:
+		print "\n\t Will NOT start permutating for the sake of MainOperations "			
+		IntraOperationsSet['Default']=(Operations['MainOperations'])
+
+	StreamConfig['IntraOperationsSet']=IntraOperationsSet
+	
+	ConstantsSet=[]
+	for i in range(Min['Constant'],Max['Constant']+1):	# WARNING: This feature is mostly foolish! 
+		ConstantsSet.append(i)
+		print "\n\t Constant: "+str(i)
 		
 	print "\n\n "
-	return	StreamConfigResults	
+	return	StreamConfig	
 	
 	
 	
@@ -200,13 +248,14 @@ def main():
  	print "\n\t WARNING: NumVars is assumed to be equal, you have been warned!! "
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
-	Max['NumOperands']=[2,3,2,4]
+	Max['NumOperands']=[2,3,1,4]
 	Min['NumOperands']=[1,2,1,1] #Min: Should be >= 1 
 	Operations={}
 	Operations['MainOperations']=['+','-','*','/']
 
 	PermutationsFlag={}
 	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
+	PermutationsFlag['IntraOperations']= 1
 	
 	Operations['NumIntraOperandsNeeded']=[]
 	for CurrVar in range(NumVars):
@@ -215,7 +264,7 @@ def main():
 		
 		
 	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands(Max-Min)>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
-	Max['NumIntraOperands']=[[2,1],[1,3],[1],[1,2,2,1]]
+	Max['NumIntraOperands']=[[3,1],[1,3],[1],[1,2,2,4]]
 	Min['NumIntraOperands']=[[1,1],[1,2],[1],[1,1,1,1]] #Min: Should be >= 1 
 	Operations['IntraOperations']=Operations['MainOperations']
 	
@@ -279,6 +328,7 @@ def main():
  	#	print "\n\t CurrSetIterations: "+str(CurrSetIterations) 
 
  	#sys.exit()
+ 	StreamConfig=PerStreamConfig(Max,Min,Operations)
    	for CurrSetIterations in OutputSet:	
 	   	print "\n\t CurrSetIterations: "+str(CurrSetIterations)
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
@@ -327,7 +377,7 @@ def main():
 				StrideString=''
 				StrideName=''
 				print "\n\t This is the length of ResultString: "+str(len(ResultString))
-				StreamConfigResults=PerStreamConfig(ResultString,Max,Min,Operations)
+				
 				sys.exit()	
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
