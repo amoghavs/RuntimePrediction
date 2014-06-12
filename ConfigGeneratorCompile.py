@@ -1,5 +1,5 @@
 
-import sys,subprocess,re,math,commands,time
+import sys,subprocess,re,math,commands,time,copy
  
 def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
 	#print "\n\t StartStream: "+str(StartStream)+' and NumStrides: '+str(NumStrides)
@@ -101,9 +101,47 @@ def PerStreamConfig(ResultString,Max,Min,Operations):
 	
 	NumOperands=[]
 	NumVars=(Max['Vars']-Min['Vars']+1)
+	if(Max['Vars']==Min['Vars']):
+		NumVars=Max['Vars']
+	
+ 	NumVarsMinusOne=NumVars-1
+ 	
+	RequiredNumOperandsRange=[]
 	for CurrVar in range(NumVars):
+		Temp=[]
+		for CurrVarNumOperands in range(Min['NumOperands'][CurrVar],Max['NumOperands'][CurrVar]+1):
+			Temp.append(CurrVarNumOperands)
+		RequiredNumOperandsRange.append(Temp)
+
+
+	VarsCovered=[]
+	NeedToRepeat=0
+	for CurrVar in range(NumVars):
+		VarsCovered.append(len(RequiredNumOperandsRange[CurrVar]))
+		if((len(RequiredNumOperandsRange[CurrVar]))):
+			NeedToRepeat+=1
+
+	NumOperandsSet=[]
+	Temp=[]
+	NumOperandsSet.append(Temp)
+	NeedToRepeat=0
+	for CurrVar in range(0,NumVars):
+		TempNumOperandsSet=[]
+		for CurrSet in NumOperandsSet:
+			for CurrNumOperand in RequiredNumOperandsRange[CurrVar]:
+				Temp=copy.deepcopy(CurrSet)
+				Temp.append(CurrNumOperand)
+				TempNumOperandsSet.append(Temp)
+				#print "\n\t Temp: "+str(Temp)
+		NumOperandsSet=copy.deepcopy(TempNumOperandsSet)
+
+	ExpectedNumOperandsinSet=1
+	for i in range(NumVars):
+		ExpectedNumOperandsinSet*=len(RequiredNumOperandsRange[i])
+		#print "\n\t ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)+" len(RequiredNumOperandsRange[CurrVar]): "+str(len(RequiredNumOperandsRange[i]))
 		
-	Max['NumOperands']
+	print "\n\t len(NumOperandsSet): "+str(len(NumOperandsSet))+" ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)				
+	print "\n\n"
 	return	StreamConfigResults	
 	
 	
@@ -112,8 +150,8 @@ def main():
 
         Max={} #; Ensure Max is less than or equal to Min. 
         Min={}
-        Max['Vars']=3
-        Min['Vars']=1
+        Max['Vars']=4
+        Min['Vars']=4
         Max['Dims']=3
         Min['Dims']=3
         Max['NumStream']=4
@@ -125,26 +163,26 @@ def main():
         DS='d'
         #SpatWindow=[8,16,32];
         LoopIterationBase=10;
-        LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3]];
+        LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
         MbyteSize=20 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         Dim0Size=2**(MbyteSize-8)
         HigherDimSize= MaxSize/ Dim0Size
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
-	Max['NumOperands']=[2,2,1]
-	Min['NumOperands']=[1,1,1]
+	Max['NumOperands']=[2,3,2,4]
+	Min['NumOperands']=[1,1,1,1]
 	Operations={}
 	Operations['MainOperations']=['+','-','*','/']
 
 	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
-	Max['NumIntraOperands']=[[2,1],[1,3],[1]]
-	Min['NumIntraOperands']=[[1,1],[1,2],[1]]
+	Max['NumIntraOperands']=[[2,1],[1,3],[1],[1]]
+	Min['NumIntraOperands']=[[1,1],[1,2],[1],[1]]
 	Operations['IntraOperations']=Operations['MainOperations']
 	
 	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. 
-	Max['IntraOperandDelta']=[(+1,-2,0) , ( +2,+3,+4) , (0,0,0) ]
-	Min['IntraOperandDelta']=[ (0,-3,0) , ( +2,+3,+4) , (0,0,0) ]
+	Max['IntraOperandDelta']=[(+1,-2,0) , ( +2,+3,+4) , (0,0,0) , (0,0,0) ]
+	Min['IntraOperandDelta']=[ (0,-3,0) , ( +2,+3,+4) , (0,0,0) , (0,0,0) ]
 	
 	Max['Constant']=10
 	Min['Constant']=2
@@ -179,10 +217,12 @@ def main():
 
 	
  	NumVars=(Max['Vars']-Min['Vars']+1)
+ 	if(Max['Vars']==Min['Vars']):	
+ 		NumVars=(Min['Vars'])
  	NumVarsLessOne=NumVars-1
  	
         LoopIterations=[]
-        for CurrVar in range(Min['Vars']-1,Max['Vars']):
+        for CurrVar in range(NumVars):
         	Temp=[]
         	for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
         		CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
@@ -198,7 +238,7 @@ def main():
  		Prefix.append(0)
  	IterationsCombination(LoopIterations,StartIdx,CurrVar,NumVars,Prefix,OutputSet)
  	for CurrSetIterations in OutputSet:
- 		print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" len(OutputSet): "+str(len(OutputSet))
+ 		print "\n\t CurrSetIterations: "+str(CurrSetIterations) 
  	#sys.exit()
    	for CurrSetIterations in OutputSet:	
 	   	print "\n\t CurrSetIterations: "+str(CurrSetIterations)
@@ -249,7 +289,7 @@ def main():
 				StrideName=''
 				print "\n\t This is the length of ResultString: "+str(len(ResultString))
 				StreamConfigResults=PerStreamConfig(ResultString,Max,Min,Operations)
-					
+				sys.exit()	
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
 					Strides=re.split(',',CurrStreamCombi)
