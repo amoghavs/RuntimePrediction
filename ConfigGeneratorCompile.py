@@ -9,13 +9,13 @@ def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,C
 			for i in range(StartStream,NumStrides):
 				Result=CurrString+','+str((2**i))
 				ResultString.append(Result)
-				print "\n\t Result: "+Result
+				#print "\n\t Result: "+Result
 		else:
 			#print "\n\t ---- \n"
 			for i in range(NumStrides):
 				Result=CurrString+str((2**i))
 				ResultString.append(Result)
-				print "\n\t Result: "+Result		
+				#print "\n\t Result: "+Result		
 			
 		CurrStream-=1
 		return #(CurrStream,CurrPrefixPos)
@@ -41,35 +41,25 @@ def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,C
 	#print "\n\t ^^ CurrPrefixPos: "+str(CurrPrefixPos)+' CurrStream: '+str(CurrStream)+" CurrString: "+str(CurrString)+" CurrPrefix: "+str(CurrPrefix)	
 	return #(CurrStream,CurrPrefixPos)	
 	
-def IterationsCombination(LoopIterations,StartIdx,CurrVar,NumVars,Prefix,OutputSet):
-	if(CurrVar==(NumVars-1)):
-		print "\n\t StartIdx: "+str(StartIdx)
-		
-		for CurrIter in (LoopIterations[CurrVar]):
-			BeforePrefix=[]
-			idx=0
-			for i in Prefix:
-				BeforePrefix.append(0)
-				BeforePrefix[idx]=i
-				idx+=1
-			BeforePrefix[CurrVar]=(CurrIter)			
-			OutputSet.append(BeforePrefix)
-			#print "\n\t Prefix: "+str(Prefix)
-		#sys.exit()
-		return
-	else:
-		StartIdx=0
-		#print "\n\t StartIdx: "+str(StartIdx)+" CurrVar: "+str(CurrVar)+" len(LoopIterations[CurrVar]): "+str(len(LoopIterations[CurrVar]))
-		while(StartIdx<len(LoopIterations[CurrVar])):
-		#while(CurrVar!=NumVars)
-			#if(not(CurrVar)):
-			#	Prefix=[]
-			Prefix[CurrVar]=(LoopIterations[CurrVar][StartIdx])
-			#print "\n\t 1. StartIdx: "+str(StartIdx)+" CurrVar: "+str(CurrVar)+" Prefix: "+str(Prefix)
-			IterationsCombination(LoopIterations,StartIdx,CurrVar+1,NumVars,Prefix,OutputSet)
-			StartIdx+=1
-			#print "\n\t 2. StartIdx: "+str(StartIdx)+" CurrVar: "+str(CurrVar)+" Prefix: "+str(Prefix)+" len(LoopIterations[CurrVar]) "+str(len(LoopIterations[CurrVar]))
+def IterationsCombination(LoopIterations,NumVars):
+	OutputSet=[]
+	Temp=[]
+	OutputSet.append(Temp)
+	TempOutputSet=[]
+	print "\n\t NumVars: "+str(NumVars)+" len(LoopIterations): "+str(len(LoopIterations))
+	for CurrVar in range(NumVars):
+		for CurrLoopIterationsSet in OutputSet:
+			for CurrLoopIterationsNum in (LoopIterations[CurrVar]):
+				Temp=copy.deepcopy(CurrLoopIterationsSet)
+				Temp.append((CurrLoopIterationsNum))
+				TempOutputSet.append(Temp)
+				#print "\n\t Temp: "+str(Temp)+" CurrLoopIterationsNum "+str(CurrLoopIterationsNum)+" len(TempOutputSet): "+str(len(TempOutputSet))+" "
 
+		OutputSet=copy.deepcopy(TempOutputSet)
+		TempOutputSet=[]
+		#print "\n\t CurrVar: "+str(CurrVar)+" len(OutputSet): "+str(len(OutputSet))
+				
+	return OutputSet;		
 
 """
 
@@ -97,7 +87,7 @@ def IterationsCombination(LoopIterations,StartIdx,CurrVar,NumVars,Prefix,OutputS
 			
 def PerStreamConfig(ResultString,Max,Min,Operations):
 	print "\n\t In PerStreamConfig "
-	StreamConfigResults=[]
+	StreamConfigResults={}
 	
 	NumOperands=[]
 	NumVars=(Max['Vars']-Min['Vars']+1)
@@ -107,10 +97,14 @@ def PerStreamConfig(ResultString,Max,Min,Operations):
  	NumVarsMinusOne=NumVars-1
  	
 	RequiredNumOperandsRange=[]
+	MaxNumOperands=0
 	for CurrVar in range(NumVars):
 		Temp=[]
 		for CurrVarNumOperands in range(Min['NumOperands'][CurrVar],Max['NumOperands'][CurrVar]+1):
 			Temp.append(CurrVarNumOperands)
+			if(CurrVarNumOperands > MaxNumOperands):
+				print "\n\t MaxNumOperands: "+str(MaxNumOperands)+" CurrVarNumOperands: "+str(CurrVarNumOperands)
+				MaxNumOperands= CurrVarNumOperands
 		RequiredNumOperandsRange.append(Temp)
 
 
@@ -138,10 +132,40 @@ def PerStreamConfig(ResultString,Max,Min,Operations):
 	ExpectedNumOperandsinSet=1
 	for i in range(NumVars):
 		ExpectedNumOperandsinSet*=len(RequiredNumOperandsRange[i])
-		#print "\n\t ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)+" len(RequiredNumOperandsRange[CurrVar]): "+str(len(RequiredNumOperandsRange[i]))
+		print "\n\t ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)+" len(RequiredNumOperandsRange[CurrVar]): "+str(len(RequiredNumOperandsRange[i]))
 		
-	print "\n\t len(NumOperandsSet): "+str(len(NumOperandsSet))+" ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)				
-	print "\n\n"
+	print "\n\t len(NumOperandsSet): "+str(len(NumOperandsSet))+" ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)		
+	StreamConfigResults['NumOperandsSet']=NumOperandsSet
+	
+	MainOperationsSet={}
+	if(Operations['PermutationsFlag']['MainOperations']):
+		print "\n\t Will start permutating now for the sake of MainOperations "
+		CurrNumOperationsSet=[]
+		Temp=[]
+		CurrNumOperationsSet.append(Temp)
+		TempCurrNumOperationsSet=[]
+		for CurrNumOperations in range(1,MaxNumOperands):
+			for CurrOperationsSet in CurrNumOperationsSet:
+				for CurrOperations in Operations['MainOperations']:
+					Temp=[]
+					Temp=copy.deepcopy(CurrOperationsSet)
+					Temp.append(CurrOperations)
+					TempCurrNumOperationsSet.append(Temp)
+					#print "\n\t Temp: "+str(Temp)+" len(TempCurrNumOperationsSet): "+str(len(TempCurrNumOperationsSet))
+
+			CurrNumOperationsSet=copy.deepcopy(TempCurrNumOperationsSet)
+			TempCurrNumOperationsSet=[]
+			MainOperationsSet[CurrNumOperations]= CurrNumOperationsSet # CAUTION/WARNING: Assuming that the CurrNumOperations!=0 will access this dictionary, since that is an illegal case.
+			print "\n\t CurrNumOperations: "+str(CurrNumOperations)+" len(CurrNumOperationsSet): "+str(len(CurrNumOperationsSet))
+			
+	else:
+		print "\n\t Will NOT start permutating for the sake of MainOperations "			
+		MainOperationsSet['Default']=(Operations['MainOperations'])
+
+	#for CurrVar in range(NumVars):
+		
+		
+	print "\n\n "
 	return	StreamConfigResults	
 	
 	
@@ -169,15 +193,30 @@ def main():
         Dim0Size=2**(MbyteSize-8)
         HigherDimSize= MaxSize/ Dim0Size
 
+ 	NumVars=(Max['Vars']-Min['Vars']+1)
+ 	if(Max['Vars']==Min['Vars']):	
+ 		NumVars=(Min['Vars'])
+ 	NumVarsLessOne=NumVars-1
+ 	print "\n\t WARNING: NumVars is assumed to be equal, you have been warned!! "
+
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
 	Max['NumOperands']=[2,3,2,4]
-	Min['NumOperands']=[1,1,1,1]
+	Min['NumOperands']=[1,2,1,1] #Min: Should be >= 1 
 	Operations={}
 	Operations['MainOperations']=['+','-','*','/']
 
-	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
-	Max['NumIntraOperands']=[[2,1],[1,3],[1],[1]]
-	Min['NumIntraOperands']=[[1,1],[1,2],[1],[1]]
+	PermutationsFlag={}
+	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
+	
+	Operations['NumIntraOperandsNeeded']=[]
+	for CurrVar in range(NumVars):
+		CurrNumIntraOperandsNeeded=(Max['NumOperands'][CurrVar]-Min['NumOperands'][CurrVar]+1)
+		Operations['NumIntraOperandsNeeded'].append(CurrNumIntraOperandsNeeded)
+		
+		
+	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands(Max-Min)>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
+	Max['NumIntraOperands']=[[2,1],[1,3],[1],[1,2,2,1]]
+	Min['NumIntraOperands']=[[1,1],[1,2],[1],[1,1,1,1]] #Min: Should be >= 1 
 	Operations['IntraOperations']=Operations['MainOperations']
 	
 	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. 
@@ -187,6 +226,8 @@ def main():
 	Max['Constant']=10
 	Min['Constant']=2
 	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
+	
+	Operations['PermutationsFlag']=PermutationsFlag
 	
 	ScriptUniqueID=''
 	if(len(Alloc)==1):
@@ -216,29 +257,27 @@ def main():
 	#MasterSWStatsFile=MasterSWStatsPrefix+MasterSWStatsSuffix+'.txt'
 
 	
- 	NumVars=(Max['Vars']-Min['Vars']+1)
- 	if(Max['Vars']==Min['Vars']):	
- 		NumVars=(Min['Vars'])
- 	NumVarsLessOne=NumVars-1
- 	
+	
         LoopIterations=[]
         for CurrVar in range(NumVars):
         	Temp=[]
         	for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
         		CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
         		Temp.append(CurrNumLoops)
-        		print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
+        		#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
  		LoopIterations.append(Temp)
  	#sys.exit()
- 	OutputSet=[]
+ 	#OutputSet=[]
  	CurrVar=0
  	Prefix=[]
  	StartIdx=0
  	for i in range(NumVars):
  		Prefix.append(0)
- 	IterationsCombination(LoopIterations,StartIdx,CurrVar,NumVars,Prefix,OutputSet)
- 	for CurrSetIterations in OutputSet:
- 		print "\n\t CurrSetIterations: "+str(CurrSetIterations) 
+ 	OutputSet=IterationsCombination(LoopIterations,NumVars)
+
+ 	#for CurrSetIterations in OutputSet:
+ 	#	print "\n\t CurrSetIterations: "+str(CurrSetIterations) 
+
  	#sys.exit()
    	for CurrSetIterations in OutputSet:	
 	   	print "\n\t CurrSetIterations: "+str(CurrSetIterations)
@@ -345,11 +384,6 @@ def main():
 					CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
 					#print "\n\t CMDCompile: "+str(CMDCompileSRC)
 					commands.getoutput(CMDCompileSRC) """
-
-		#MasterSWStats.close()				
-					
-			
-	
 
 
 
