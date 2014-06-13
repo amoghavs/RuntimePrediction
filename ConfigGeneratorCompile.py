@@ -1,6 +1,14 @@
 
 import sys,subprocess,re,math,commands,time,copy
- 
+### WORKING ASSUMPTIONS:
+# NumVars is constant
+
+### ShortComing/Future-work: 
+# 1. stream, stride is not permutable; Hence similar stream and stride is used for all variable. 
+	# Current working solution: Split the "stride/stream" space amongst variable, instead of making each possible combination. 
+	# Might work for now, but for generalizing the tool, will need this flexibility. Might not take too long to incorporate this!
+# 2. <>
+
 def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
 	#print "\n\t StartStream: "+str(StartStream)+' and NumStrides: '+str(NumStrides)
 	if(CurrStream==(NumStreams)):
@@ -18,12 +26,10 @@ def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,C
 				#print "\n\t Result: "+Result		
 			
 		CurrStream-=1
-		return #(CurrStream,CurrPrefixPos)
+		return 
 
  	CurrPrefixPos=0
- 	#if(StartStream):
- 	#	StartStream-=1
- 	StartStream+=1 #CurrStream-1	
+  	StartStream+=1 
 	while(CurrPrefixPos!=(NumStrides-2)):
 		if(CurrPrefix==''):	
 			CurrString=CurrPrefix+str((2**CurrPrefixPos))	
@@ -33,13 +39,9 @@ def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,C
 		#print "\n\t $$ CurrStream: "+str(CurrStream)+" CurrPrefixPos: "+str(CurrPrefixPos)
 		RecursiveStrideGen(CurrStream+1,NumStreams,StartStream,NumStrides,CurrString,CurrString,CurrPrefixPos,ResultString)
 		CurrPrefixPos+=1
-		#StartStream+=1
-		#print "\n\t %% CurrStream: "+str(CurrStream)+" CurrPrefixPos: "+str(CurrPrefixPos)		
-		#return CurrStream
-		
+ 		
 	CurrStream-=1
-	#print "\n\t ^^ CurrPrefixPos: "+str(CurrPrefixPos)+' CurrStream: '+str(CurrStream)+" CurrString: "+str(CurrString)+" CurrPrefix: "+str(CurrPrefix)	
-	return #(CurrStream,CurrPrefixPos)	
+ 	return  	
 	
 def IterationsCombination(LoopIterations,NumVars):
 	OutputSet=[]
@@ -61,29 +63,6 @@ def IterationsCombination(LoopIterations,NumVars):
 				
 	return OutputSet;		
 
-"""
-
-	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
-	Max['NumOperands']=[2,2,1]
-	Min['NumOperands']=[1,1,1]
-	Operations={}
-	Operations['MainOperations']=['+','-','*','/']
-
-	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
-	Max['NumIntraOperands']=[[2,1],[1,3],[1]]
-	Min['NumIntraOperands']=[[1,1],[1,2],[1]]
-	Operations['IntraOperations']=Operations['MainOperations']
-	
-	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. 
-	Max['IntraOperandDelta']=[(+1;-2;0) , ( +2,+3,+4) , (0,0,0) ]
-	Min['IntraOperandDelta']=[ (0;-3;0) , ( +2,+3,+4) , (0,0,0) ]
-	
-	Max['Constant']=10
-	Min['Constant']=2
-	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
-
-
-"""
 			
 def PerStreamConfig(Max,Min,Operations):
 	print "\n\t In PerStreamConfig "
@@ -136,7 +115,6 @@ def PerStreamConfig(Max,Min,Operations):
 		
 	print "\n\t len(NumOperandsSet): "+str(len(NumOperandsSet))+" ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)		
 	StreamConfig['NumOperandsSet']=NumOperandsSet
-	
 	MainOperationsSet={}
 	if(Operations['PermutationsFlag']['MainOperations']):
 		print "\n\t Will start permutating now for the sake of MainOperations "
@@ -162,11 +140,12 @@ def PerStreamConfig(Max,Min,Operations):
 		print "\n\t Will NOT start permutating for the sake of MainOperations "			
 		MainOperationsSet['Default']=(Operations['MainOperations'])
 
+	StreamConfig['MainOperationsSet']=MainOperationsSet
 	NumIntraOperandsRange={}
 	MaxIntraNumOperands=0
 	for CurrVar in range(NumVars):
 		NumIntraOperandsRange[CurrVar]={}
-		print "\n\t CurrVar: "+str(CurrVar)
+		#print "\n\t CurrVar: "+str(CurrVar)
 		for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
 			MinVal=Min['NumIntraOperands'][CurrVar][CurrOperand]
 			MaxVal=Max['NumIntraOperands'][CurrVar][CurrOperand]
@@ -175,9 +154,11 @@ def PerStreamConfig(Max,Min,Operations):
 				MaxIntraNumOperands=MaxVal
 			for CurrVal in range(MinVal,MaxVal+1):
 				Temp.append(CurrVal)
-				#print "\n\t CurrVal: "+str(CurrVal)+" Temp: "+str(Temp)
+				print "\n\t CurrVal: "+str(CurrVal)+" Temp: "+str(Temp)
 			NumIntraOperandsRange[CurrVar][CurrOperand]=Temp
-		
+			print "\n\t CurrVar: "+str(CurrVar)+" CurrOperand "+str(CurrOperand)+" len(NumIntraOperandsRange[CurrVar][CurrOperand]): "+str(len(NumIntraOperandsRange[CurrVar][CurrOperand]))
+			print "\n\t NumIntraOperandsRange[CurrVar][CurrOperand]): "+str(NumIntraOperandsRange[CurrVar][CurrOperand])
+	#sys.exit()	
 	StreamConfig['NumIntraOperandsRange']=NumIntraOperandsRange
 
 	IntraOperationsSet={}
@@ -211,11 +192,11 @@ def PerStreamConfig(Max,Min,Operations):
 	ConstantsSet=[]
 	for i in range(Min['Constant'],Max['Constant']+1):	# WARNING: This feature is mostly foolish! 
 		ConstantsSet.append(i)
-		print "\n\t Constant: "+str(i)
+		#print "\n\t Constant: "+str(i)
+	StreamConfig['ConstantsSet']=ConstantsSet
 		
 	print "\n\n "
 	return	StreamConfig	
-	
 	
 	
 def main():
@@ -370,15 +351,66 @@ def main():
 				CurrPrefix=''
 				CurrPrefixPos=0
 				StartStream=-1 
-				ResultString=[]
-				RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString)
+				StrideSet=[]
+				RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,StrideSet)
 		
 				NumStreamString='#StreamDims '+str(NumStreams) # CAUTION: Should change this when NumVars > 1
 				StrideString=''
 				StrideName=''
-				print "\n\t This is the length of ResultString: "+str(len(ResultString))
+				print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
 				
-				sys.exit()	
+				# StreamConfig['NumOperandsSet'] 
+				# StreamConfig['MainOperationsSet']
+				# StreamConfig['NumIntraOperandsRange']
+				# StreamConfig['IntraOperationsSet']
+				# StreamConfig['ConstantsSet']
+				
+				
+				for CurrStrideSet in StrideSet:
+					ExtractStrideforStream=re.split(',',CurrStrideSet)
+					if ExtractStrideforStream:
+						for CurrStride in ExtractStrideforStream:
+							print "\n\t CurrStride: "+str(CurrStride)
+					else:
+						print "\n\t ERROR: Some error with extracting stride for the stream. "
+					for CurrNumOperands in (StreamConfig['NumOperandsSet']):
+						print "\n\t CurrNumOperands: "+str(CurrNumOperands) 
+						for CurrKey in (StreamConfig['MainOperationsSet']):
+							print "\n\t CurrKey: "+str(CurrKey)+" len(StreamConfig['MainOperationsSet'][CurrKey]): "+str(len(StreamConfig['MainOperationsSet'][CurrKey]))
+						for CurrVar in range(NumVars):
+								if(len(ExtractStrideforStream)==NumStreams):
+									for CurrNumStream in range(NumStreams):
+										StrideOperationsPrefix='#strideoperations_var'+str(CurrVar)+'_'+str(CurrNumStream)
+										StrideOperationsPrefix+=' <'+str(ExtractStrideforStream[CurrNumStream])+','+str(CurrNumOperands[CurrVar])
+										print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix) 
+								
+								else:
+									print "\n\t ERROR: NumStreams "+str(NumStreams)+" is not equal to len(ExtractStrideforStream): "+str(len(ExtractStrideforStream))
+									sys.exit()
+							
+							
+				#sys.exit()	
+							
+				
+				for CurrVar in range(NumVars):
+					for CurrKey in (StreamConfig['MainOperationsSet']):
+						print "\n\t CurrKey: "+str(CurrKey)+" len(StreamConfig['MainOperationsSet'][CurrKey]): "+str(len(StreamConfig['MainOperationsSet'][CurrKey]))
+						for CurrNumOperands in (StreamConfig['NumOperandsSet']):
+							print "\n\t CurrNumOperands: "+str(CurrNumOperands)
+							#+" CurrVar "+str(CurrVar)+" CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])
+							#+#" CurrNumIntraOperands: "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrNumOperands[CurrVar]-1])
+							
+					for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
+						print "\n\t CurrVar: "+str(CurrVar)+" CurrOperand "+str(CurrOperand)+" Operations['NumIntraOperandsNeeded'][CurrVar][CurrOperand]) "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])
+							
+				for key in StreamConfig['NumIntraOperandsRange']:
+					print "\n\t Key: "+str(key)
+					for Key1 in StreamConfig['NumIntraOperandsRange'][key]:
+						print "\n\t\t Key1: "+str(Key1)
+				#str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrNumOperands[CurrVar]])
+							
+					
+				sys.exit()
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
 					Strides=re.split(',',CurrStreamCombi)
