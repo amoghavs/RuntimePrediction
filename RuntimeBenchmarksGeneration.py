@@ -779,8 +779,14 @@ def main(argv):
 											CheckOperation=re.match('\s*[\+\-\*\/]',CurrOperation)
 											if CheckOperation:
 												ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(CurrOperation)
-												if debug:
-													print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
+												#if debug:
+												print "\n\t 1. stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
+											elif(CurrOperation=='0'):
+												ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(0)
+												#if debug:
+												print "\n\t 2. stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
+												
+												
 											else:
 												print "\n\t ERROR: Expected one of \"+-*/\" as operation. Use debug to locate source of the error"
 												print "\n\t CurrOperation "+str(CurrOperation)
