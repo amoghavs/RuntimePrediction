@@ -1,5 +1,6 @@
 
-import sys,subprocess,re,math,commands,time,copy
+import sys,subprocess,re,math,commands,time,copy,random
+
 ### WORKING ASSUMPTIONS:
 # NumVars is constant
 
@@ -194,7 +195,13 @@ def PerStreamConfig(Max,Min,Operations):
 		ConstantsSet.append(i)
 		#print "\n\t Constant: "+str(i)
 	StreamConfig['ConstantsSet']=ConstantsSet
+
+	StreamConfig['IntraOperandDelta']={}
+	StreamConfig['IntraOperandDelta']['Max']=Max['IntraOperandDelta']
+	StreamConfig['IntraOperandDelta']['Min']=Min['IntraOperandDelta']
 		
+	StreamConfig['CurrNumDims']=Max['Dims'] 
+	print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
 	print "\n\n "
 	return	StreamConfig	
 	
@@ -232,22 +239,26 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 				#print "\n\t CurrVar: "+str(CurrVar)+" CurrOperand "+str(CurrOperand)+" Operations['NumIntraOperandsNeeded'][CurrVar][CurrOperand]) "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])
 				StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]={}
 				for CurrIntraOperands in StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand]:
-					StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]['OpCombo']=[]
+					StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]={}
+					StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo']=[]
 					if(CurrIntraOperands>1):
 						IntraOpsKey=CurrIntraOperands-1
 						#print "\n\t\t CurrIntraOperands: "+str(CurrIntraOperands)+" will permute over a set of operations: "+str(len(StreamConfig['IntraOperationsSet'][IntraOpsKey]))+" LastSet: "+str(StreamConfig['IntraOperationsSet'][IntraOpsKey][(len(StreamConfig['IntraOperationsSet'][IntraOpsKey])-1)])
 						for CurrIntraOperationsSet in (StreamConfig['IntraOperationsSet'][IntraOpsKey]):
-							OpCombo='('+str(CurrIntraOperands)+','
+							OpCombo='('+str(CurrIntraOperands)+':'
 							for Idx,CurrIntraOperation in enumerate(CurrIntraOperationsSet):
-								OpCombo+=str(CurrIntraOperation)+','
+								if Idx:
+									OpCombo+=','+str(CurrIntraOperation)
+								else:
+									OpCombo+=str(CurrIntraOperation)
+							OpCombo+=':'
 							#print "\n\t OpCombo: "+str(OpCombo)
-							StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]['OpCombo'].append(OpCombo)
+							StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo'].append(OpCombo)
 					else:
-						OpCombo='('+str(CurrIntraOperands)+','
-						StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]['OpCombo'].append(OpCombo)
+						OpCombo='('+str(CurrIntraOperands)+':'
+						StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo'].append(OpCombo)
 						#print "\n\t OpCombo: "+str(OpCombo)#"""
 		
-
 	return StrideConfigPrep
 
 def PrepareStreamConfig(StreamConfigPreparation,CurrVar,CurrNumOperands,PrefixStream,StrideConfigPrep,StreamConfig,NumVars,Operations):
@@ -269,29 +280,36 @@ def PrepareStreamConfig(StreamConfigPreparation,CurrVar,CurrNumOperands,PrefixSt
 		CurrStream=PrefixStream
 		CurrStream+=','+str(CurrCombo)
 		print "\n\t CurrCombo: "+str(CurrCombo)+' CurrStream: '+str(CurrStream)+' PrefixStream: '+str(PrefixStream)
-		
-		"""for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
+		StreamSoFar=CurrStream
+		for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
 			#print "\n\t CurrVar: "+str(CurrVar)+" CurrOperand "+str(CurrOperand)+" Operations['NumIntraOperandsNeeded'][CurrVar][CurrOperand]) "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])
-			StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]={}
 			for CurrIntraOperands in StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand]:
-				StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]['OpCombo']=[]
-				if(CurrIntraOperands>1):
-					IntraOpsKey=CurrIntraOperands-1
-					#print "\n\t\t CurrIntraOperands: "+str(CurrIntraOperands)+" will permute over a set of operations: "+str(len(StreamConfig['IntraOperationsSet'][IntraOpsKey]))+" LastSet: "+str(StreamConfig['IntraOperationsSet'][IntraOpsKey][(len(StreamConfig['IntraOperationsSet'][IntraOpsKey])-1)])
-					for CurrIntraOperationsSet in (StreamConfig['IntraOperationsSet'][IntraOpsKey]):
-						OpCombo='('+str(CurrIntraOperands)+','
-						for Idx,CurrIntraOperation in enumerate(CurrIntraOperationsSet):
-							OpCombo+=str(CurrIntraOperation)+','
-						#print "\n\t OpCombo: "+str(OpCombo)
-						StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]['OpCombo'].append(OpCombo)
-				else:
-					OpCombo='('+str(CurrIntraOperands)+','
-					StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]['OpCombo'].append(OpCombo)
-					#print "\n\t OpCombo: "+str(OpCombo)#"""
+				
+				for CurrOpCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo']):
+					for Idx in range(CurrIntraOperands):
+						if(Idx):
+							CurrOpCombo+=','
+							#print"\n\t Idx: "+str(Idx)+" CurrOpCombo: "+str(CurrOpCombo)
+							
+						PickDelta=random.randrange(StreamConfig['CurrNumDims'])
+						Duh=int(StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
+						PickIdx=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickDelta],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
+						if(random.randrange(2)==0):
+							PickIdx=str(Operations['DimLookup'][PickDelta])+'-'+str(PickIdx)
+						else:
+							PickIdx=str(Operations['DimLookup'][PickDelta])+'+'+str(PickIdx)
+						CurrOpCombo+=str(PickIdx)
+						
+					CurrOpCombo+=')'
+					Stream=str(StreamSoFar)+','+str(CurrOpCombo)
+					print "\n\t CurrOpCombo: "+str(CurrOpCombo)+' CurrStream: '+str(Stream)
+					
+			
+			print "\n\t NumIntraOperands: "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])+" Operations['NumIntraOperandsNeeded'][CurrVar]: "+str(Operations['NumIntraOperandsNeeded'][CurrVar])
 	
 	#" ""
 	print "\n\t Boo-Yeah!! "
-	#sys.exit()
+	sys.exit()
 	return StreamConfigPreparation
 
 	
@@ -326,8 +344,8 @@ def main():
  	print "\n\t WARNING: NumVars is assumed to be equal, you have been warned!! "
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
-	Max['NumOperands']=[2,3,1,4]
-	Min['NumOperands']=[1,2,1,1] #Min: Should be >= 1 
+	Max['NumOperands']=[3,2,1,4]
+	Min['NumOperands']=[2,1,1,1] #Min: Should be >= 1 
 	Operations={}
 	Operations['MainOperations']=['+','-','*','/']
 
@@ -345,11 +363,11 @@ def main():
 	Max['NumIntraOperands']=[[3,1],[1,3],[1],[1,2,2,4]]
 	Min['NumIntraOperands']=[[1,1],[1,2],[1],[1,1,1,1]] #Min: Should be >= 1 
 	Operations['IntraOperations']=['+','-','*','/']
-
+	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
-	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. 
-	Max['IntraOperandDelta']=[(+1,-2,0) , ( +2,+3,+4) , (0,0,0) , (0,0,0) ]
-	Min['IntraOperandDelta']=[ (0,-3,0) , ( +2,+3,+4) , (0,0,0) , (0,0,0) ]
+	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
+	Max['IntraOperandDelta']=[(+1,+6,1) , ( +2,+3,+4) , (0,0,0) , (0,0,0) ]
+	Min['IntraOperandDelta']=[ (0,+2,0) , ( +2,+3,+4) , (0,0,0) , (0,0,0) ]
 	
 	Max['Constant']=10
 	Min['Constant']=2
