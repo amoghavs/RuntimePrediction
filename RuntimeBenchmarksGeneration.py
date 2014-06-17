@@ -765,36 +765,57 @@ def main(argv):
 								ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']=int(RemoveWhiteSpace(ExprnBreakdown[0]))
 								ConfigParams['StrideinStream'][CurrVar][CurrStream]=ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']
 								ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']=int(RemoveWhiteSpace(ExprnBreakdown[1]))
-								NumOperands=len(ExprnBreakdown)-3
-								if(ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']!=NumOperands):
+								NumOperands=ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']
+								OperationsIdx=2
+								OperandsIdx=3
+								if(0): #ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']!=NumOperands):
 									print "\n\t ERROR: Expected "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands'])+" number of operands and have only "+str(NumOperands)+" operands provided!"
 									print "\n\t CurrExprn: "+str(ExprnBreakdown)
 									sys.exit()
 								else:
-									ExprnOperations=re.split(',',ExprnBreakdown[2])
+									ExprnOperations=re.split(',',ExprnBreakdown[OperationsIdx])
 									if ExprnOperations:
 										ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']=[]
-										for CurrOperation in ExprnOperations:
-											CurrOperation=RemoveBraces(CurrOperation)
-											CheckOperation=re.match('\s*[\+\-\*\/]',CurrOperation)
-											if CheckOperation:
-												ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(CurrOperation)
-												#if debug:
-												print "\n\t 1. stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
-											elif(CurrOperation=='0'):
-												ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(0)
-												#if debug:
-												print "\n\t 2. stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
+										print "\n\t Number of operations "+str(len(ExprnOperations))
+										if( len(ExprnOperations)!=(NumOperands-1) ):
+											print "\n\t ERROR: Expected "+str(NumOperands-1)+" operations, but could find only "+str(len(ExprnOperations))
+											sys.exit()
+										else:
+										
+											for CurrOperation in ExprnOperations:
+												CurrOperation=RemoveBraces(CurrOperation)
+												CheckOperation=re.match('\s*[\+\-\*\/]',CurrOperation)
+												if CheckOperation:
+													ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(CurrOperation)
+													if debug:
+														print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
+												elif(CurrOperation=='0'):
+													ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'].append(0)
+													if debug:
+														print "\n\t stream "+str(CurrStream)+" and variable "+str(CurrVar)+" CurrOperation "+str(CurrOperation)
 												
 												
-											else:
-												print "\n\t ERROR: Expected one of \"+-*/\" as operation. Use debug to locate source of the error"
-												print "\n\t CurrOperation "+str(CurrOperation)
-												sys.exit()
+												else:
+													print "\n\t ERROR: Expected one of \"+-*/\" as operation. Use debug to locate source of the error"
+													print "\n\t CurrOperation "+str(CurrOperation)
+													sys.exit()
 									else:
 										print "\n\t ERROR: Unable to extract operations b/n operands  of stream "+str(CurrStream)+" and variable "+str(CurrVar)
 									ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands']={}
-									for i in range(NumOperands):
+									OperandsSet=RemoveBraces(ExprnBreakdown[OperandsIdx])
+									OperandsBreakdown=re.split(',',OperandsSet)
+									if OperandsBreakdown:
+										FoundNumOperands=len(OperandsBreakdown)
+										if(FoundNumOperands!=NumOperands):
+											print "\n\t ERROR: Was expecting "+str(NumOperands)+" number of operands, but obtained "+str(FoundNumOperands)+" operands "
+											sys.exit()
+										else:
+											for i in range(NumOperands):
+												ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]= (OperandsBreakdown[i])
+												if debug:
+													print "\n\t i: "+str(i)+" Operands: "+str(OperandsBreakdown[i])
+												
+									"""for i in range(NumOperands):
 										ConfigParams['StrideVar'][CurrVar][CurrStream]['Operands'][i]={}
 										BracesRemoved=RemoveBraces(ExprnBreakdown[i+3])
 										CurrOperand=re.split(':',BracesRemoved)
@@ -837,7 +858,7 @@ def main(argv):
 												print "\n\t Error in extracting operations for operand: "+str(CurrOperand)+" of stream "+str(CurrStream)+" and variable "+str(CurrVar)
 									StrideExtracted[CurrVar]+=1 #CAUTION: Risking the assumption that all other safety check in place to directly update the extracted count by 1.
 									if debug:
-										print "\n\t -*- CurrVar "+str(CurrVar)+" StrideExtracted: "+str(StrideExtracted[CurrVar])+" -- "
+										print "\n\t -*- CurrVar "+str(CurrVar)+" StrideExtracted: "+str(StrideExtracted[CurrVar])+" -- " """
 												
 											
 								
@@ -942,6 +963,7 @@ def main(argv):
 		
 	if(AllStridesAvailable==ConfigParams['Dims']):
 		StrideForAllVarsNotFound=0
+	sys.exit()
 	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0)):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
