@@ -367,7 +367,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     if debug:
     	for CurrDim in range(len(FinalStreamIndexChange)):
     		print "\n\t CurrDim: "+str(CurrDim)+" FinalStreamIndexChange "+str(FinalStreamIndexChange[CurrDim])
-    sys.exit()		
+    #sys.exit()		
 #########
 
     BoundForDim=[]
@@ -424,7 +424,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 
 	####    		
     	
-    	 
+    #sys.exit()	 
     ThisLoop.append(CurrAccumVarDecl)		   	
     if debug:
     	print "\n\t IndexDecl: "+str(IndexDecl)+' Bounds: '+str(BoundForDim[0])
@@ -474,7 +474,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     for k in range(NumDims):
 		TabSpace+='\t'
 
-
+    
 ###########
 
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
@@ -484,10 +484,11 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			LHSVariableCurrStream+='['+str(LHSIndicesPerStream[CurrStream][CurrDim])+']'
 		#print "\n\t CurrStream: "+str(CurrStream)+" Var: "+str(LHSVariableCurrStream)
 		#print "\n\t RHSExprnPerOperand: "+str(RHSExprnPerStream[CurrStream])
-		StreamExprn=LHSVariableCurrStream+'='+str(RHSExprnPerStream[CurrStream])+';'
+		StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
 		if debug:
 			print "\n\t StreamExprn: "+str(StreamExprn)
 		ThisLoop.append(StreamExprn)
+    
     
     for k in range(NumDims+1): # NumDims+1 since we are looping over the loops! 
     	TabSpace='\t'
@@ -503,6 +504,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     ThisLoop.append('return Sum;')
     ThisLoop.append('}')
     ThisLoop.append(PopCode)
+
     return ThisLoop
 
 def WriteArray(Array,File):
