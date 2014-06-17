@@ -165,30 +165,17 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	
     eqn=''
     BoundsChangePerStream={}
-    RHSExprnPerOperand={}
+    RHSExprnPerStream={}
     ShouldDeclareVars=[]
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
 	    LHSindices=''
 	    RHSindices=''
 	    indices=''
-	    
-	    """for j in range(NumDims):
-		if(j==StrideDim):
-			#RHSindices+='['+str(ConfigParams['IndirVar'][VarNum][CurrStream])+'['+str(ConfigParams['indices'][j])+'] ]'
-			#RHSindices+='['+str(ConfigParams['indices'][j])+']'	
-			RHSindices+='['+str(StrideIndex[CurrStream])+']'
-		else:
-			#LHSindices+='['+str(ConfigParams['indices'][j])+']'
-			RHSindices+='['+str(ConfigParams['indices'][j])+']'
-
-		
-		#print "\n\t LHS: "+str(LHSindices)+" RHS: "+str(RHSindices)
-		"""
-	    #for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-	    StreamVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)
+ 
+ 	    StreamVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)
 	
-	    RHSExprnPerOperand[CurrStream]=[]
+	    RHSExprnPerStream[CurrStream]=[]
 	    IndexChangeForBound=[]
     	    RHSOperandsForStream=[]
 
@@ -196,11 +183,14 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	CurrOperands=ConfigParams['StrideVar'][VarNum][CurrStream]['Operands']
 	    		        
 	    	#IntraOperations=ConfigParams['StrideVar'][VarNum][CurrStream]['Operations']
-	    	IndexChangeforBoundforOperand=[]
+	    	#IndexChangeforBoundforOperand=[]
+	    	
 	    	if debug:
 	    		print "\n\t CurrVar: "+str(VarNum)+" CurrOperand: "+str(CurrOperandIdx)#+" which needs "+str(IntraOperands[CurrOperand]['NumOperands'])+" operands which have operations "+str(IntraOperands[CurrOperand]['Operations'])
+
 	    	#NumOperations=len(IntraOperands[CurrOperand]['Operations'])
 	    	#if(IntraOperands[CurrOperand]['NumOperands']==1):
+
 		CurrOperandExprn=str(CurrOperands[CurrOperandIdx])	
 		print "\n\t CurrOperand: "+str(CurrOperandExprn)  	
 ## ***********
@@ -270,6 +260,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		    				AppendIndexChange=BreakIndexChange.group(1)+str(BreakIndexChange.group(2))	
 		    				IndexChangeBreakdown['Sign']=BreakIndexChange.group(1)
 		    				IndexChangeBreakdown['Delta']=BreakIndexChange.group(2)
+		    				print "\n\t -- Sign: "+str(IndexChangeBreakdown['Sign'])+" Delta "+str(IndexChangeBreakdown['Delta'])
 		    			else:
 		    				print "\n\t ERROR: Unable to decode index change. Likely that the index change term was not of the form \"+-number\". Use debug to locate the source of error" 
 		    				sys.exit()
@@ -285,7 +276,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    				ThusOperand=str(StreamVar)+str(OperandIndices)
 	    				if(AppendIndexChange==''):
 	    					AppendIndexChange=0
-	    				IndexChangeforBoundforOperand.append((StreamDim,IndexChangeBreakdown))
+
+	    				IndexChangeForBound.append((StreamDim,IndexChangeBreakdown))
 	    				RHSOperandsForStream.append(ThusOperand)
 	    				if debug:
 	    					print "\n\t Hence the indices should be "+str(ThusOperand)+" push-indices: "+str(PushIndexChange)+" AppendIndexChange "+str(AppendIndexChange)
@@ -295,128 +287,21 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    iIter=0
 	    RHSExprn=''	    	
 	    for ThisOperand in range(len(RHSOperandsForStream)-1):
-		RHSExprn+=RHSOperandsForStream[ThisOperand]+' '+str(ConfigParams['StrideVar'][VarNum][CurrStream]['ExprnOperations'][iIter]) #str(IntraOperands[CurrOperand]['Operations'][iIter])
+		RHSExprn+=' '+RHSOperandsForStream[ThisOperand]+' '+str(ConfigParams['StrideVar'][VarNum][CurrStream]['ExprnOperations'][iIter]) #str(IntraOperands[CurrOperand]['Operations'][iIter])
 		if debug:
 			print "\n\t Operand "+str(RHSOperandsForStream[ThisOperand]) #+" Operation: "+str(IntraOperands[CurrOperand]['Operations'][iIter])
 			print "\n\t -- RHSExprn: "+str(RHSExprn)
 		iIter+=1
 	    if(len(RHSOperandsForStream)):
 		RHSExprn+=' '+str(RHSOperandsForStream[len(RHSOperandsForStream)-1])
-	    RHSExprnPerOperand[CurrStream].append(RHSExprn)
+	    #RHSExprnPerStream[CurrStream].append(RHSExprn)
+	    RHSExprnPerStream[CurrStream]=(RHSExprn)
 	    if debug:
 		print "\n\t RHSExprn: "+str(RHSExprn)
 		
-	    IndexChangeForBound.append(IndexChangeforBoundforOperand)		    	
-	    	
 ## *********	    	
-	    	
-	    """for CurrIntraOperand in (IntraOperands[CurrOperand]['Operands']):
-	    		# CAUTION/LIMITATION: In present shape only a constant number is accepted, systematic way of generating other constants should be accepted, it'd help if they are parameterized/not-case-specific.
-	    		if(CurrIntraOperand[0]=='='):
-	    			#if debug:
-	    			RHSExprn='Const_Var'+str(VarNum)+'_Stream'+str(CurrStream)
-	    			ExtractNumber=re.match('\s*\=(.*)',CurrIntraOperand)
-	    			if debug:
-	    				print "\n\t CurrIntraOperand: "+str(CurrIntraOperand)
-	    			if ExtractNumber:
-	    				NumberCheck=re.match('\s*(\d+)*\.(\d+)*',ExtractNumber.group(1))
-	    				if NumberCheck:
-	    					DeclareVar='double '+str(RHSExprn)+str(CurrIntraOperand)+';'
-	    				else:
-	    					IntCheck=re.match('\s*(\d+)*',ExtractNumber.group(1))
-	    					if IntCheck:
-	    						DeclareVar='long int '+str(RHSExprn)+str(CurrIntraOperand)+';'
-	    					else:
-	    						print "\n\t ERROR: Const-var does not have number! Use debug to locate the error! \n"
-	    						sys.exit()
-	    			else:
-	    				print "\n\t ERROR: Const var does not have equal symbol! Use debug to locate the error! \n "
-	    				sys.exit()
-
-	    			if debug:
-	    				print "\n\t ConstVar should be inserted!! "+str(CurrIntraOperand)+" RHSExprn: "+str(RHSExprn)
-
-	    			LHSIntraOperandsForOperand.append(RHSExprn)
-	    			ShouldDeclareVars.append(DeclareVar)
-	    		else:
-	    			if debug:
-	    				print "\n\t Operand: "+str(CurrIntraOperand)
-	    			BreakdownFromIdx=re.match('\s*([ijkl])(.*)',CurrIntraOperand)
-	    			StreamDim=-1
-	    			if BreakdownFromIdx:
-	    				#print "\n\t Requesting indices "+str(BreakdownFromIdx.group(1))+" extra "+str(BreakdownFromIdx.group(2)) 
-	    				IndexChange=RemoveWhiteSpace(BreakdownFromIdx.group(2))
-	    				if(BreakdownFromIdx.group(1)=='i'):
-	    						StreamDim=NumDims-1
-	    				elif(BreakdownFromIdx.group(1)=='j'):
-	    					if(ConfigParams['Dims']>1):
-	    						StreamDim=NumDims-2
-	    					else:
-	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-1), where as #dimensions are "+str(ConfigParams['Dims'])
-	    						sys.exit()
-	    				elif(BreakdownFromIdx.group(1)=='k'):
-	    					if(ConfigParams['Dims']>2):
-	    						StreamDim=NumDims-3
-	    					else:
-	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-2), where as #dimensions are "+str(ConfigParams['Dims'])
-	    						sys.exit()	    						
-	    				elif(BreakdownFromIdx.group(1)=='l'):
-	    					if(ConfigParams['Dims']>3):
-	    						StreamDims=NumDims-4
-	    					else:
-	    						print "\n\t ERROR: Requesting to manipulate (InnerMost_loop-3), where as #dimensions are "+str(ConfigParams['Dims'])
-	    						sys.exit()	
-
-					if debug:
-						print "\n\t Need to manipulate (InnerMost_loop- "+str(NumDims-StreamDim+1)+") and IndexChange: "+str(IndexChange)
-	    				AppendIndexChange=''
-	    				IndexChangeBreakdown={}
-	    				if(IndexChange):
-		    				BreakIndexChange=re.match('\s*([\+\-])\s*(\d+)*',IndexChange)
-		    				if BreakIndexChange:
-		    					AppendIndexChange=BreakIndexChange.group(1)+str(BreakIndexChange.group(2))	
-		    					IndexChangeBreakdown['Sign']=BreakIndexChange.group(1)
-		    					IndexChangeBreakdown['Delta']=BreakIndexChange.group(2)
-		    				else:
-		    					print "\n\t ERROR: Unable to decode index change. Likely that the index change term was not of the form \"+-number\". Use debug to locate the source of error" 
-		    					sys.exit()
-
-
-    					OperandIndices=''
-	    				for i in range(NumDims):
-	    					if(i==StreamDim):
-	    						PushIndexChange=str(ConfigParams['indices'][i])+str(AppendIndexChange)	
-	    						OperandIndices+='['+str(PushIndexChange)+']'	
-	    					else:
-	    						OperandIndices+='['+str(ConfigParams['indices'][i])+']'
-	    				ThusOperand=str(StreamVar)+str(OperandIndices)
-	    				if(AppendIndexChange==''):
-	    					AppendIndexChange=0
-	    				IndexChangeforBoundforOperand.append((StreamDim,IndexChangeBreakdown))
-	    				LHSIntraOperandsForOperand.append(ThusOperand)
-	    				if debug:
-	    					print "\n\t Hence the indices should be "+str(ThusOperand)+" push-indices: "+str(PushIndexChange)+" AppendIndexChange "+str(AppendIndexChange)
-	    			else:
-	    				print "\n\t ERROR: Operand requested is neither of 'ijkl'. Use debug for tracking the location of error "
-	    				sys.exit()     						
-		    	iIter=0
-			RHSExprn=''	    	
-			for ThisOperand in range(len(LHSIntraOperandsForOperand)-1):
-				RHSExprn+=LHSIntraOperandsForOperand[ThisOperand]+str(IntraOperands[CurrOperand]['Operations'][iIter])
-				if debug:
-					print "\n\t Operand "+str(LHSIntraOperandsForOperand[ThisOperand])+" Operation: "+str(IntraOperands[CurrOperand]['Operations'][iIter])
-					print "\n\t -- RHSExprn: "+str(RHSExprn)
-				iIter+=1
-			if(len(LHSIntraOperandsForOperand)):
-				RHSExprn+=LHSIntraOperandsForOperand[len(LHSIntraOperandsForOperand)-1]
-	    	RHSExprnPerOperand[CurrStream].append(RHSExprn)
-	    	if debug:
-				print "\n\t RHSExprn: "+str(RHSExprn)
-		
-	    	IndexChangeForBound.append(IndexChangeforBoundforOperand)	"""			
-	    		#print "\n\t 
-	    sys.exit()
-
+	    
+	    #sys.exit()	
 	    CurrStreamIndexChangeConsolidation={}
 	    CurrStreamIndexChangeFinal={}
 	    for CurrDim in range(NumDims):
@@ -424,24 +309,27 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			CurrStreamIndexChangeFinal[CurrDim]={}
 
 	    for CurrOperand in (IndexChangeForBound):
-	    	#print "\n\t CurrOperand: "+str(CurrOperand)
-	    	for CurrIndexChange in (CurrOperand):
-	    		CurrStreamIndexChangeConsolidation[CurrIndexChange[0]].append(CurrIndexChange[1])
-
+	    	print "\n\t CurrOperand: "+str(CurrOperand)
+    		CurrStreamIndexChangeConsolidation[CurrOperand[0]].append(CurrOperand[1])
+		
 	    for CurrDim in range(NumDims):
 	    	CurrStreamIndexChangeFinal[CurrDim]['Init']=0
 	    	CurrStreamIndexChangeFinal[CurrDim]['Final']=0
 	    	for CurrIndexChange in (CurrStreamIndexChangeConsolidation[CurrDim]):
-	    		#print "\n\t Dim: "+str(CurrDim)+" IndexChange: "+str(CurrIndexChange) 
+	    		if debug:
+	    			print "\n\t Dim: "+str(CurrDim)+" IndexChange: "+str(CurrIndexChange)#+" IndexChangeFinal: "+str(CurrStreamIndexChangeFinal[CurrDim]) 
 	    		if(CurrIndexChange):
 				if(CurrIndexChange['Sign']=='-'):
 					if( CurrStreamIndexChangeFinal[CurrDim]['Init'] < CurrIndexChange['Delta'] ):
 						CurrStreamIndexChangeFinal[CurrDim]['Init']=CurrIndexChange['Delta']
-					elif(CurrIndexChange['Sign']=='+'):
-						if( CurrStreamIndexChangeFinal[CurrDim]['Final'] < CurrIndexChange['Delta'] ):
-							CurrStreamIndexChangeFinal[CurrDim]['Final']=CurrIndexChange['Delta']
+						#print "\n\t CurrStreamIndexChangeFinal[CurrDim]['Init']: "+str(CurrStreamIndexChangeFinal[CurrDim]['Init'])
+				elif(CurrIndexChange['Sign']=='+'):
+					if( CurrStreamIndexChangeFinal[CurrDim]['Final'] < CurrIndexChange['Delta'] ):
+						CurrStreamIndexChangeFinal[CurrDim]['Final']=CurrIndexChange['Delta']
+							#print "\n\t CurrStreamIndexChangeFinal[CurrDim]['Final']: "+str(CurrStreamIndexChangeFinal[CurrDim]['Final'])
 	    
 	    BoundsChangePerStream[CurrStream]=CurrStreamIndexChangeFinal
+	    
 	    #eqn="\t"+TabSpace+str(StreamVar)+RHSindices+' = '+AccumVar[CurrStream]+' + '+str(StreamVar)+RHSindices+';'
  	    #eqn="\t"+TabSpace+AccumVar[CurrStream]+'+='+str(StreamVar)+RHSindices+';'
 	    #print "\n\t eqn: "+str(eqn)
@@ -449,6 +337,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	
 	    if debug:
 	    	print "\n So, the equation is: "+str(eqn)	
+
 
     FinalStreamIndexChange={} 	    
     if(ConfigParams['NumStreaminVar'][VarNum]>1):
@@ -467,21 +356,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    			print "\n\t Dim: "+str(CurrDim)+" IndexChange "+str(BoundsChangePerStream[CurrStream][CurrDim])+" FinalStreamIndexChange[CurrDim] "+str(FinalStreamIndexChange[CurrDim])
     else:
     	FinalStreamIndexChange=BoundsChangePerStream[ConfigParams['NumStreaminVar'][VarNum]-1] #['Init'] #CAUTION: "ConfigParams['NumStreaminVar'][VarNum]=1, hence accessing CurrStream=0 here.
-    RHSExprnPerStream={}	
-    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-    	CurrStreamRHSExprn=''
-    	for i in range(len(RHSExprnPerOperand[CurrStream])-1):	    
-    		CurrStreamRHSExprn+='('+str(RHSExprnPerOperand[CurrStream][i])+')'+ConfigParams['StrideVar'][VarNum][CurrStream]['ExprnOperations'][i]
-    		if debug:
-    			print "\n\t CurrStream: "+str(CurrStream)+" RHSExprn: "+str(RHSExprnPerOperand[CurrStream][i])+" CurrStreamRHSExprn: "+str(CurrStreamRHSExprn)
-    	
-    	RHSExprnPerStream[CurrStream]=CurrStreamRHSExprn+'('+str(RHSExprnPerOperand[CurrStream][len(RHSExprnPerOperand[CurrStream])-1])+')'
-    	if debug:
-    		print "\n\t CurrStream: "+str(CurrStream)+" RHSExprnPerStream: "+str(RHSExprnPerStream[CurrStream])
-    	for CurrDim in range(NumDims):
-    		if debug:
-    			print "\n\t -- Dim: "+str(CurrDim)+" IndexChange "+str(BoundsChangePerStream[CurrStream][CurrDim])
     
+    for CurrStream in RHSExprnPerStream:
+    	print "\n\t CurrStream: "+str(CurrStream)+" RHS: "+str(RHSExprnPerStream[CurrStream])
+    	
     for CurrDeclareVar in (ShouldDeclareVars):
         if debug:
         	print "\n\t ShouldDeclareVars: "+str(CurrDeclareVar)+" --"	    	    
@@ -489,6 +367,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     if debug:
     	for CurrDim in range(len(FinalStreamIndexChange)):
     		print "\n\t CurrDim: "+str(CurrDim)+" FinalStreamIndexChange "+str(FinalStreamIndexChange[CurrDim])
+    sys.exit()		
 #########
 
     BoundForDim=[]
