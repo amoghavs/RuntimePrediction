@@ -8,6 +8,7 @@ import sys,subprocess,re,math,commands,time,copy,random
 # 1. stream, stride is not permutable; Hence similar stream and stride is used for all variable. 
 	# Current working solution: Split the "stride/stream" space amongst variable, instead of making each possible combination. 
 	# Might work for now, but for generalizing the tool, will need this flexibility. Might not take too long to incorporate this!
+	# Even the intraoperanddelta generated is common across all streams.
 # 2. <>
 
 def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
@@ -248,7 +249,7 @@ def main():
         #SpatWindow=[8,16,32];
         LoopIterationBase=10;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
-        LoopIterationsExponent=[[1,1.2],[1],[1],[1]];
+        LoopIterationsExponent=[[1],[1],[1],[1]];
         MbyteSize=20 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         Dim0Size=2**(MbyteSize-8)
@@ -261,26 +262,6 @@ def main():
  	print "\n\t WARNING: NumVars is assumed to be equal, you have been warned!! "
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
-	"""Max['NumOperands']=[4,2,1,4]
-	Min['NumOperands']=[3,1,1,1] #Min: Should be >= 1 
-	Operations={}
-	Operations['MainOperations']=['+','-','*','/']
-
-	PermutationsFlag={}
-	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
-	PermutationsFlag['IntraOperations']= 1
-	
-	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
-	
-	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
-	Max['IntraOperandDelta']=[(+1,+6,1) , ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
-	Min['IntraOperandDelta']=[ (0,+2,0) , ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
-	
-	Max['Constant']=10
-	Min['Constant']=2
-	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
- 	#Operations['Operand']	
-	Operations['PermutationsFlag']=PermutationsFlag """
 
 	Max['NumOperands']=[4,2,1,4]
 	Min['NumOperands']=[3,1,1,1] #Min: Should be >= 1 
@@ -406,7 +387,9 @@ def main():
 				# StreamConfig['IntraOperationsSet']
 				# StreamConfig['ConstantsSet']
 				
-				StreamConfigPreparation={}
+				StreamConfigCollection={}
+				#CurrStrideStringSet=[]
+				CurrNumOperandsAccumCountSet=[]
 				for CurrStrideSet in StrideSet:
 					
 					ExtractStrideforStream=re.split(',',CurrStrideSet)
@@ -417,41 +400,102 @@ def main():
 								CurrStrideString+='_'+str(CurrStride)
 							else:
 								CurrStrideString+=(CurrStride)
-						print "\n\t CurrStrideString: "+str(CurrStrideString)
-						StreamConfigPreparation[CurrStrideString]={}
+						print "\n\t DCurrStrideString: "+str(CurrStrideString)
+						StreamConfigCollection[CurrStrideString]={}
 					else:
 						print "\n\t ERROR: Some error with extracting stride for the stream. "
+
+					CurrNumOperandsAccumCount=0
+					AccumCount=0
 					for CurrNumOperands in (StreamConfig['NumOperandsSet']):
-						print "\n\t CurrNumOperands: "+str(CurrNumOperands) 
+						
+						CurrNumOperandsString=''
+						for i in CurrNumOperands:
+							CurrNumOperandsString+=str(i)	
+						
+						print "\n\t CurrNumOperands: "+str(CurrNumOperands) +' CurrNumOperandsString: '+str(CurrNumOperandsString)+' AccumCount: '+str(AccumCount)+' CurrNumOperandsAccumCount: '+str(CurrNumOperandsAccumCount)
+						AccumCount=1
+							
 						#for CurrKey in (StreamConfig['MainOperationsSet']):
 						#	print "\n\t CurrKey: "+str(CurrKey)+" len(StreamConfig['MainOperationsSet'][CurrKey]): "+str(len(StreamConfig['MainOperationsSet'][CurrKey]))
+						if( not(CurrNumOperandsString in StreamConfigCollection[CurrStrideString]) ):
+							StreamConfigCollection[CurrStrideString][CurrNumOperandsString]={}
+							
 						for CurrVar in range(NumVars):
+								VarAccumCount=0
+								
 								if(len(ExtractStrideforStream)==NumStreams):
+									
+## $$$$$$$$$$$$$$$
+									if( not( CurrVar in StreamConfigCollection[CurrStrideString][CurrNumOperandsString] ) ):
+										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar]=[]
+									
+									OpComboSet=[]
+									for CurrCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']):
+
+										CurrOpCombo=str(CurrCombo)+'('
+										for Idx in range((CurrNumOperands[CurrVar])):
+											if(Idx):
+												CurrOpCombo+=','
+											PickDelta=random.randrange(StreamConfig['CurrNumDims'])
+											Duh=int(StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
+											PickIdx=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickDelta],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
+											if(random.randrange(2)==0):
+												PickIdx=str(Operations['DimLookup'][PickDelta])+'-'+str(PickIdx)
+											else:
+												PickIdx=str(Operations['DimLookup'][PickDelta])+'+'+str(PickIdx)	
+											CurrOpCombo+=str(PickIdx)
+										CurrOpCombo+=')'
+										OpComboSet.append(CurrOpCombo)
+## $$$$$$$$$$$$$$$$$							
+	
+									StrideOperationsPrefix=[]
 									for CurrNumStream in range(NumStreams):
-										StrideOperationsPrefix='#strideoperations_var'+str(CurrVar)+'_'+str(CurrNumStream)
-										StrideOperationsPrefix+=' <'+str(ExtractStrideforStream[CurrNumStream])+','+str(CurrNumOperands[CurrVar])
+										Temp='#strideoperations_var'+str(CurrVar)+'_'+str(CurrNumStream)
+										Temp+=' <'+str(ExtractStrideforStream[CurrNumStream])+','+str(CurrNumOperands[CurrVar])
+										StrideOperationsPrefix.append(Temp)
+										#print "\n\t -- StrideOperationsPrefix: "+str(Temp)+' CurrNumStream: '+str(CurrNumStream)
+									
+									print "\n\t len(OpComboSet): "+str(len(OpComboSet))	
+									for CurrOpCombo in OpComboSet:
+										Temp=[]
+										VarAccumCount+=1
+										#print "\n\t CurrOpCombo: "+str(CurrOpCombo)+' AccumCount: '+str(AccumCount)
+										for CurrNumStream in range(NumStreams):	
+											Temp1=str(StrideOperationsPrefix[CurrNumStream])+','+str(CurrOpCombo)+'>'
+											Temp.append(Temp1)
+										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar].append(Temp)	
 										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
-										PrepareStreamConfig(StreamConfigPreparation[CurrStrideString],CurrNumStream,CurrVar,CurrNumOperands,StrideOperationsPrefix,StrideConfigPrep,StreamConfig,NumVars,Operations)
+										
+									AccumCount*=(VarAccumCount)	
 								
 								else:
 									print "\n\t ERROR: NumStreams "+str(NumStreams)+" is not equal to len(ExtractStrideforStream): "+str(len(ExtractStrideforStream))
 									sys.exit()
-					CombisAccumulate=0		
+					
+					#for CurrNumOperands in (StreamConfig['NumOperandsSet']):					
+						CurrNumOperandsAccumCount+=AccumCount
+						print "\n\t DuhCurrNumOperands: "+str(CurrNumOperands)
+					CurrNumOperandsAccumCountSet.append(CurrNumOperandsAccumCount)
+				for i in CurrNumOperandsAccumCountSet:
+					print "\n\t DuhCurrNumOperandsAccumCount: "+str(i)+' len(StrideSet): '+str(len(StrideSet))+' NumStreams: '+str(NumStreams)
+				
+					"""CombisAccumulate=0		
 					Combis=1	
 					print "\n\t -- 	CurrStrideString: "+str(CurrStrideString)
 					for CurrNumOperandsStringKey in (StreamConfigPreparation[CurrStrideString]):
 						CombisAccumulate+=Combis
 						Combis=1
 						for CurrVarKey in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey]:
-							#print "\n\t -- "
 							Len=(len(StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey][0]))
 							Combis*=Len
-							#for CurrNumStream in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey]:
-							#	Len+=(len(StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey][CurrNumStream]))
-								#print "\n\t TNumOperands: "+str(CurrNumOperandsStringKey)+" CurrVarKey: "+str(CurrVarKey)+" CurrNumStream: "+str(CurrNumStream)+' Len of Permutations '+str(len(StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey][CurrNumStream]))+' Combis: '+str(Combis)
+							
+							for i in range(Len):
+								for CurrNumStream in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey]: """
+									
 								
 				#sys.exit()
-					print "\n\t CombisAccumulate: "+str(CombisAccumulate)
+					#print "\n\t CombisAccumulate: "+str(CombisAccumulate)
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
 					Strides=re.split(',',CurrStreamCombi)
