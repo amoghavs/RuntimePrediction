@@ -189,13 +189,13 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 
 def PrepareStreamConfig(StreamConfigPreparation,CurrNumStream,CurrVar,CurrNumOperands,PrefixStream,StrideConfigPrep,StreamConfig,NumVars,Operations):
 
-	print "\n\t CurrVar: "+str(CurrVar)+" CurrNumOperands: "+str(CurrNumOperands)+" CurrNumStream: "+str(CurrNumStream)+" -- \n"
+	#print "\n\t CurrVar: "+str(CurrVar)+" CurrNumOperands: "+str(CurrNumOperands)+" CurrNumStream: "+str(CurrNumStream)+" -- \n"
 	#sys.exit()
 	#for CurrNumOperands in (StreamConfig['NumOperandsSet']):
 	CurrNumOperandsString=''
 	for i in (CurrNumOperands):
 		CurrNumOperandsString+=str(i)
-	print "\n\t CurrNumOperands: "+str(CurrNumOperands)+" string: "+str(CurrNumOperandsString)	
+	#print "\n\t CurrNumOperands: "+str(CurrNumOperands)+" string: "+str(CurrNumOperandsString)	
 	
 	#for CurrVar in range(NumVars):
 		#+" Should use the key for MainOperationSet: "+str(CurrNumOperands[CurrVar]-1)
@@ -248,7 +248,7 @@ def main():
         #SpatWindow=[8,16,32];
         LoopIterationBase=10;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
-        LoopIterationsExponent=[[1],[1],[1],[1]];
+        LoopIterationsExponent=[[1,1.2],[1],[1],[1]];
         MbyteSize=20 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         Dim0Size=2**(MbyteSize-8)
@@ -261,6 +261,27 @@ def main():
  	print "\n\t WARNING: NumVars is assumed to be equal, you have been warned!! "
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
+	"""Max['NumOperands']=[4,2,1,4]
+	Min['NumOperands']=[3,1,1,1] #Min: Should be >= 1 
+	Operations={}
+	Operations['MainOperations']=['+','-','*','/']
+
+	PermutationsFlag={}
+	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
+	PermutationsFlag['IntraOperations']= 1
+	
+	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
+	
+	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
+	Max['IntraOperandDelta']=[(+1,+6,1) , ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
+	Min['IntraOperandDelta']=[ (0,+2,0) , ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
+	
+	Max['Constant']=10
+	Min['Constant']=2
+	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
+ 	#Operations['Operand']	
+	Operations['PermutationsFlag']=PermutationsFlag """
+
 	Max['NumOperands']=[4,2,1,4]
 	Min['NumOperands']=[3,1,1,1] #Min: Should be >= 1 
 	Operations={}
@@ -280,7 +301,8 @@ def main():
 	Min['Constant']=2
 	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
  	#Operations['Operand']	
-	Operations['PermutationsFlag']=PermutationsFlag
+	Operations['PermutationsFlag']=PermutationsFlag 
+
 	
 	ScriptUniqueID=''
 	if(len(Alloc)==1):
@@ -395,7 +417,7 @@ def main():
 								CurrStrideString+='_'+str(CurrStride)
 							else:
 								CurrStrideString+=(CurrStride)
-							print "\n\t CurrStride: "+str(CurrStride)+" CurrStrideString: "+str(CurrStrideString)
+						print "\n\t CurrStrideString: "+str(CurrStrideString)
 						StreamConfigPreparation[CurrStrideString]={}
 					else:
 						print "\n\t ERROR: Some error with extracting stride for the stream. "
@@ -408,19 +430,28 @@ def main():
 									for CurrNumStream in range(NumStreams):
 										StrideOperationsPrefix='#strideoperations_var'+str(CurrVar)+'_'+str(CurrNumStream)
 										StrideOperationsPrefix+=' <'+str(ExtractStrideforStream[CurrNumStream])+','+str(CurrNumOperands[CurrVar])
-										print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
+										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
 										PrepareStreamConfig(StreamConfigPreparation[CurrStrideString],CurrNumStream,CurrVar,CurrNumOperands,StrideOperationsPrefix,StrideConfigPrep,StreamConfig,NumVars,Operations)
 								
 								else:
 									print "\n\t ERROR: NumStreams "+str(NumStreams)+" is not equal to len(ExtractStrideforStream): "+str(len(ExtractStrideforStream))
 									sys.exit()
+					CombisAccumulate=0		
+					Combis=1	
+					print "\n\t -- 	CurrStrideString: "+str(CurrStrideString)
 					for CurrNumOperandsStringKey in (StreamConfigPreparation[CurrStrideString]):
+						CombisAccumulate+=Combis
+						Combis=1
 						for CurrVarKey in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey]:
-							print "\n\t -- "
-							for CurrNumStream in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey]:
-								print "\n\t NumOperands: "+str(CurrNumOperandsStringKey)+" CurrVarKey: "+str(CurrVarKey)+" CurrNumStream: "+str(CurrNumStream)
-								#StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrNumStream]
+							#print "\n\t -- "
+							Len=(len(StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey][0]))
+							Combis*=Len
+							#for CurrNumStream in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey]:
+							#	Len+=(len(StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey][CurrNumStream]))
+								#print "\n\t TNumOperands: "+str(CurrNumOperandsStringKey)+" CurrVarKey: "+str(CurrVarKey)+" CurrNumStream: "+str(CurrNumStream)+' Len of Permutations '+str(len(StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey][CurrNumStream]))+' Combis: '+str(Combis)
+								
 				#sys.exit()
+					print "\n\t CombisAccumulate: "+str(CombisAccumulate)
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
 					Strides=re.split(',',CurrStreamCombi)
