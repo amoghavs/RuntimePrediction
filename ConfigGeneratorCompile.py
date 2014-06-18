@@ -154,69 +154,6 @@ def PerStreamConfig(Max,Min,Operations):
 	print "\n "
 	return	StreamConfig	
 
-	"""
-	NumIntraOperandsRange={}
-	MaxIntraNumOperands=0
-	for CurrVar in range(NumVars):
-		NumIntraOperandsRange[CurrVar]={}
-		#print "\n\t CurrVar: "+str(CurrVar)
-		for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
-			MinVal=Min['NumIntraOperands'][CurrVar][CurrOperand]
-			MaxVal=Max['NumIntraOperands'][CurrVar][CurrOperand]
-			Temp=[]
-			if(MaxVal > MaxIntraNumOperands):
-				MaxIntraNumOperands=MaxVal
-			for CurrVal in range(MinVal,MaxVal+1):
-				Temp.append(CurrVal)
-				print "\n\t CurrVal: "+str(CurrVal)+" Temp: "+str(Temp)
-			NumIntraOperandsRange[CurrVar][CurrOperand]=Temp
-			print "\n\t CurrVar: "+str(CurrVar)+" CurrOperand "+str(CurrOperand)+" len(NumIntraOperandsRange[CurrVar][CurrOperand]): "+str(len(NumIntraOperandsRange[CurrVar][CurrOperand]))
-			print "\n\t NumIntraOperandsRange[CurrVar][CurrOperand]): "+str(NumIntraOperandsRange[CurrVar][CurrOperand])
-	#sys.exit()	
-	StreamConfig['NumIntraOperandsRange']=NumIntraOperandsRange
-
-	IntraOperationsSet={}
-	if(Operations['PermutationsFlag']['IntraOperations']):
-		print "\n\t Will start permutating now for the sake of MainOperations "
-		CurrIntraNumOperationsSet=[]
-		Temp=[]
-		CurrIntraNumOperationsSet.append(Temp)
-		TempCurrIntraNumOperationsSet=[]
-		
-		for CurrNumOperations in range(1,MaxIntraNumOperands): # CAUTION: Where 
-			for CurrIntraOperationsSet in CurrIntraNumOperationsSet:
-				for CurrIntraOperations in Operations['IntraOperations']:
-					Temp=[]
-					Temp=copy.deepcopy(CurrIntraOperationsSet)
-					Temp.append(CurrIntraOperations)
-					TempCurrIntraNumOperationsSet.append(Temp)
-					#print "\n\t Temp: "+str(Temp)+" len(TempCurrNumOperationsSet): "+str(len(TempCurrIntraNumOperationsSet))
-
-			CurrIntraNumOperationsSet=copy.deepcopy(TempCurrIntraNumOperationsSet)
-			TempCurrIntraNumOperationsSet=[]
-			IntraOperationsSet[CurrNumOperations]= CurrIntraNumOperationsSet # CAUTION/WARNING: Assuming that the CurrNumOperations!=0 will access this dictionary, since that is an illegal case.
-			print "\n\t CurrNumOperations: "+str(CurrNumOperations)+" len(CurrNumOperationsSet): "+str(len(CurrIntraNumOperationsSet))
-		print "\n\t MaxIntraNumOperands: "+str(MaxIntraNumOperands)
-	else:
-		print "\n\t Will NOT start permutating for the sake of MainOperations "			
-		IntraOperationsSet['Default']=(Operations['MainOperations'])
-
-	StreamConfig['IntraOperationsSet']=IntraOperationsSet
-	
-	ConstantsSet=[]
-	for i in range(Min['Constant'],Max['Constant']+1):	# WARNING: This feature is mostly foolish! 
-		ConstantsSet.append(i)
-		#print "\n\t Constant: "+str(i)
-	StreamConfig['ConstantsSet']=ConstantsSet
-
-	StreamConfig['IntraOperandDelta']={}
-	StreamConfig['IntraOperandDelta']['Max']=Max['IntraOperandDelta']
-	StreamConfig['IntraOperandDelta']['Min']=Min['IntraOperandDelta']
-		
-	StreamConfig['CurrNumDims']=Max['Dims'] 
-	print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
-	print "\n\n "
-	return	StreamConfig	"""
 	
 def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 
@@ -225,7 +162,7 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 		CurrNumOperandsString=''
 		for i in (CurrNumOperands):
 			CurrNumOperandsString+=str(i)
-		print "\n\t CurrNumOperands: "+str(CurrNumOperands)+" string: "+str(CurrNumOperandsString)	
+		#print "\n\t CurrNumOperands: "+str(CurrNumOperands)+" string: "+str(CurrNumOperandsString)	
 		StrideConfigPrep[CurrNumOperandsString]={}
 		for CurrVar in range(NumVars):
 			#+" Should use the key for MainOperationSet: "+str(CurrNumOperands[CurrVar]-1)
@@ -247,36 +184,12 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 			else:
 				#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
 				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(0)
-			
-			"""for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
-				#print "\n\t CurrVar: "+str(CurrVar)+" CurrOperand "+str(CurrOperand)+" Operations['NumIntraOperandsNeeded'][CurrVar][CurrOperand]) "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])
-				StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand]={}
-				for CurrIntraOperands in StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand]:
-					StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]={}
-					StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo']=[]
-					if(CurrIntraOperands>1):
-						IntraOpsKey=CurrIntraOperands-1
-						#print "\n\t\t CurrIntraOperands: "+str(CurrIntraOperands)+" will permute over a set of operations: "+str(len(StreamConfig['IntraOperationsSet'][IntraOpsKey]))+" LastSet: "+str(StreamConfig['IntraOperationsSet'][IntraOpsKey][(len(StreamConfig['IntraOperationsSet'][IntraOpsKey])-1)])
-						for CurrIntraOperationsSet in (StreamConfig['IntraOperationsSet'][IntraOpsKey]):
-							OpCombo='('+str(CurrIntraOperands)+':'
-							for Idx,CurrIntraOperation in enumerate(CurrIntraOperationsSet):
-								if Idx:
-									OpCombo+=','+str(CurrIntraOperation)
-								else:
-									OpCombo+=str(CurrIntraOperation)
-							OpCombo+=':'
-							#print "\n\t OpCombo: "+str(OpCombo)
-							StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo'].append(OpCombo)
-					else:
-						OpCombo='('+str(CurrIntraOperands)+':'
-						StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo'].append(OpCombo)
-						#print "\n\t OpCombo: "+str(OpCombo)#"""
-		
+					
 	return StrideConfigPrep
 
-def PrepareStreamConfig(StreamConfigPreparation,CurrVar,CurrNumOperands,PrefixStream,StrideConfigPrep,StreamConfig,NumVars,Operations):
+def PrepareStreamConfig(StreamConfigPreparation,CurrNumStream,CurrVar,CurrNumOperands,PrefixStream,StrideConfigPrep,StreamConfig,NumVars,Operations):
 
-	print "\n\t CurrVar: "+str(CurrVar)+" CurrNumOperands: "+str(CurrNumOperands)+" -- \n"
+	print "\n\t CurrVar: "+str(CurrVar)+" CurrNumOperands: "+str(CurrNumOperands)+" CurrNumStream: "+str(CurrNumStream)+" -- \n"
 	#sys.exit()
 	#for CurrNumOperands in (StreamConfig['NumOperandsSet']):
 	CurrNumOperandsString=''
@@ -286,51 +199,33 @@ def PrepareStreamConfig(StreamConfigPreparation,CurrVar,CurrNumOperands,PrefixSt
 	
 	#for CurrVar in range(NumVars):
 		#+" Should use the key for MainOperationSet: "+str(CurrNumOperands[CurrVar]-1)
-	StreamConfigPreparation[CurrNumOperandsString]={}
-	StreamConfigPreparation[CurrNumOperandsString][CurrVar]={}
+	if(not(CurrNumOperandsString in StreamConfigPreparation)):
+		StreamConfigPreparation[CurrNumOperandsString]={}
+	if(not(CurrVar in StreamConfigPreparation[CurrNumOperandsString])):
+		StreamConfigPreparation[CurrNumOperandsString][CurrVar]={}
+	StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrNumStream]=[]
 	print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])
 	for CurrCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']):
 		CurrStream=PrefixStream
 		CurrStream+=','+str(CurrCombo)
-		print "\n\t CurrCombo: "+str(CurrCombo)+' CurrStream: '+str(CurrStream)+' PrefixStream: '+str(PrefixStream)
 		
-		"""for CurrOperand in range(Operations['NumIntraOperandsNeeded'][CurrVar]):
-			#print "\n\t CurrVar: "+str(CurrVar)+" CurrOperand "+str(CurrOperand)+" Operations['NumIntraOperandsNeeded'][CurrVar][CurrOperand]) "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])
-			print "\n\t CurrVar: "+str(CurrVar)+" CurrOperandCheckOut: "+str(CurrOperand)+" StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand] "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])+" --Duh-- "+str(Operations['NumIntraOperandsNeeded'][CurrVar])
-			#StreamSoFar=CurrStream
-			StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrOperand]={}
-			for CurrIntraOperands in StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand]:
-				print "\n\t --CurrIntraOperands-- : "+str(CurrIntraOperands)
-				StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]=[]
-				for CurrOpCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]['OpCombo']):
-					for Idx in range(CurrIntraOperands):
-						if(Idx):
-							CurrOpCombo+=','
-							#print"\n\t Idx: "+str(Idx)+" CurrOpCombo: "+str(CurrOpCombo)
-							
-						PickDelta=random.randrange(StreamConfig['CurrNumDims'])
-						Duh=int(StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
-						PickIdx=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickDelta],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
-						if(random.randrange(2)==0):
-							PickIdx=str(Operations['DimLookup'][PickDelta])+'-'+str(PickIdx)
-						else:
-							PickIdx=str(Operations['DimLookup'][PickDelta])+'+'+str(PickIdx)
-						CurrOpCombo+=str(PickIdx)
-						
-					CurrOpCombo+=')'
-					StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands].append(CurrOpCombo)
-					#StreamSoFar+=','+str(CurrOpCombo)
-					#print "\n\t CurrOpCombo: "+str(CurrOpCombo)#+' StramConfigPrep... '+str(Stream)
-			for CurrIntraOperands in StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand]:
-				print "\n\t CurrIntraOperands: "+str(CurrIntraOperands)
-				for CurrIntraOperandCombo in (StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrOperand][CurrIntraOperands]):
-					print "\n\t CurrIntraOperandCombo: "+str(CurrIntraOperandCombo)
-			
-			print "\n\t NumIntraOperands: "+str(StreamConfig['NumIntraOperandsRange'][CurrVar][CurrOperand])+" Operations['NumIntraOperandsNeeded'][CurrVar]: "+str(Operations['NumIntraOperandsNeeded'][CurrVar])"""
-	
-	#" ""
-	print "\n\t Boo-Yeah!! "
-	#sys.exit()
+		CurrOpCombo='('
+		for Idx in range((CurrNumOperands[CurrVar])):
+			if(Idx):
+				CurrOpCombo+=','
+			PickDelta=random.randrange(StreamConfig['CurrNumDims'])
+			Duh=int(StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
+			PickIdx=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickDelta],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
+			if(random.randrange(2)==0):
+				PickIdx=str(Operations['DimLookup'][PickDelta])+'-'+str(PickIdx)
+			else:
+				PickIdx=str(Operations['DimLookup'][PickDelta])+'+'+str(PickIdx)	
+			CurrOpCombo+=str(PickIdx)
+		CurrOpCombo+=')'
+		CurrStream+=','+str(CurrOpCombo)+'>'
+		StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrNumStream].append(CurrStream)
+		#print "\n\t CurrCombo: "+str(CurrCombo)+' CurrStream: '+str(CurrStream)+' PrefixStream: '+str(PrefixStream)+' CurrOpCombo: '+str(CurrOpCombo)
+
 	return StreamConfigPreparation
 
 	
@@ -343,8 +238,8 @@ def main():
         Min['Vars']=4
         Max['Dims']=3
         Min['Dims']=3
-        Max['NumStream']=4
-        Min['NumStream']=1
+        Max['NumStream']=2
+        Min['NumStream']=2
         Max['Stride']=3 # ie., 2^4
         Min['Stride']=0 # ie., 2^0=1
         Alloc=['d']    
@@ -352,7 +247,8 @@ def main():
         DS='d'
         #SpatWindow=[8,16,32];
         LoopIterationBase=10;
-        LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
+        #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
+        LoopIterationsExponent=[[1],[1],[1],[1]];
         MbyteSize=20 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         Dim0Size=2**(MbyteSize-8)
@@ -365,8 +261,8 @@ def main():
  	print "\n\t WARNING: NumVars is assumed to be equal, you have been warned!! "
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
-	Max['NumOperands']=[3,2,1,4]
-	Min['NumOperands']=[2,1,1,1] #Min: Should be >= 1 
+	Max['NumOperands']=[4,2,1,4]
+	Min['NumOperands']=[3,1,1,1] #Min: Should be >= 1 
 	Operations={}
 	Operations['MainOperations']=['+','-','*','/']
 
@@ -374,15 +270,6 @@ def main():
 	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
 	PermutationsFlag['IntraOperations']= 1
 	
-	"""Operations['NumIntraOperandsNeeded']=[]
-	for CurrVar in range(NumVars):
-		CurrNumIntraOperandsNeeded=(Max['NumOperands'][CurrVar]-Min['NumOperands'][CurrVar]+1)
-		Operations['NumIntraOperandsNeeded'].append(CurrNumIntraOperandsNeeded)
-		
-	# Max/Min['NumIntraOperands']= [ [<Variable-Num-Operands(Max-Min)>] * <#Vars> ] ; Ensure Max is less than or equal to Min. 
-	Max['NumIntraOperands']=[[3,1],[1,3],[1],[1,2,2,4]]
-	Min['NumIntraOperands']=[[2,1],[1,2],[1],[1,1,1,1]] #Min: Should be >= 1 
-	Operations['IntraOperations']=['+','-','*','/']"""
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
 	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
@@ -508,7 +395,7 @@ def main():
 								CurrStrideString+='_'+str(CurrStride)
 							else:
 								CurrStrideString+=(CurrStride)
-							print "\n\t CurrStride: "+str(CurrStride)
+							print "\n\t CurrStride: "+str(CurrStride)+" CurrStrideString: "+str(CurrStrideString)
 						StreamConfigPreparation[CurrStrideString]={}
 					else:
 						print "\n\t ERROR: Some error with extracting stride for the stream. "
@@ -521,13 +408,19 @@ def main():
 									for CurrNumStream in range(NumStreams):
 										StrideOperationsPrefix='#strideoperations_var'+str(CurrVar)+'_'+str(CurrNumStream)
 										StrideOperationsPrefix+=' <'+str(ExtractStrideforStream[CurrNumStream])+','+str(CurrNumOperands[CurrVar])
-										print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix) 
-										PrepareStreamConfig(StreamConfigPreparation[CurrStrideString],CurrVar,CurrNumOperands,StrideOperationsPrefix,StrideConfigPrep,StreamConfig,NumVars,Operations)
+										print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
+										PrepareStreamConfig(StreamConfigPreparation[CurrStrideString],CurrNumStream,CurrVar,CurrNumOperands,StrideOperationsPrefix,StrideConfigPrep,StreamConfig,NumVars,Operations)
 								
 								else:
 									print "\n\t ERROR: NumStreams "+str(NumStreams)+" is not equal to len(ExtractStrideforStream): "+str(len(ExtractStrideforStream))
 									sys.exit()
-						sys.exit()
+					for CurrNumOperandsStringKey in (StreamConfigPreparation[CurrStrideString]):
+						for CurrVarKey in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey]:
+							print "\n\t -- "
+							for CurrNumStream in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey]:
+								print "\n\t NumOperands: "+str(CurrNumOperandsStringKey)+" CurrVarKey: "+str(CurrVarKey)+" CurrNumStream: "+str(CurrNumStream)
+								#StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrNumStream]
+				#sys.exit()
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
 					Strides=re.split(',',CurrStreamCombi)
