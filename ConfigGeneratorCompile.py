@@ -188,48 +188,6 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 					
 	return StrideConfigPrep
 
-def PrepareStreamConfig(StreamConfigPreparation,CurrNumStream,CurrVar,CurrNumOperands,PrefixStream,StrideConfigPrep,StreamConfig,NumVars,Operations):
-
-	#print "\n\t CurrVar: "+str(CurrVar)+" CurrNumOperands: "+str(CurrNumOperands)+" CurrNumStream: "+str(CurrNumStream)+" -- \n"
-	#sys.exit()
-	#for CurrNumOperands in (StreamConfig['NumOperandsSet']):
-	CurrNumOperandsString=''
-	for i in (CurrNumOperands):
-		CurrNumOperandsString+=str(i)
-	#print "\n\t CurrNumOperands: "+str(CurrNumOperands)+" string: "+str(CurrNumOperandsString)	
-	
-	#for CurrVar in range(NumVars):
-		#+" Should use the key for MainOperationSet: "+str(CurrNumOperands[CurrVar]-1)
-	if(not(CurrNumOperandsString in StreamConfigPreparation)):
-		StreamConfigPreparation[CurrNumOperandsString]={}
-	if(not(CurrVar in StreamConfigPreparation[CurrNumOperandsString])):
-		StreamConfigPreparation[CurrNumOperandsString][CurrVar]={}
-	StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrNumStream]=[]
-	print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])
-	for CurrCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']):
-		CurrStream=PrefixStream
-		CurrStream+=','+str(CurrCombo)
-		
-		CurrOpCombo='('
-		for Idx in range((CurrNumOperands[CurrVar])):
-			if(Idx):
-				CurrOpCombo+=','
-			PickDelta=random.randrange(StreamConfig['CurrNumDims'])
-			Duh=int(StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
-			PickIdx=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickDelta],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
-			if(random.randrange(2)==0):
-				PickIdx=str(Operations['DimLookup'][PickDelta])+'-'+str(PickIdx)
-			else:
-				PickIdx=str(Operations['DimLookup'][PickDelta])+'+'+str(PickIdx)	
-			CurrOpCombo+=str(PickIdx)
-		CurrOpCombo+=')'
-		CurrStream+=','+str(CurrOpCombo)+'>'
-		StreamConfigPreparation[CurrNumOperandsString][CurrVar][CurrNumStream].append(CurrStream)
-		#print "\n\t CurrCombo: "+str(CurrCombo)+' CurrStream: '+str(CurrStream)+' PrefixStream: '+str(PrefixStream)+' CurrOpCombo: '+str(CurrOpCombo)
-
-	return StreamConfigPreparation
-
-	
 ########		
 def main():
 
@@ -380,16 +338,10 @@ def main():
 				StrideString=''
 				StrideName=''
 				print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
-				
-				# StreamConfig['NumOperandsSet'] 
-				# StreamConfig['MainOperationsSet']
-				# StreamConfig['NumIntraOperandsRange']
-				# StreamConfig['IntraOperationsSet']
-				# StreamConfig['ConstantsSet']
-				
+
 				StreamConfigCollection={}
-				#CurrStrideStringSet=[]
-				CurrNumOperandsAccumCountSet=[]
+				CurrStrideStringSet=[]
+
 				for CurrStrideSet in StrideSet:
 					
 					ExtractStrideforStream=re.split(',',CurrStrideSet)
@@ -401,20 +353,18 @@ def main():
 							else:
 								CurrStrideString+=(CurrStride)
 						print "\n\t DCurrStrideString: "+str(CurrStrideString)
+						CurrStrideStringSet.append(CurrStrideString)
 						StreamConfigCollection[CurrStrideString]={}
 					else:
 						print "\n\t ERROR: Some error with extracting stride for the stream. "
 
-					CurrNumOperandsAccumCount=0
-					AccumCount=0
 					for CurrNumOperands in (StreamConfig['NumOperandsSet']):
 						
 						CurrNumOperandsString=''
 						for i in CurrNumOperands:
 							CurrNumOperandsString+=str(i)	
 						
-						print "\n\t CurrNumOperands: "+str(CurrNumOperands) +' CurrNumOperandsString: '+str(CurrNumOperandsString)+' AccumCount: '+str(AccumCount)+' CurrNumOperandsAccumCount: '+str(CurrNumOperandsAccumCount)
-						AccumCount=1
+						#print "\n\t CurrNumOperands: "+str(CurrNumOperands) +' CurrNumOperandsString: '+str(CurrNumOperandsString)
 							
 						#for CurrKey in (StreamConfig['MainOperationsSet']):
 						#	print "\n\t CurrKey: "+str(CurrKey)+" len(StreamConfig['MainOperationsSet'][CurrKey]): "+str(len(StreamConfig['MainOperationsSet'][CurrKey]))
@@ -422,10 +372,8 @@ def main():
 							StreamConfigCollection[CurrStrideString][CurrNumOperandsString]={}
 							
 						for CurrVar in range(NumVars):
-								VarAccumCount=0
 								
 								if(len(ExtractStrideforStream)==NumStreams):
-									
 ## $$$$$$$$$$$$$$$
 									if( not( CurrVar in StreamConfigCollection[CurrStrideString][CurrNumOperandsString] ) ):
 										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar]=[]
@@ -456,46 +404,50 @@ def main():
 										StrideOperationsPrefix.append(Temp)
 										#print "\n\t -- StrideOperationsPrefix: "+str(Temp)+' CurrNumStream: '+str(CurrNumStream)
 									
-									print "\n\t len(OpComboSet): "+str(len(OpComboSet))	
+									#print "\n\t len(OpComboSet): "+str(len(OpComboSet))	
 									for CurrOpCombo in OpComboSet:
 										Temp=[]
-										VarAccumCount+=1
+										
 										#print "\n\t CurrOpCombo: "+str(CurrOpCombo)+' AccumCount: '+str(AccumCount)
 										for CurrNumStream in range(NumStreams):	
 											Temp1=str(StrideOperationsPrefix[CurrNumStream])+','+str(CurrOpCombo)+'>'
 											Temp.append(Temp1)
 										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar].append(Temp)	
 										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
-										
-									AccumCount*=(VarAccumCount)	
 								
 								else:
 									print "\n\t ERROR: NumStreams "+str(NumStreams)+" is not equal to len(ExtractStrideforStream): "+str(len(ExtractStrideforStream))
-									sys.exit()
-					
-					#for CurrNumOperands in (StreamConfig['NumOperandsSet']):					
-						CurrNumOperandsAccumCount+=AccumCount
-						print "\n\t DuhCurrNumOperands: "+str(CurrNumOperands)
-					CurrNumOperandsAccumCountSet.append(CurrNumOperandsAccumCount)
-				for i in CurrNumOperandsAccumCountSet:
-					print "\n\t DuhCurrNumOperandsAccumCount: "+str(i)+' len(StrideSet): '+str(len(StrideSet))+' NumStreams: '+str(NumStreams)
 				
-					"""CombisAccumulate=0		
-					Combis=1	
+									sys.exit()
+				CombinedStreamConfig={}
+				for CurrStrideString in (CurrStrideStringSet):
+					CombinedStreamConfig[CurrStrideString]={}
 					print "\n\t -- 	CurrStrideString: "+str(CurrStrideString)
-					for CurrNumOperandsStringKey in (StreamConfigPreparation[CurrStrideString]):
-						CombisAccumulate+=Combis
-						Combis=1
-						for CurrVarKey in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey]:
-							Len=(len(StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey][0]))
-							Combis*=Len
-							
-							for i in range(Len):
-								for CurrNumStream in StreamConfigPreparation[CurrStrideString][CurrNumOperandsStringKey][CurrVarKey]: """
-									
+					for CurrNumOperandsStringKey in (StreamConfigCollection[CurrStrideString]):
+						Temp=[]
+						CombiAccumulation=[]
+						CombiAccumulation.append(Temp)
+						AccumulationCount=0;
+						for CurrVar in range(NumVars):
+							TempCombiAccumulation=[]
+							for CurrCombi in (CombiAccumulation):
+								print "\n\t CurrCombi: "+str(CurrCombi)
+								for CurrVarCombiSet in (StreamConfigCollection[CurrStrideString][CurrNumOperandsStringKey][CurrVar]):
+									Temp=[]
+									Temp=copy.deepcopy(CurrCombi)
+									AccumulationCount+=1
+									for CurrVarCombi in (CurrVarCombiSet):
+										Temp.append(CurrVarCombi)
+									#print "\n\t Temp: "+str(Temp)	
+									print "\n\t ---------"
+									for i in (Temp):
+										print "\n\t "+str(i)
+									TempCombiAccumulation.append(Temp)
 								
-				#sys.exit()
-					#print "\n\t CombisAccumulate: "+str(CombisAccumulate)
+							CombiAccumulation=copy.deepcopy(TempCombiAccumulation)
+						print "\n\t AccumulationCount: "+str(AccumulationCount)+' * (Num-NumOperands) '+str(len(StreamConfigCollection[CurrStrideString]))+' * '+str(len(CurrStrideStringSet))
+						sys.exit()									
+
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
 					Strides=re.split(',',CurrStreamCombi)
