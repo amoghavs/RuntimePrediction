@@ -145,7 +145,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     ThisLoop.append(FuncDecl)
     ThisLoop.append('{')
     ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
-    ThisLoop.append('long int AnotherIndex=0;')
+    #ThisLoop.append('long int AnotherIndex=0;')
     NumDims=ConfigParams['Dims']
     LHSindices=''
     RHSindices=''
