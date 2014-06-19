@@ -406,7 +406,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				else:
 					index=str('StreamIndex'+str(i))
 					IndicesForStream.append(index)
-					bounds= '( (' + str(ConfigParams['size'][VarNum]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+')'      	
+					bounds= '( (' + str(ConfigParams['size'][CurrDim]) +' * '+ str(ConfigParams['maxstride'][VarNum] )+' ) - '  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+')'      	
 					#print "\n\t CurrStream: "+str(i)+" bounds: "+str(bounds)
 				   	#BoundForDim.append(str(bounds))
 					CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['GlobalVar']['Stream'][VarNum][i])
@@ -766,8 +766,22 @@ def main(argv):
 									ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']=[]
 									print "\n\t Number of operations "+str(len(ExprnOperations))
 									if( len(ExprnOperations)!=(NumOperands-1) ):
-										print "\n\t ERROR: Expected "+str(NumOperands-1)+" operations, but could find only "+str(len(ExprnOperations))
-										sys.exit()
+										if(len(ExprnOperations)>1):
+											print "\n\t ERROR: Expected "+str(NumOperands-1)+" operations, but could find only "+str(len(ExprnOperations))
+											#print "\n\t ExprnOperations: "+str(ExprnOperations)
+											sys.exit()
+										else:
+											CheckEmpty=re.match('^\s*$',(ExprnOperations[0]) )
+											if(CheckEmpty):
+												if debug:
+													print "\n\t Found a one operand RHS "
+											else:
+												print "\n\t ERROR: Expected "+str(NumOperands-1)+" operations, but could find only "+str(len(ExprnOperations))
+												#print "\n\t ExprnOperations: "+str(ExprnOperations)
+												sys.exit()
+												
+											
+											
 									else:
 									
 										for CurrOperation in ExprnOperations:
@@ -804,6 +818,7 @@ def main(argv):
 											if debug:
 												print "\n\t i: "+str(i)+" Operands: "+str(OperandsBreakdown[i])
 								
+								StrideExtracted[CurrVar]+=1
 							else:
 								print "\n\t Not able to extract the expression for var: "+str(CurrVar)+" and stream "+str(CurrStream)
 								sys.exit()	
@@ -897,14 +912,19 @@ def main(argv):
 	
 	#Tabs: 1
 	AllStridesAvailable=0
+	print "\n\t StrideExtracted "+str(StrideExtracted)
+	
 	for CurrVar in range(len(StrideExtracted)):
 		if debug:
 			print "\n\t Var: "+str(CurrVar)+" expected stream expression for "+str(ConfigParams['NumStreaminVar'][CurrVar])+" and have extracted "+str(StrideExtracted[CurrVar])	
 		if(ConfigParams['NumStreaminVar'][CurrVar] == StrideExtracted[CurrVar] ):
 			AllStridesAvailable+=1
 		
-	if(AllStridesAvailable==ConfigParams['Dims']):
+	if(AllStridesAvailable==ConfigParams['NumVars']):
 		StrideForAllVarsNotFound=0
+		StrideNotFound=0
+	else:
+		print "\n\t AllStridesAvailable: "+str(AllStridesAvailable)+" ConfigParams['NumVars'] "+str(ConfigParams['NumVars'])
 	#sys.exit()
 	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0)):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
@@ -1121,7 +1141,11 @@ def main(argv):
  			print "\n\t -- DSString: "+str(DSString)+" -- "				
 	else:
 		print "\n\t The config file has DOES NOT HAVE all the required info: #dims, size and allocation for all the dimensions. If this message is printed, there is a bug in the script, please report. "
-		sys.exit(0)
+
+		print "\n\t (NumVarNotFound) "+str(NumVarNotFound)+" (DimNotFound) "+str(DimNotFound)+" SizeNotFound: "+str(SizeNotFound)
+		print "\n\t StrideNotFound "+str(StrideNotFound)+" AllocNotFound: "+str(AllocNotFound)+" InitNotFound: "+str(InitNotFound)
+		print "\n\t NumStreamsDimsNotFound=: "+str(NumStreamsDimsNotFound)+" LoopIterationsNotFound: "+str(LoopIterationsNotFound)
+ 		sys.exit(0)
 	
 	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_'+str(ConfigParams['NumVars'])+"vars"+"_DS_"+str(DSString)+'_alloc_'+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_stride_'+str(StrideString)+'.c'
 	WriteFile=open(SrcFileName,'w')			

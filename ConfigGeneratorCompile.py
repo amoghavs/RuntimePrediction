@@ -184,7 +184,7 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 					StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)
 			else:
 				#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
-				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(0)
+				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append('')
 					
 	return StrideConfigPrep
 
@@ -201,9 +201,9 @@ def main():
         Min['NumStream']=2
         Max['Stride']=3 # ie., 2^4
         Min['Stride']=0 # ie., 2^0=1
-        Alloc=['d']    
-        Init='index0'
-        DS='d'
+        Alloc=[['d','d','d','d']]    
+        Init=['index0','index0','index0','index0']
+        DS=[['d','d','d','d']]    
         #SpatWindow=[8,16,32];
         LoopIterationBase=10;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
@@ -244,7 +244,7 @@ def main():
 
 	
 	ScriptUniqueID=''
-	if(len(Alloc)==1):
+	"""if(len(Alloc)==1):
 		if( Alloc[0]=='d'):
 			ScriptUniqueID='Dynamic'
 		elif(Alloc[0]=='s'):
@@ -262,7 +262,7 @@ def main():
 	
 	else:
 		print "\n\t The script is designed only for including name of one allocation type and alloc has "+str(len(Alloc))+" alloc requests. You are doomed!! \n"
-		sys.exit()
+		sys.exit()"""
 	
 				
 	MasterSWStatsPrefix='MasterSWStats_'+ScriptUniqueID+'_Stride'+str(Min['Stride'])+'to'+str(Max['Stride'])
@@ -289,9 +289,25 @@ def main():
 
   	StreamConfig=PerStreamConfig(Max,Min,Operations)
   	StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
+  	
+  	InitExpression=''
+  	for i,CurrVarInit in enumerate(Init):
+  		if(i):
+  			InitExpression+=','+str(CurrVarInit)
+  		else:
+  			InitExpression+=str(CurrVarInit)
 	
    	for CurrSetIterations in OutputSet:	
-	   	print "\n\t CurrSetIterations: "+str(CurrSetIterations)
+	   	
+	   	IterationsString=''
+	   	for i,CurrVarIterations in enumerate(CurrSetIterations):
+	   		if(i):
+	   			IterationsString+=','+str(CurrVarIterations)
+	   		else:
+	   			IterationsString+=str(CurrVarIterations)
+ 		
+ 		print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" IterationsString: "+str(IterationsString)
+ 		
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
  		for NumDims in range(Min['Dims'],Max['Dims']+1):
 			SizeString=''
@@ -334,7 +350,11 @@ def main():
 				StrideSet=[]
 				RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,StrideSet)
 		
-				NumStreamString='#StreamDims '+str(NumStreams) # CAUTION: Should change this when NumVars > 1
+				for i in range(NumVars):	
+					if(i):
+						NumStreamString+=','+str(NumStreams) 
+					else:
+						NumStreamString='#StreamDims '+str(NumStreams)
 				StrideString=''
 				StrideName=''
 				print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
@@ -347,13 +367,17 @@ def main():
 					ExtractStrideforStream=re.split(',',CurrStrideSet)
 					if ExtractStrideforStream:
 						CurrStrideString=''
+						CurrStrideCombi=''
 						for idx,CurrStride in enumerate(ExtractStrideforStream):
 							if(idx):
 								CurrStrideString+='_'+str(CurrStride)
+								CurrStrideCombi+=','+str(CurrStride)
 							else:
 								CurrStrideString+=(CurrStride)
+								CurrStrideCombi+=str(CurrStride)
+								
 						print "\n\t DCurrStrideString: "+str(CurrStrideString)
-						CurrStrideStringSet.append(CurrStrideString)
+						CurrStrideStringSet.append((CurrStrideString,CurrStrideCombi) )
 						StreamConfigCollection[CurrStrideString]={}
 					else:
 						print "\n\t ERROR: Some error with extracting stride for the stream. "
@@ -381,7 +405,7 @@ def main():
 									OpComboSet=[]
 									for CurrCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']):
 
-										CurrOpCombo=str(CurrCombo)+'('
+										CurrOpCombo=str(CurrCombo)+'; ('
 										for Idx in range((CurrNumOperands[CurrVar])):
 											if(Idx):
 												CurrOpCombo+=','
@@ -400,7 +424,7 @@ def main():
 									StrideOperationsPrefix=[]
 									for CurrNumStream in range(NumStreams):
 										Temp='#strideoperations_var'+str(CurrVar)+'_'+str(CurrNumStream)
-										Temp+=' <'+str(ExtractStrideforStream[CurrNumStream])+','+str(CurrNumOperands[CurrVar])
+										Temp+=' <'+str(ExtractStrideforStream[CurrNumStream])+';'+str(CurrNumOperands[CurrVar])
 										StrideOperationsPrefix.append(Temp)
 										#print "\n\t -- StrideOperationsPrefix: "+str(Temp)+' CurrNumStream: '+str(CurrNumStream)
 									
@@ -410,7 +434,7 @@ def main():
 										
 										#print "\n\t CurrOpCombo: "+str(CurrOpCombo)+' AccumCount: '+str(AccumCount)
 										for CurrNumStream in range(NumStreams):	
-											Temp1=str(StrideOperationsPrefix[CurrNumStream])+','+str(CurrOpCombo)+'>'
+											Temp1=str(StrideOperationsPrefix[CurrNumStream])+' ; '+str(CurrOpCombo)+'>'
 											Temp.append(Temp1)
 										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar].append(Temp)	
 										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
@@ -420,7 +444,9 @@ def main():
 				
 									sys.exit()
 				CombinedStreamConfig={}
-				for CurrStrideString in (CurrStrideStringSet):
+				for StrideTuple in (CurrStrideStringSet):
+					CurrStrideString=StrideTuple[0]
+					CurrStrideCombi=StrideTuple[1]
 					CombinedStreamConfig[CurrStrideString]={}
 					print "\n\t -- 	CurrStrideString: "+str(CurrStrideString)
 					for CurrNumOperandsStringKey in (StreamConfigCollection[CurrStrideString]):
@@ -431,7 +457,7 @@ def main():
 						for CurrVar in range(NumVars):
 							TempCombiAccumulation=[]
 							for CurrCombi in (CombiAccumulation):
-								print "\n\t CurrCombi: "+str(CurrCombi)
+								#print "\n\t CurrCombi: "+str(CurrCombi)
 								for CurrVarCombiSet in (StreamConfigCollection[CurrStrideString][CurrNumOperandsStringKey][CurrVar]):
 									Temp=[]
 									Temp=copy.deepcopy(CurrCombi)
@@ -439,14 +465,63 @@ def main():
 									for CurrVarCombi in (CurrVarCombiSet):
 										Temp.append(CurrVarCombi)
 									#print "\n\t Temp: "+str(Temp)	
-									print "\n\t ---------"
-									for i in (Temp):
-										print "\n\t "+str(i)
+									#print "\n\t ---------"
+									#for i in (Temp):
+									#	print "\n\t "+str(i)
 									TempCombiAccumulation.append(Temp)
 								
 							CombiAccumulation=copy.deepcopy(TempCombiAccumulation)
 						print "\n\t AccumulationCount: "+str(AccumulationCount)+' * (Num-NumOperands) '+str(len(StreamConfigCollection[CurrStrideString]))+' * '+str(len(CurrStrideStringSet))
-						sys.exit()									
+
+						for CurrCombiAccumulation in (CombiAccumulation):
+							
+							for CurrAllocSet in Alloc:
+								AllocString=''
+								for i,CurrAlloc in enumerate(CurrAllocSet):
+									if(i):
+										AllocString+=','+str(CurrAlloc)
+									else:
+										AllocString+=str(CurrAlloc)
+								DSString=''
+								for CurrDSSet in DS:
+									for i,CurrDS in enumerate(CurrDSSet):
+										if(i):
+											DSString+=','+str(CurrDS)
+										else:
+											DSString+=str(CurrDS)
+											
+								Config='TestConfig'
+								ConfigFile=str(Config)+'.txt'
+
+								f=open(ConfigFile,'w')
+								f.write("\n#vars "+str(NumVars))
+								f.write("\n#dims "+str(NumDims))
+								f.write("\n"+str(NumStreamString))
+								f.write("\n#loop_iterations "+str(IterationsString))
+								#f.write("\n"+str(StrideString))
+								f.write("\n#size "+str(SizeString))
+								f.write("\n#allocation "+str(AllocString) )
+								f.write("\n#init "+str(InitExpression))
+								f.write("\n#datastructure "+str(DSString))
+							
+								for CurrCombi in CurrCombiAccumulation:
+									print "\n\t CurrCombi: "+str(CurrCombi)
+									f.write("\n"+str(CurrCombi))
+									
+
+								CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFile)
+								commands.getoutput(CMDrunStrideBenchmarks)
+								sys.exit()
+								#SRCCode='StrideBenchmarks_'+str(SRCID)+'.c'
+								#EXE='StrideBenchmarks_'+str(SRCID)
+								#print "\n\t Config file: "+str(ConfigFile)#+" source: "+str(SRCCode)+" exe "+str(EXE)						
+								#CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
+								#print "\n\t CMDCompile: "+str(CMDCompileSRC)
+								#commands.getoutput(CMDCompileSRC) """
+
+									
+						
+																
 
 				"""for CurrStreamCombi in ResultString:
 					StrideString='#stride0 '+str(CurrStreamCombi)
