@@ -289,7 +289,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    iIter=0
 	    RHSExprn=''	    	
 	    for ThisOperand in range(len(RHSOperandsForStream)-1):
-		RHSExprn+=' '+RHSOperandsForStream[ThisOperand]+' '+str(ConfigParams['StrideVar'][VarNum][CurrStream]['ExprnOperations'][iIter]) #str(IntraOperands[CurrOperand]['Operations'][iIter])
+		RHSExprn+=' ('+RHSOperandsForStream[ThisOperand]+') '+str(ConfigParams['StrideVar'][VarNum][CurrStream]['ExprnOperations'][iIter]) #str(IntraOperands[CurrOperand]['Operations'][iIter])
 		if debug:
 			print "\n\t Operand "+str(RHSOperandsForStream[ThisOperand]) #+" Operation: "+str(IntraOperands[CurrOperand]['Operations'][iIter])
 			print "\n\t -- RHSExprn: "+str(RHSExprn)
