@@ -21,11 +21,11 @@ def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,C
 				ResultString.append(Result)
 				#print "\n\t Result: "+Result
 		else:
-			#print "\n\t ---- \n"
-			for i in range(NumStrides):
+			#print "\n\t ---- StartStream: "+str(StartStream)+"\n"
+			for i in range(StartStream,StartStream+NumStrides):
 				Result=CurrString+str((2**i))
 				ResultString.append(Result)
-				#print "\n\t Result: "+Result		
+				#print "\n\t 2. Result: "+Result		
 			
 		CurrStream-=1
 		return 
@@ -314,7 +314,7 @@ def main():
 				CurrString=''
 				CurrPrefix=''
 				CurrPrefixPos=0
-				StartStream=-1 
+				StartStream=Min['Stride']
 				StrideSet=[]
 				RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,StrideSet)
 		
