@@ -1112,10 +1112,12 @@ def main(argv):
 		
 		StrideString=''
 		for index in range(ConfigParams['NumVars']-1):
+			if index:
+				StrideString+='_'
 			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
 				if debug:
 					print "\n\t -- CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
-				StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
+				StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])#+'_'
 		
 		index=ConfigParams['NumVars']-1
 		

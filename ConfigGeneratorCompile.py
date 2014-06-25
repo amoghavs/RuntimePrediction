@@ -241,35 +241,7 @@ def main():
 	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
  	#Operations['Operand']	
 	Operations['PermutationsFlag']=PermutationsFlag 
-
-	
-	ScriptUniqueID=''
-	"""if(len(Alloc)==1):
-		if( Alloc[0]=='d'):
-			ScriptUniqueID='Dynamic'
-		elif(Alloc[0]=='s'):
-			ScriptUniqueID='Static'
-		else:
-			print "\n\t Data Alloc is neither dynamic or static \n"
-			sys.exit()
-		
-		if(DS=='i' or DS=='int'):
-			ScriptUniqueID='Int_'+ScriptUniqueID
-		elif(DS=='f' or DS=='float'):
-			ScriptUniqueID='Float_'+ScriptUniqueID		
-		elif(DS=='d' or DS=='double'):
-			ScriptUniqueID='Double_'+ScriptUniqueID		
-	
-	else:
-		print "\n\t The script is designed only for including name of one allocation type and alloc has "+str(len(Alloc))+" alloc requests. You are doomed!! \n"
-		sys.exit()"""
-	
-				
-	MasterSWStatsPrefix='MasterSWStats_'+ScriptUniqueID+'_Stride'+str(Min['Stride'])+'to'+str(Max['Stride'])
-	#MasterSWStatsSuffix='_Size2power'+str(MbyteSize)+'_dim'+str(Min['Dims'])+'to'+str(Max['Dims'])+'_Stride'+str(Min['Stride'])+'to'+str(Max['Stride'])+'_Streams'+str(Min['NumStream'])+'to'+str(Max['NumStream'])+'_Iterations'+str(LoopIterations[0])+'to'+str(LoopIterations[len(LoopIterations)-1])
-	#FolderName='SRC_'+ScriptUniqueID+MasterSWStatsSuffix
-	#MasterSWStatsFile=MasterSWStatsPrefix+MasterSWStatsSuffix+'.txt'
-
+ 
         LoopIterations=[]
         for CurrVar in range(NumVars):
         	Temp=[]
@@ -278,9 +250,8 @@ def main():
         		Temp.append(CurrNumLoops)
         		#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
  		LoopIterations.append(Temp)
- 	#sys.exit()
- 	#OutputSet=[]
- 	CurrVar=0
+ 
+  	CurrVar=0
  	Prefix=[]
  	StartIdx=0
  	for i in range(NumVars):
@@ -338,10 +309,7 @@ def main():
 			
 
 			for NumStreams in range(Min['NumStream'],Max['NumStream']+1):
-					#MasterSWStatsFile=MasterSWStatsPrefix+'_Iters'+str(NumLoopIterations)+'_dim'+str(NumDims)+'_Streams'+str(NumStreams)+'.txt'
-					#print "\n\t MasterSWStatsFile: "+str(MasterSWStatsFile)+" NumStreams: "+str(NumStreams)
-					#MasterSWStats=open(MasterSWStatsFile,'w')
-				CurrStream=1
+ 				CurrStream=1
 				NumStrides=((Max['Stride']-Min['Stride'])+1)	
 				CurrString=''
 				CurrPrefix=''
@@ -390,11 +358,7 @@ def main():
 						for i in CurrNumOperands:
 							CurrNumOperandsString+=str(i)	
 						
-						#print "\n\t CurrNumOperands: "+str(CurrNumOperands) +' CurrNumOperandsString: '+str(CurrNumOperandsString)
-							
-						#for CurrKey in (StreamConfig['MainOperationsSet']):
-						#	print "\n\t CurrKey: "+str(CurrKey)+" len(StreamConfig['MainOperationsSet'][CurrKey]): "+str(len(StreamConfig['MainOperationsSet'][CurrKey]))
-						if( not(CurrNumOperandsString in StreamConfigCollection[CurrStrideString]) ):
+ 						if( not(CurrNumOperandsString in StreamConfigCollection[CurrStrideString]) ):
 							StreamConfigCollection[CurrStrideString][CurrNumOperandsString]={}
 							
 						for CurrVar in range(NumVars):
@@ -466,11 +430,7 @@ def main():
 									AccumulationCount+=1
 									for CurrVarCombi in (CurrVarCombiSet):
 										Temp.append(CurrVarCombi)
-									#print "\n\t Temp: "+str(Temp)	
-									#print "\n\t ---------"
-									#for i in (Temp):
-									#	print "\n\t "+str(i)
-									TempCombiAccumulation.append(Temp)
+ 									TempCombiAccumulation.append(Temp)
 								
 							CombiAccumulation=copy.deepcopy(TempCombiAccumulation)
 						print "\n\t AccumulationCount: "+str(AccumulationCount)+' * (Num-NumOperands) '+str(len(StreamConfigCollection[CurrStrideString]))+' * '+str(len(CurrStrideStringSet))
@@ -493,7 +453,7 @@ def main():
 											DSString+=str(CurrDS)
 											
 								ConfigFileName='SampleConfig_Vars'+str(NumVars)+'_Dims'+str(NumDims)+'_Streams_'+str(StreamName)+'.txt'
-								print "\n\t ConfigFileName: "+str(ConfigFileName)
+								#print "\n\t ConfigFileName: "+str(ConfigFileName)
 
 								f=open(ConfigFileName,'w')
 								f.write("\n#vars "+str(NumVars))
@@ -507,7 +467,7 @@ def main():
 								f.write("\n#datastructure "+str(DSString))
 								
 								for CurrCombi in CurrCombiAccumulation:
-									print "\n\t CurrCombi: "+str(CurrCombi)
+									#print "\n\t CurrCombi: "+str(CurrCombi)
 									f.write("\n"+str(CurrCombi))
 									
 								f.write("\n\n")
@@ -515,7 +475,7 @@ def main():
 								OutputFileName='Duh.log'
 								CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
 								commands.getoutput(CMDrunStrideBenchmarks)
-								print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
+								#print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
 								OutputFile=open(OutputFileName)
 								ReadOutput=OutputFile.readlines()
 								OutputFile.close()
@@ -523,74 +483,11 @@ def main():
 									FileName=re.match('^\s*Source\s*file\s*name\:\s*(.*).c',CurrLine)
 									if FileName:
 										print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
-								sys.exit()
-								#SRCCode='StrideBenchmarks_'+str(SRCID)+'.c'
-								#EXE='StrideBenchmarks_'+str(SRCID)
-								#print "\n\t Config file: "+str(ConfigFile)#+" source: "+str(SRCCode)+" exe "+str(EXE)						
-								#CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
-								#print "\n\t CMDCompile: "+str(CMDCompileSRC)
-								#commands.getoutput(CMDCompileSRC) """
-
-									
-						
-																
-
-				"""for CurrStreamCombi in ResultString:
-					StrideString='#stride0 '+str(CurrStreamCombi)
-					Strides=re.split(',',CurrStreamCombi)
-					StrideName=''
-					MaxStride=0
-					if Strides:
-						for i in range(len(Strides)-1):
-							StrideName+=str(Strides[i])+'_'
-							if(MaxStride<int(Strides[i])):
-								MaxStride=int(Strides[i]) # CAUTION: Should change this when NumVars > 1
-							else:
-								print "\n\t We think strides[i]: "+str(Strides[i])+" is lesser than Maxstrides: "+str(MaxStride)
-						StrideName+=str(Strides[len(Strides)-1])
-						if(MaxStride<int(Strides[len(Strides)-1])):
-							MaxStride=int(Strides[len(Strides)-1]) # CAUTION: Should change this when NumVars > 1
-						else:
-							print"\n\t -- Stride: "+str(Strides[len(Strides)-1])+" MaxStride: "+str(MaxStride)
-						
-						#StrideName+=str(MaxStride) # CAUTION: Should change this when NumVars > 1
-						print "\n\t Stride-Name: "+str(StrideName)+' StrideString '+str(StrideString)+" and Maxstride: "+str(MaxStride)
-					else:
-						print "\n\t CurrStreamCombi: "+str(StrideName)+" seems to be corrupted, exitting! "
+										SRCFileName=str(FileName.group(1))+'.c'
+										CMDCompileFile='gcc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
+										print "\n\t CMDCompileFile: "+str(CMDCompileFile)
+										commands.getoutput(CMDCompileFile)
 						sys.exit()
-						
-							
-					for CurrAlloc in Alloc:
-						UniqueID='Iters'+str(NumLoopIterations)+'_'+str(NumVars)+"vars_"+str(CurrAlloc)+'_'+str(NumDims)+"dims_"+str(SizeName)+'_streams_'+str(NumStreams)+'_stride_'+str(StrideName)
-						SRCID='Iters'+str(NumLoopIterations)+'_'+str(NumVars)+"vars_"+str(CurrAlloc)+'_'+str(NumDims)+"dims_"+str(SizeName)+'_streams_'+str(NumStreams)+'_stride_'+str(StrideName)
-						Config="Config_"+UniqueID
-						ConfigFile=str(Config)+'.txt'
-
-						f=open(ConfigFile,'w')
-						f.write("\n#vars "+str(NumVars))
-						f.write("\n#dims "+str(NumDims))
-						f.write("\n"+str(NumStreamString))
-						f.write("\n#loop_iterations "+str(NumLoopIterations))
-						f.write("\n"+str(StrideString))
-						#f.write("\n#stride "+str(Stride))
-						f.write("\n#size "+str(SizeString))
-						f.write("\n#allocation "+str(CurrAlloc) )
-						f.write("\n#init "+str(Init))
-						f.write("\n#datastructure "+str(DS))
-						f.close()
-					
-					#CMDConfigDir='mkdir '+str(Config)
-					#commands.getoutput(CMDConfigDir)						
-					
-					CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFile)
-					commands.getoutput(CMDrunStrideBenchmarks)
-					SRCCode='StrideBenchmarks_'+str(SRCID)+'.c'
-					EXE='StrideBenchmarks_'+str(SRCID)
-					print "\n\t Config file: "+str(ConfigFile)#+" source: "+str(SRCCode)+" exe "+str(EXE)						
-					CMDCompileSRC='gcc -O3 -g '+str(SRCCode)+' -o '+str(EXE)
-					#print "\n\t CMDCompile: "+str(CMDCompileSRC)
-					commands.getoutput(CMDCompileSRC) """
-
 
 
 
