@@ -295,7 +295,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			print "\n\t -- RHSExprn: "+str(RHSExprn)
 		iIter+=1
 	    if(len(RHSOperandsForStream)):
-		RHSExprn+=' '+str(RHSOperandsForStream[len(RHSOperandsForStream)-1])
+		RHSExprn+=' ( '+str(RHSOperandsForStream[len(RHSOperandsForStream)-1])+' )'
 	    #RHSExprnPerStream[CurrStream].append(RHSExprn)
 	    RHSExprnPerStream[CurrStream]=(RHSExprn)
 	    if debug:
