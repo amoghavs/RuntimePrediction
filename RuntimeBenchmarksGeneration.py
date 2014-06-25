@@ -192,7 +192,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	#if(IntraOperands[CurrOperand]['NumOperands']==1):
 
 		CurrOperandExprn=str(CurrOperands[CurrOperandIdx])	
-		print "\n\t CurrOperand: "+str(CurrOperandExprn)  	
+		if debug:
+			print "\n\t CurrOperand: "+str(CurrOperandExprn)  	
 ## ***********
 
 	    	if(CurrOperandExprn[0]=='='):
@@ -260,7 +261,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		    				AppendIndexChange=BreakIndexChange.group(1)+str(BreakIndexChange.group(2))	
 		    				IndexChangeBreakdown['Sign']=BreakIndexChange.group(1)
 		    				IndexChangeBreakdown['Delta']=BreakIndexChange.group(2)
-		    				print "\n\t -- Sign: "+str(IndexChangeBreakdown['Sign'])+" Delta "+str(IndexChangeBreakdown['Delta'])
+		    				if debug:
+		    					print "\n\t -- Sign: "+str(IndexChangeBreakdown['Sign'])+" Delta "+str(IndexChangeBreakdown['Delta'])
 		    			else:
 		    				print "\n\t ERROR: Unable to decode index change. Likely that the index change term was not of the form \"+-number\". Use debug to locate the source of error" 
 		    				sys.exit()
@@ -309,7 +311,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			CurrStreamIndexChangeFinal[CurrDim]={}
 
 	    for CurrOperand in (IndexChangeForBound):
-	    	print "\n\t CurrOperand: "+str(CurrOperand)
+	    	if debug:
+	    		print "\n\t CurrOperand: "+str(CurrOperand)
     		CurrStreamIndexChangeConsolidation[CurrOperand[0]].append(CurrOperand[1])
 		
 	    for CurrDim in range(NumDims):
@@ -358,7 +361,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	FinalStreamIndexChange=BoundsChangePerStream[ConfigParams['NumStreaminVar'][VarNum]-1] #['Init'] #CAUTION: "ConfigParams['NumStreaminVar'][VarNum]=1, hence accessing CurrStream=0 here.
     
     for CurrStream in RHSExprnPerStream:
-    	print "\n\t CurrStream: "+str(CurrStream)+" RHS: "+str(RHSExprnPerStream[CurrStream])
+    	if debug:
+    		print "\n\t CurrStream: "+str(CurrStream)+" RHS: "+str(RHSExprnPerStream[CurrStream])
     	
     for CurrDeclareVar in (ShouldDeclareVars):
         if debug:
@@ -602,10 +606,11 @@ def main(argv):
 					ConfigParams['NumVars']=NumVars
 					for i in range(NumVars):
 						StrideExtracted.append(0)
-					if debug:
-						print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
+					#if debug:
+					print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
 					LineNotProcessed=0
-					NumVarNotFound=0			
+					NumVarNotFound=0	
+							
 					
 		if NumStreamsDimsNotFound:
 			MatchObj=re.match(r'\s*\#StreamDims',CurrLine)
@@ -764,7 +769,8 @@ def main(argv):
 								ExprnOperations=re.split(',',ExprnBreakdown[OperationsIdx])
 								if ExprnOperations:
 									ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']=[]
-									print "\n\t Number of operations "+str(len(ExprnOperations))
+									if debug:
+										print "\n\t Number of operations "+str(len(ExprnOperations))
 									if( len(ExprnOperations)!=(NumOperands-1) ):
 										if(len(ExprnOperations)>1):
 											print "\n\t ERROR: Expected "+str(NumOperands-1)+" operations, but could find only "+str(len(ExprnOperations))
@@ -912,7 +918,8 @@ def main(argv):
 	
 	#Tabs: 1
 	AllStridesAvailable=0
-	print "\n\t StrideExtracted "+str(StrideExtracted)
+	if debug:
+		print "\n\t StrideExtracted "+str(StrideExtracted)
 	
 	for CurrVar in range(len(StrideExtracted)):
 		if debug:
@@ -984,14 +991,16 @@ def main(argv):
 		for index in range(ConfigParams['NumVars']):
 			ConfigParams['GlobalVar']['Stream'][index]=[]
 			
-			print "\n -- NumStreams: "+str(ConfigParams['NumStreaminVar'][index])
+			if debug:
+				print "\n -- NumStreams: "+str(ConfigParams['NumStreaminVar'][index])
 			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
 				StrideVar='StrideVar'+str(index)+"_Stream"+str(CurrStream)
 				StrideVarDecl='int '+str(StrideVar)+' = '+str(ConfigParams['StrideinStream'][index][CurrStream])+' ;'
 				ConfigParams['GlobalVar']['Stream'][index].append(StrideVar)
 				ConfigParams['GlobalVar']['Stream']['StrideVarDecl'].append(StrideVarDecl)
-				print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
-				print "\t\t Var: "+str(StrideVar)+" StrideVarDecl "+str(StrideVarDecl)
+				if debug:
+					print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
+					print "\t\t Var: "+str(StrideVar)+" StrideVarDecl "+str(StrideVarDecl)
 
 
 ###
@@ -1104,19 +1113,63 @@ def main(argv):
 		StrideString=''
 		for index in range(ConfigParams['NumVars']-1):
 			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
-				#print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
+				if debug:
+					print "\n\t -- CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
 				StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		
 		index=ConfigParams['NumVars']-1
+		
 		for CurrStream in range(ConfigParams['NumStreaminVar'][index]-1):
-			#print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
+			if debug:
+				print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
 			StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		StrideString+=str(ConfigParams['StrideinStream'][index][(ConfigParams['NumStreaminVar'][index]-1)])
 			
 		if debug:
-			print "\n\t StrideString: "+str(StrideString)
-		#sys.exit()
-			
+			print "\n\t StrideString: "+str(StrideString)+" ConfigParams['NumStreaminVar'] "+str(ConfigParams['NumStreaminVar'])
+
+		OpStream=''
+		for VarIdx,CurrVar in enumerate(ConfigParams['StrideVar']):
+			Temp=''
+			for Idx,CurrStream in enumerate(ConfigParams['StrideVar'][CurrVar]):
+				for OpertnIdx,CurrOperatn in enumerate(ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']):
+					
+					if(CurrOperatn=='+'):
+						if OpertnIdx:
+							Temp+='p'
+						else:
+							Temp+='P'
+					if(CurrOperatn=='-'):
+						if OpertnIdx:
+							Temp+='s'
+						else:
+							Temp+='S'
+					if(CurrOperatn=='*'):
+						if OpertnIdx:
+							Temp+='m'
+						else:
+							Temp+='M'
+					if(CurrOperatn=='d'):
+						if OpertnIdx:
+							Temp+='d'
+						else:
+							Temp+='D'
+					if(CurrOperatn==''):
+						Temp+='0'
+					if debug:
+						print "\n\t CurrVar: "+str(CurrVar)+" CurrStream "+str(CurrStream)+" CurrOperatn "+str(CurrOperatn)+" Temp "+str(Temp)
+				if(len(ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'])==0):
+					Temp+='0'
+					if debug:
+						print "\n\t Temp: "+str(Temp)+" (ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']): "+str((ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations']))
+			if(VarIdx):
+				OpStream+='_'+Temp
+			else:
+				OpStream+=Temp
+		
+		if debug:
+			print "\n\t OpStream: "+str(OpStream)
+		
 		alloc_str=''
 		for CurrAlloc in ConfigParams['alloc']:
 			alloc_str+=str(CurrAlloc)
@@ -1147,7 +1200,7 @@ def main(argv):
 		print "\n\t NumStreamsDimsNotFound=: "+str(NumStreamsDimsNotFound)+" LoopIterationsNotFound: "+str(LoopIterationsNotFound)
  		sys.exit(0)
 	
-	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_'+str(ConfigParams['NumVars'])+"vars"+"_DS_"+str(DSString)+'_alloc_'+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_stride_'+str(StrideString)+'.c'
+	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_'+str(ConfigParams['NumVars'])+"vars"+"_DS_"+str(DSString)+'_alloc_'+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_Ops_'+str(OpStream)+'_stride_'+str(StrideString)+'.c'
 	WriteFile=open(SrcFileName,'w')			
 	InitLoop=[]
 	for VarNum in range(ConfigParams['NumVars']):

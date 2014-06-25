@@ -353,8 +353,10 @@ def main():
 				for i in range(NumVars):	
 					if(i):
 						NumStreamString+=','+str(NumStreams) 
+						StreamName+='_'+str(NumStreams)
 					else:
-						NumStreamString='#StreamDims '+str(NumStreams)
+						NumStreamString=' '+str(NumStreams)
+						StreamName=str(NumStreams)
 				StrideString=''
 				StrideName=''
 				print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
@@ -490,27 +492,37 @@ def main():
 										else:
 											DSString+=str(CurrDS)
 											
-								Config='TestConfig'
-								ConfigFile=str(Config)+'.txt'
+								ConfigFileName='SampleConfig_Vars'+str(NumVars)+'_Dims'+str(NumDims)+'_Streams_'+str(StreamName)+'.txt'
+								print "\n\t ConfigFileName: "+str(ConfigFileName)
 
-								f=open(ConfigFile,'w')
+								f=open(ConfigFileName,'w')
 								f.write("\n#vars "+str(NumVars))
 								f.write("\n#dims "+str(NumDims))
-								f.write("\n"+str(NumStreamString))
+								f.write("\n #StreamDims "+str(NumStreamString))
 								f.write("\n#loop_iterations "+str(IterationsString))
 								#f.write("\n"+str(StrideString))
 								f.write("\n#size "+str(SizeString))
 								f.write("\n#allocation "+str(AllocString) )
 								f.write("\n#init "+str(InitExpression))
 								f.write("\n#datastructure "+str(DSString))
-							
+								
 								for CurrCombi in CurrCombiAccumulation:
 									print "\n\t CurrCombi: "+str(CurrCombi)
 									f.write("\n"+str(CurrCombi))
 									
-
-								CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFile)
+								f.write("\n\n")
+								f.close()
+								OutputFileName='Duh.log'
+								CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
 								commands.getoutput(CMDrunStrideBenchmarks)
+								print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
+								OutputFile=open(OutputFileName)
+								ReadOutput=OutputFile.readlines()
+								OutputFile.close()
+								for CurrLine in ReadOutput:
+									FileName=re.match('^\s*Source\s*file\s*name\:\s*(.*).c',CurrLine)
+									if FileName:
+										print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
 								sys.exit()
 								#SRCCode='StrideBenchmarks_'+str(SRCID)+'.c'
 								#EXE='StrideBenchmarks_'+str(SRCID)
