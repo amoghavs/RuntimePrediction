@@ -1151,15 +1151,15 @@ def main(argv):
 							Temp+='m'
 						else:
 							Temp+='M'
-					if(CurrOperatn=='d'):
+					if(CurrOperatn=='/'):
 						if OpertnIdx:
 							Temp+='d'
 						else:
 							Temp+='D'
 					if(CurrOperatn==''):
 						Temp+='0'
-					if debug:
-						print "\n\t CurrVar: "+str(CurrVar)+" CurrStream "+str(CurrStream)+" CurrOperatn "+str(CurrOperatn)+" Temp "+str(Temp)
+					#if debug:
+					print "\n\t CurrVar: "+str(CurrVar)+" CurrStream "+str(CurrStream)+" CurrOperatn "+str(CurrOperatn)+" Temp "+str(Temp)
 				if(len(ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'])==0):
 					Temp+='0'
 					if debug:
