@@ -355,7 +355,7 @@ def main():
 						NumStreamString+=','+str(NumStreams) 
 						StreamName+='_'+str(NumStreams)
 					else:
-						NumStreamString=' '+str(NumStreams)
+						NumStreamString=str(NumStreams)
 						StreamName=str(NumStreams)
 				StrideString=''
 				StrideName=''
@@ -498,7 +498,7 @@ def main():
 								f=open(ConfigFileName,'w')
 								f.write("\n#vars "+str(NumVars))
 								f.write("\n#dims "+str(NumDims))
-								f.write("\n #StreamDims "+str(NumStreamString))
+								f.write("\n#StreamDims "+str(NumStreamString))
 								f.write("\n#loop_iterations "+str(IterationsString))
 								#f.write("\n"+str(StrideString))
 								f.write("\n#size "+str(SizeString))
