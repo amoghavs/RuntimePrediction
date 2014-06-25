@@ -19,13 +19,13 @@ def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,C
 			for i in range(StartStream,NumStrides):
 				Result=CurrString+','+str((2**i))
 				ResultString.append(Result)
-				#print "\n\t Result: "+Result
+				print "\n\t 1. Result: "+Result
 		else:
-			#print "\n\t ---- \n"
-			for i in range(NumStrides):
+			#print "\n\t ---- StartStream: "+str(StartStream)+"\n"
+			for i in range(StartStream,StartStream+NumStrides):
 				Result=CurrString+str((2**i))
 				ResultString.append(Result)
-				#print "\n\t Result: "+Result		
+				#print "\n\t 2. Result: "+Result		
 			
 		CurrStream-=1
 		return 
@@ -37,7 +37,7 @@ def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,C
 			CurrString=CurrPrefix+str((2**CurrPrefixPos))	
 		else:
 			CurrString=CurrPrefix+','+str((2**CurrPrefixPos))
-		#print "\n\t -- CurrPrefixPos: "+str(CurrPrefixPos)+' CurrStream: '+str(CurrStream)+" CurrString: "+str(CurrString)+" CurrPrefix: "+str(CurrPrefix)		
+		print "\n\t -- CurrPrefixPos: "+str(CurrPrefixPos)+' CurrStream: '+str(CurrStream)+" CurrString: "+str(CurrString)+" CurrPrefix: "+str(CurrPrefix)		
 		#print "\n\t $$ CurrStream: "+str(CurrStream)+" CurrPrefixPos: "+str(CurrPrefixPos)
 		RecursiveStrideGen(CurrStream+1,NumStreams,StartStream,NumStrides,CurrString,CurrString,CurrPrefixPos,ResultString)
 		CurrPrefixPos+=1
@@ -193,22 +193,22 @@ def main():
 
         Max={} #; Ensure Max is less than or equal to Min. 
         Min={}
-        Max['Vars']=4
-        Min['Vars']=4
+        Max['Vars']=1
+        Min['Vars']=1
         Max['Dims']=3
         Min['Dims']=3
-        Max['NumStream']=2
-        Min['NumStream']=2
+        Max['NumStream']=1
+        Min['NumStream']=1
         Max['Stride']=3 # ie., 2^4
-        Min['Stride']=0 # ie., 2^0=1
-        Alloc=[['d','d','d','d']]    
-        Init=['index0','index0','index0','index0']
-        DS=[['d','d','d','d']]    
+        Min['Stride']=2 # ie., 2^0=1
+        Alloc=[['d']] #,'d','d','d']]    
+        Init=['index0']#,'index0','index0','index0']
+        DS=[['d']]#,'d','d','d']]    
         #SpatWindow=[8,16,32];
         LoopIterationBase=10;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
-        LoopIterationsExponent=[[1],[1],[1],[1]];
-        MbyteSize=20 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
+        LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
+        MbyteSize=28 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         Dim0Size=2**(MbyteSize-8)
         HigherDimSize= MaxSize/ Dim0Size
@@ -221,8 +221,8 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
 
-	Max['NumOperands']=[4,2,1,4]
-	Min['NumOperands']=[3,1,1,1] #Min: Should be >= 1 
+	Max['NumOperands']=[3] #,2,1,4]
+	Min['NumOperands']=[3] #,1,1,1] #Min: Should be >= 1 
 	Operations={}
 	Operations['MainOperations']=['+','-','*','/']
 
@@ -233,8 +233,8 @@ def main():
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
 	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
-	Max['IntraOperandDelta']=[(+1,+6,1) , ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
-	Min['IntraOperandDelta']=[ (0,+2,0) , ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
+	Max['IntraOperandDelta']=[(+1,+6,1) ]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
+	Min['IntraOperandDelta']=[ (0,+2,0) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
 	
 	Max['Constant']=10
 	Min['Constant']=2
@@ -314,7 +314,7 @@ def main():
 				CurrString=''
 				CurrPrefix=''
 				CurrPrefixPos=0
-				StartStream=-1 
+				StartStream=Min['Stride'] 
 				StrideSet=[]
 				RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,StrideSet)
 		
@@ -331,7 +331,7 @@ def main():
 
 				StreamConfigCollection={}
 				CurrStrideStringSet=[]
-
+				
 				for CurrStrideSet in StrideSet:
 					
 					ExtractStrideforStream=re.split(',',CurrStrideSet)
@@ -487,7 +487,7 @@ def main():
 										CMDCompileFile='gcc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
 										print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 										commands.getoutput(CMDCompileFile)
-						sys.exit()
+						
 
 
 
