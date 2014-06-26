@@ -109,7 +109,7 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
     				LoopStmt=[]
 				LoopStmt.append(TabSpace+'for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+='+str(NumOperandsVar)+' )')
 				LoopStmt.append(TabSpace+'{')
-				LoopStmt.append(TabSpace+'\t '+str(BoundVar)+'='+str(ConfigParams['indices'][j])+' * '+str(NumOperandsVar)+' ;')
+				LoopStmt.append(TabSpace+'\t '+str(BoundVar)+'= '+str(ConfigParams['indices'][j])+' + '+str(NumOperandsVar)+' ;')
 				LoopStmt.append(TabSpace+'\t if( '+str(BoundVar)+' > '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' )')
 				LoopStmt.append(TabSpace+'\t\t '+str(BoundVar)+' = '+str(ConfigParams['GlobalVar']['DimsSize'][j])+';')
 				LoopStmt.append(TabSpace+'\t '+str(TempVar)+' = (int) ( rand() % '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' );')
@@ -126,8 +126,9 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
 			ThisForLoop=TabSpace+ThisForLoop
 			ThisLoop.append(ThisForLoop)
 			ThisLoop.append(TabSpace+'{')
-		#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
-		LHSindices+='['+str(ConfigParams['indices'][j])+']'
+			LHSindices+='['+str(ConfigParams['indices'][j])+']'
+		else:
+			LHSindices+='['+str(InnerLoopVar)+']'
 
     	TabSpace=''
     	for k in range(NumForLoops):
