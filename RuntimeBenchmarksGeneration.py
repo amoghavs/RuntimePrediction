@@ -99,6 +99,7 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
     				ThisLoop.append(BoundVarDecl);
     				InnerLoopVar='InnerLoopVar'
     				InnerLoopVarDecl=TabSpace+'int '+InnerLoopVar+' =0;'
+    				ThisLoop.append(InnerLoopVarDecl)
     				TempVar='temp'
     				TempVarDecl=TabSpace+'int '+str(TempVar)+';'
     				ThisLoop.append(TempVarDecl);
@@ -202,6 +203,16 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     BoundsChangePerStream={}
     RHSExprnPerStream={}
     ShouldDeclareVars=[]
+    RandomAccessVarPerStream={}
+    
+    if(ConfigParams['RandomAccess'][VarNum]>0):
+    	for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
+    		Temp='RandomVar'+str(VarNum)+'_stream'+str(CurrStream)
+    		RandomAccessVarPerStream[CurrStream]=Temp
+    		VarDecl='int '+str(Temp)+'=0;'
+    		ShouldDeclareVars.append(VarDecl)
+    		
+    		
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
 	    LHSindices=''
@@ -304,12 +315,27 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 
 	    	
     					OperandIndices=''
-	    				for i in range(NumDims):
-		    				if(i==StreamDim):
-		    					PushIndexChange=str(ConfigParams['indices'][i])+str(AppendIndexChange)	
-		    					OperandIndices+='['+str(PushIndexChange)+']'	
-		    				else:
-		    					OperandIndices+='['+str(ConfigParams['indices'][i])+']'
+    					if( (ConfigParams['RandomAccess'][VarNum]>0) ):
+		    				for i in range(NumDims-1):
+			    				if(i==StreamDim):
+			    					PushIndexChange=str(ConfigParams['indices'][i])+str(AppendIndexChange)	
+			    					OperandIndices+='['+str(PushIndexChange)+']'	
+			    				else:
+			    					OperandIndices+='['+str(ConfigParams['indices'][i])+']'
+			    			if(StreamDim==(NumDims-1)):
+			    				PushIndexChange=str(RandomAccessVarPerStream[CurrStream])+str(AppendIndexChange)
+			    				OperandIndices+='['+str(PushIndexChange)+']'	
+			    			else:
+			    				PushIndexChange=str(RandomAccessVarPerStream[CurrStream])
+							OperandIndices+='['+str(PushIndexChange)+']'
+							
+	    				else:
+		    				for i in range(NumDims):
+			    				if(i==StreamDim):
+			    					PushIndexChange=str(ConfigParams['indices'][i])+str(AppendIndexChange)	
+			    					OperandIndices+='['+str(PushIndexChange)+']'	
+			    				else:
+			    					OperandIndices+='['+str(ConfigParams['indices'][i])+']'
 	    				ThusOperand=str(StreamVar)+str(OperandIndices)
 	    				if(AppendIndexChange==''):
 	    					AppendIndexChange=0
@@ -434,7 +460,11 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				
 				if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 					LargestIndexNotFound=0
-					bounds= '((' + str(ConfigParams['size'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  	
+					if(ConfigParams['RandomAccess'][VarNum]>0):
+						#bounds= '(' + str(ConfigParams['size'][StrideDim])+' - ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  
+						bounds= '(' + str(ConfigParams['size'][StrideDim])+' - '+str(FinalStreamIndexChange[StrideDim]['Final'])+')'  		
+					else:
+						bounds= '((' + str(ConfigParams['size'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  	
 					BoundForDim.append(str(bounds))#BoundForDim.insert(0,str(bounds))
 					CurrIndexIncr=str(ConfigParams['indices'][StrideDim])+'+= '+str(ConfigParams['GlobalVar']['Stream'][VarNum][i])
 					IndexIncr=str(CurrIndexIncr)+str(IndexIncr)    	
@@ -495,6 +525,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		if(j==StrideDim):
 			#RHSindices+='['+str(ConfigParams['indices'][j])+']'
 			#ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 '+str(IndexInit)+';'+str(ConfigParams['indices'][j])+'<='+str(BoundForDim[j])+';'+str(IndexIncr)+')'
+		        if(ConfigParams['RandomAccess'][VarNum]>0):
+		    		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
+		    			ThisLoop.append(TabSpace+str(RandomAccessVarPerStream[CurrStream])+' =0;')
+			
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+str(InitForDim[j])+';'+str(ConfigParams['indices'][j])+'<='+str(BoundForDim[j])+';'+str(IndexIncr)+')'
 		elif(j!=StrideDim):
 			#RHSindices+='['+str(ConfigParams['indices'][j])+']'	
@@ -519,11 +553,21 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 		StreamVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)
 		LHSVariableCurrStream=str(StreamVar)
-		for CurrDim in range(NumDims):
-			LHSVariableCurrStream+='['+str(LHSIndicesPerStream[CurrStream][CurrDim])+']'
+		if(ConfigParams['RandomAccess'][VarNum]>0):
+			print "\n\t Var: "+str(VarNum)+" has random variable -->  "+str(RandomAccessVarPerStream)
+			for CurrDim in range(NumDims-1):
+				LHSVariableCurrStream+='['+str(LHSIndicesPerStream[CurrStream][CurrDim])+']'
+			LHSVariableCurrStream+='['+str(RandomAccessVarPerStream[CurrStream])+']'
+		else:
+			for CurrDim in range(NumDims):
+				LHSVariableCurrStream+='['+str(LHSIndicesPerStream[CurrStream][CurrDim])+']'
+		
 		#print "\n\t CurrStream: "+str(CurrStream)+" Var: "+str(LHSVariableCurrStream)
 		#print "\n\t RHSExprnPerOperand: "+str(RHSExprnPerStream[CurrStream])
-		StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
+		if(ConfigParams['RandomAccess'][VarNum]):
+			StreamExprn=LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) % '+str(ConfigParams['indices'][(ConfigParams['Dims']-1)])+';'
+		else:
+			StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
 		if debug:
 			print "\n\t StreamExprn: "+str(StreamExprn)
 		ThisLoop.append(StreamExprn)
