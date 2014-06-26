@@ -95,13 +95,13 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
     		if(j==NumForLoops-1):
     			if(ConfigParams['RandomAccess'][VarNum]>0):
 	    			BoundVar='bound'
-    				BoundVarDecl=TabSpace+'int '+BoundVar+' =0; '
+    				BoundVarDecl=TabSpace+'long int '+BoundVar+' =0; '
     				ThisLoop.append(BoundVarDecl);
     				InnerLoopVar='InnerLoopVar'
-    				InnerLoopVarDecl=TabSpace+'int '+InnerLoopVar+' =0;'
+    				InnerLoopVarDecl=TabSpace+'long int '+InnerLoopVar+' =0;'
     				ThisLoop.append(InnerLoopVarDecl)
     				TempVar='temp'
-    				TempVarDecl=TabSpace+'int '+str(TempVar)+';'
+    				TempVarDecl=TabSpace+'long int '+str(TempVar)+';'
     				NumOperandsVar='NumOperands'
     				NumOperandsVarDecl=TabSpace+'int '+str(NumOperandsVar)+'= '+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+' ;'
     				ThisLoop.append(TempVarDecl);
@@ -112,7 +112,7 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
 				LoopStmt.append(TabSpace+'\t '+str(BoundVar)+'= '+str(ConfigParams['indices'][j])+' + '+str(NumOperandsVar)+' ;')
 				LoopStmt.append(TabSpace+'\t if( '+str(BoundVar)+' > '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' )')
 				LoopStmt.append(TabSpace+'\t\t '+str(BoundVar)+' = '+str(ConfigParams['GlobalVar']['DimsSize'][j])+';')
-				LoopStmt.append(TabSpace+'\t '+str(TempVar)+' = (int) ( rand() % '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' );')
+				LoopStmt.append(TabSpace+'\t '+str(TempVar)+' = (long int) ( rand() % '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' );')
 				LoopStmt.append(TabSpace+'\t for('+str(InnerLoopVar)+'='+str(ConfigParams['indices'][j])+' ; '+ str(InnerLoopVar)+' < '+str(BoundVar)+' ; '+str(InnerLoopVar)+'+=1)')
 				for CurrLine in LoopStmt:
 					ThisLoop.append(CurrLine)
