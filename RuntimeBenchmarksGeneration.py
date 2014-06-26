@@ -42,6 +42,7 @@ def InitIndirArray(A,VarNum,InitExp,ConfigParams,debug):
     	RHSindices=''
     
 	ThisForLoop=''
+
     	#for j in range(NumForLoops):
     	#	if(j==NumForLoops-1): # If you need to loop over, remove commented code and tab the for loop-code-gen twice
     	j=NumForLoops-1
@@ -85,27 +86,53 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
     	LHSindices=''
     	RHSindices=''
     
-	
+	print "\n\t Operand: "+str(VarNum)+" Stream: "+str(StreamNum)+" and I have "+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+" operands in me! "+" my random acess status is "+str(ConfigParams['RandomAccess'][VarNum])	
     	for j in range(NumForLoops):
-    		if(j==NumForLoops-1):
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
-			
-		else:
-			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
-		
 		TabSpace='\t'
 		for k in range(j):
 			TabSpace+='\t'
-		ThisForLoop=TabSpace+ThisForLoop
-		ThisLoop.append(ThisForLoop)
-		ThisLoop.append(TabSpace+'{')
+    		DontSkip=1
+    		if(j==NumForLoops-1):
+    			if(ConfigParams['RandomAccess'][VarNum]>0):
+	    			BoundVar='bound'
+    				BoundVarDecl=TabSpace+'int '+BoundVar+' =0; '
+    				ThisLoop.append(BoundVarDecl);
+    				InnerLoopVar='InnerLoopVar'
+    				InnerLoopVarDecl=TabSpace+'int '+InnerLoopVar+' =0;'
+    				TempVar='temp'
+    				TempVarDecl=TabSpace+'int '+str(TempVar)+';'
+    				ThisLoop.append(TempVarDecl);
+    				LoopStmt=[]
+				LoopStmt.append(TabSpace+'for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+='+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+' )')
+				LoopStmt.append(TabSpace+'{')
+				LoopStmt.append(TabSpace+'\t '+str(BoundVar)+'='+str(ConfigParams['indices'][j])+' * '+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+' ;')
+				LoopStmt.append(TabSpace+'\t if( '+str(BoundVar)+' > '+str(ConfigParams['size'][j])+' )')
+				LoopStmt.append(TabSpace+'\t\t '+str(BoundVar)+' = '+str(ConfigParams['size'][j])+';')
+				LoopStmt.append(TabSpace+'\t '+str(TempVar)+' = (int) ( rand() % '+str(ConfigParams['size'][j])+' );')
+				LoopStmt.append(TabSpace+'\t for('+str(InnerLoopVar)+'='+str(ConfigParams['indices'][j])+' ; '+ str(InnerLoopVar)+' < '+str(BoundVar)+' ; '+str(InnerLoopVar)+'+=1)')
+				for CurrLine in LoopStmt:
+					ThisLoop.append(CurrLine)
+				DontSkip=0
+			else:
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1 )'
+			
+		else:
+			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['size'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
+		if DontSkip:
+			ThisForLoop=TabSpace+ThisForLoop
+			ThisLoop.append(ThisForLoop)
+			ThisLoop.append(TabSpace+'{')
 		#print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
 		LHSindices+='['+str(ConfigParams['indices'][j])+']'
 
     	TabSpace=''
     	for k in range(NumForLoops):
 		TabSpace+='\t'
-    	eqn="\t"+TabSpace+str(A)+LHSindices+' = '+str(ConfigParams['init'][VarNum])+';'
+    	if(ConfigParams['RandomAccess'][VarNum]):
+	    	eqn="\t\t"+TabSpace+str(A)+LHSindices+' = '+str(TempVar)+';' #+str(ConfigParams['init'][VarNum])+';'
+	else:
+		eqn="\t"+TabSpace+str(A)+LHSindices+' = '+str(ConfigParams['init'][VarNum])+';'
+    	
     	#print "\n So, the equation is: "+str(eqn)	
 	ThisLoop.append(eqn)
     	for k in range(NumForLoops):
@@ -640,7 +667,7 @@ def main(argv):
 					print "\n\t RandomAccessString: "+str(RandomAccessString)
 					for CurrRandomAccess in RandomAccessString:
 						if(IsNumber(CurrRandomAccess)):
-							ConfigParams['RandomAccess'].append(CurrRandomAccess)
+							ConfigParams['RandomAccess'].append(int(CurrRandomAccess))
 					#if debug:
 					if not(NumVarNotFound):
 						if( len(ConfigParams['RandomAccess']) == ConfigParams['NumVars']):
@@ -805,6 +832,11 @@ def main(argv):
 								if debug:
 									print "\n\t ExprnBreakdown -- "+str(ExprnBreakdown)
 								ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']=int(RemoveWhiteSpace(ExprnBreakdown[0]))
+								if( (ConfigParams['RandomAccess'][CurrVar]>0) and (ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']>1) ):
+									print "\n\t ERROR: Variable: "+str(CurrVar)+" has conflicting configurations requested in stream "+str(CurrStream)+" . Random Acess is requested with a stride greater than 1. "
+									print "\n\t RandomAccess[Var] "+str(ConfigParams['RandomAccess'][CurrVar])+" Stride: "+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride'])
+									print "\n\t CurrExprn: "+str(CurrExprn)
+									sys.exit()
 								ConfigParams['StrideinStream'][CurrVar][CurrStream]=ConfigParams['StrideVar'][CurrVar][CurrStream]['Stride']
 								ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']=int(RemoveWhiteSpace(ExprnBreakdown[1]))
 								NumOperands=ConfigParams['StrideVar'][CurrVar][CurrStream]['NumOperands']
