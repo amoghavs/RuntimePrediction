@@ -17,6 +17,14 @@ def RemoveWhiteSpace(Input):
 	Output=re.sub('\s*$','',temp)
 	
 	return Output
+	
+def IsNumber(s):
+# Credits: StackExchange: DanielGoldberg: http://stackoverflow.com/questions/354038/how-do-i-check-if-a-string-is-a-number-in-python
+	try:
+		float(s)
+		return True
+	except ValueError:
+		return False
 
 def RemoveBraces(Input):
 	temp=re.sub('^\s*\(','',Input)
@@ -563,7 +571,8 @@ def main(argv):
 	ConfigParams['NumStreaminVar']=[]
 	ConfigParams['StrideinStream']=[]
 	ConfigParams['StrideVar']={}
-	
+	ConfigParams['RandomAccess']=[]
+		
 	LineCount=0;
 	DimNotFound=1;
 	SizeNotFound=1;
@@ -579,8 +588,10 @@ def main(argv):
 	StrideForAllVarsNotFound=1
 	FoundStrideForDims=0
 	LoopIterationsNotFound=1
+	RandomAccessNotFound=1
+	RandomAccessExtracted=0
 	StrideExtracted=[]
-	
+
 	# Tabs: 1
 	for CurrLine in ConfigContents:
 		LineCount+=1;
@@ -606,10 +617,44 @@ def main(argv):
 					ConfigParams['NumVars']=NumVars
 					for i in range(NumVars):
 						StrideExtracted.append(0)
-					#if debug:
-					print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
+					if debug:
+						print "\n\t Number of variables is "+str(ConfigParams['NumVars'])+"\n"	
+					if RandomAccessExtracted:
+						if( len(ConfigParams['RandomAccess']) == ConfigParams['NumVars']):
+							if debug:
+								print "\n\t 1. RandomAccess found for all variables "
+							RandomAccessNotFound=0
+						else:
+							print "\n\t ERROR: RandomAccess found for "+str(len(ConfigParams['RandomAccess']))+" expected it for "+str(ConfigParams['NumVars'])
+							sys.exit()
 					LineNotProcessed=0
 					NumVarNotFound=0	
+
+		if RandomAccessNotFound:
+			MatchObj=re.match(r'\s*\#RandomAccess',CurrLine)
+			if MatchObj:
+				DimsLine=re.match(r'\s*\#RandomAccess\s*(.*)',CurrLine)
+				if DimsLine:
+					Temp=RemoveWhiteSpace(DimsLine.group(1))
+					RandomAccessString=re.split(',',Temp)
+					print "\n\t RandomAccessString: "+str(RandomAccessString)
+					for CurrRandomAccess in RandomAccessString:
+						if(IsNumber(CurrRandomAccess)):
+							ConfigParams['RandomAccess'].append(CurrRandomAccess)
+					#if debug:
+					if not(NumVarNotFound):
+						if( len(ConfigParams['RandomAccess']) == ConfigParams['NumVars']):
+							#if debug:
+							print "\n\t RandomAccess found for all variables "
+							RandomAccessNotFound=0	
+						else:
+							print "\n\t ERROR: RandomAccess found for "+str(len(ConfigParams['RandomAccess']))+" expected it for "+str(ConfigParams['NumVars'])
+							sys.exit()
+					else:
+						RandomAccessExtracted=1
+
+				LineNotProcessed=0
+							
 							
 					
 		if NumStreamsDimsNotFound:
@@ -933,7 +978,7 @@ def main(argv):
 	else:
 		print "\n\t AllStridesAvailable: "+str(AllStridesAvailable)+" ConfigParams['NumVars'] "+str(ConfigParams['NumVars'])
 	#sys.exit()
-	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0)):
+	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0)):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
 		LibAlloc=[]
@@ -1200,6 +1245,7 @@ def main(argv):
 		print "\n\t (NumVarNotFound) "+str(NumVarNotFound)+" (DimNotFound) "+str(DimNotFound)+" SizeNotFound: "+str(SizeNotFound)
 		print "\n\t StrideNotFound "+str(StrideNotFound)+" AllocNotFound: "+str(AllocNotFound)+" InitNotFound: "+str(InitNotFound)
 		print "\n\t NumStreamsDimsNotFound=: "+str(NumStreamsDimsNotFound)+" LoopIterationsNotFound: "+str(LoopIterationsNotFound)
+		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
  		sys.exit(0)
 	
 	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_'+str(ConfigParams['NumVars'])+"vars"+"_DS_"+str(DSString)+'_alloc_'+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_Ops_'+str(OpStream)+'_stride_'+str(StrideString)+'.c'

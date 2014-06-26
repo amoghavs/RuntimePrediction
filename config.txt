@@ -2,6 +2,8 @@
 #vars 3
 #dims 3
 #StreamDims 2,1,1
+#RandomAccess 1,0,0
+
 #loop_iterations 16,10,10
 #size 2,256,32786
 #allocation d,d,d

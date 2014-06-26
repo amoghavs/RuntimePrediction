@@ -487,6 +487,7 @@ def main():
 										CMDCompileFile='gcc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
 										print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 										commands.getoutput(CMDCompileFile)
+								sys.exit()
 						
 
 
