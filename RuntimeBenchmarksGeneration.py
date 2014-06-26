@@ -211,9 +211,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     
     if(ConfigParams['RandomAccess'][VarNum]>0):
     	for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
-    		Temp='RandomVar'+str(VarNum)+'_stream'+str(CurrStream)
+     		Temp='RandomVar'+str(VarNum)+'_Stream'+str(CurrStream)
     		RandomAccessVarPerStream[CurrStream]=Temp
-    		VarDecl='int '+str(Temp)+'=0;'
+   		VarDecl='int '+str(Temp)+'=0;'
     		ShouldDeclareVars.append(VarDecl)
     		
     		
@@ -566,6 +566,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		#print "\n\t CurrStream: "+str(CurrStream)+" Var: "+str(LHSVariableCurrStream)
 		#print "\n\t RHSExprnPerOperand: "+str(RHSExprnPerStream[CurrStream])
 		if(ConfigParams['RandomAccess'][VarNum]):
+			AccumExprn=str(AccumVar[VarNum])+' += '+str(RandomAccessVarPerStream[CurrStream])+';'
+			ThisLoop.append(AccumExprn)
 			StreamExprn=LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) % '+str(ConfigParams['GlobalVar']['DimsSize'][(NumDims-1)])+';'
 		else:
 			StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
