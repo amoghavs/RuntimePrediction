@@ -1327,7 +1327,10 @@ def main(argv):
 		DSString=''
 		for i in range(ConfigParams['NumVars']):
 			DSString+=str(ConfigParams['datastructure'][i])
-					
+
+		RandomAccessString=''
+		for i in range(ConfigParams['NumVars']):
+				RandomAccessString+=str(ConfigParams['RandomAccess'][i])	
  		if debug:
  			print "\n\t -- DSString: "+str(DSString)+" -- "				
 	else:
@@ -1339,7 +1342,7 @@ def main(argv):
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
  		sys.exit(0)
 	
-	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_'+str(ConfigParams['NumVars'])+"vars"+"_DS_"+str(DSString)+'_alloc_'+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_Ops_'+str(OpStream)+'_stride_'+str(StrideString)+'.c'
+	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_Vars_'+str(ConfigParams['NumVars'])+"_DS_"+str(DSString)+'_Alloc_'+alloc_str+'_Dims_'+str(ConfigParams['Dims'])+'_Size_'+str(SizeString)+'_Random_'+str(RandomAccessString)+'_Streams_'+str(StreamString)+'_Ops_'+str(OpStream)+'_Stride_'+str(StrideString)+'.c'
 	WriteFile=open(SrcFileName,'w')			
 	InitLoop=[]
 	for VarNum in range(ConfigParams['NumVars']):
