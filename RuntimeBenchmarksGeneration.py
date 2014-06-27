@@ -726,7 +726,8 @@ def main(argv):
 							sys.exit()
 					else:
 						RandomAccessExtracted=1
-
+						print "\n\t RandomAccessExtracted: "+str(RandomAccessExtracted)+" RandomAccessNotFound "+str(RandomAccessNotFound)
+				print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
 				LineNotProcessed=0
 							
 							
@@ -819,7 +820,7 @@ def main(argv):
 						else:
 							SizeNotFound=0
 
-			if StrideForAllVarsNotFound:
+			if StrideForAllVarsNotFound and (not RandomAccessNotFound):
 				MatchObj=re.match(r'\s*\#stride',CurrLine)
 				if MatchObj:
 					FindDim=re.match(r'\s*\#stride(\d+)+',CurrLine)
@@ -1057,6 +1058,7 @@ def main(argv):
 	else:
 		print "\n\t AllStridesAvailable: "+str(AllStridesAvailable)+" ConfigParams['NumVars'] "+str(ConfigParams['NumVars'])
 	#sys.exit()
+	print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
 	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0)):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
@@ -1386,6 +1388,12 @@ def main(argv):
 	WriteFile.write("\n\t struct timeval start,end;")
 	WriteFile.write("\n\t double currtime;")
 	
+
+        WriteFile.write('\n\t gettimeofday(&start,NULL);')
+        WriteFile.write('\n\t currtime=(start.tv_sec+start.tv_usec/1000000.0); ')
+    	WriteFile.write("\n\t srand(currtime); ")
+
+
 	for VarNum in range(ConfigParams['NumVars']):
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 			WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	

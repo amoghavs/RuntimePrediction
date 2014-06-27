@@ -169,22 +169,40 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 			#+" Should use the key for MainOperationSet: "+str(CurrNumOperands[CurrVar]-1)
 			StrideConfigPrep[CurrNumOperandsString][CurrVar]={}
 			StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']=[]
-			if(CurrNumOperands[CurrVar]>1):
-				MainOpsKey=CurrNumOperands[CurrVar]-1
-				#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" can permutate over a set of operations: "+str(len(StreamConfig['MainOperationsSet'][MainOpsKey]))
-				NumOpsLastIdx=(CurrNumOperands[CurrVar]-1)-1
-				for CurrOperationsSet in (StreamConfig['MainOperationsSet'][MainOpsKey]):
-					OpCombo='('
-					for Idx,CurrOperation in enumerate(CurrOperationsSet):
-						OpCombo+=str(CurrOperation)
-						if(NumOpsLastIdx>Idx):
-							OpCombo+=','
-					OpCombo+=')'
-					#print "\n\t OpCombo: "+str(OpCombo)+" CurrSet: "+str(CurrOperationsSet)	
-					StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)
+			if(Operations['PermutationsFlag']['MainOperations']):
+				if(CurrNumOperands[CurrVar]>1):
+					MainOpsKey=CurrNumOperands[CurrVar]-1
+					print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" can permutate over a set of operations: "+str((StreamConfig['MainOperationsSet'][MainOpsKey]))
+					NumOpsLastIdx=(CurrNumOperands[CurrVar]-1)-1
+					for CurrOperationsSet in (StreamConfig['MainOperationsSet'][MainOpsKey]):
+						OpCombo='('
+						for Idx,CurrOperation in enumerate(CurrOperationsSet):
+							OpCombo+=str(CurrOperation)
+							if(NumOpsLastIdx>Idx):
+								OpCombo+=','
+						OpCombo+=')'
+						#print "\n\t OpCombo: "+str(OpCombo)+" CurrSet: "+str(CurrOperationsSet)	
+						StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)
+				else:
+					#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
+					StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append('')
 			else:
-				#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
-				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append('')
+				NumOperations=len(Operations['MainOperations'])
+				OpCombo='('
+				print "\n\t CurrNumOperands: "+str(CurrNumOperands)
+				for i in range(CurrNumOperands[CurrVar]-1):
+					Idx=random.randrange(NumOperations)
+					CurrOperation=Operations['MainOperations'][Idx]
+					if(i):
+						OpCombo+=','+str(CurrOperation)
+					else:
+						OpCombo+=str(CurrOperation)
+				if(CurrNumOperands[CurrVar]==1):
+					OpCombo=''
+				else:
+					OpCombo+=')'
+
+				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)
 					
 	return StrideConfigPrep
 
@@ -199,16 +217,17 @@ def main():
         Min['Dims']=3
         Max['NumStream']=1
         Min['NumStream']=1
-        Max['Stride']=3 # ie., 2^4
-        Min['Stride']=2 # ie., 2^0=1
+        Max['Stride']=1 # ie., 2^4
+        Min['Stride']=1 # ie., 2^0=1
         Alloc=[['d']] #,'d','d','d']]    
         Init=['index0']#,'index0','index0','index0']
         DS=[['d']]#,'d','d','d']]    
+	RandomAccess=[[1]] # 1,1,1]]
         #SpatWindow=[8,16,32];
         LoopIterationBase=10;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
         LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
-        MbyteSize=28 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
+        MbyteSize=20 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         Dim0Size=2**(MbyteSize-8)
         HigherDimSize= MaxSize/ Dim0Size
@@ -222,13 +241,13 @@ def main():
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
 
 	Max['NumOperands']=[3] #,2,1,4]
-	Min['NumOperands']=[3] #,1,1,1] #Min: Should be >= 1 
+	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
+
 	Operations={}
 	Operations['MainOperations']=['+','-','*','/']
 
 	PermutationsFlag={}
-	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
-	PermutationsFlag['IntraOperations']= 1
+	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of 
 	
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
@@ -314,7 +333,7 @@ def main():
 				CurrString=''
 				CurrPrefix=''
 				CurrPrefixPos=0
-				StartStream=Min['Stride'] 
+				StartStream=0 #Min['Stride'] 
 				StrideSet=[]
 				RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,StrideSet)
 		
@@ -433,7 +452,8 @@ def main():
  									TempCombiAccumulation.append(Temp)
 								
 							CombiAccumulation=copy.deepcopy(TempCombiAccumulation)
-						print "\n\t AccumulationCount: "+str(AccumulationCount)+' * (Num-NumOperands) '+str(len(StreamConfigCollection[CurrStrideString]))+' * '+str(len(CurrStrideStringSet))
+						print "\n\t AccumulationCount: "+str(AccumulationCount)+' * (NumOperands) '+str(len(StreamConfigCollection[CurrStrideString]))+' * '+str(len(CurrStrideStringSet))
+						
 
 						for CurrCombiAccumulation in (CombiAccumulation):
 							
@@ -451,43 +471,51 @@ def main():
 											DSString+=','+str(CurrDS)
 										else:
 											DSString+=str(CurrDS)
-											
-								ConfigFileName='SampleConfig_Vars'+str(NumVars)+'_Dims'+str(NumDims)+'_Streams_'+str(StreamName)+'.txt'
-								#print "\n\t ConfigFileName: "+str(ConfigFileName)
+									RandomAccessString=''
+									for CurrVarRandomAccessSet in RandomAccess:
+										for i,CurrVarRandomAccess in enumerate(CurrVarRandomAccessSet):
+											 	if(i):
+											 		RandomAccessString+=','+str(CurrVarRandomAccess)
+											 	else:
+											 		RandomAccessString+=str(CurrVarRandomAccess)		
+										
+										ConfigFileName='SampleConfig_Vars'+str(NumVars)+'_Dims'+str(NumDims)+'_Streams_'+str(StreamName)+'.txt'
+										print "\n\t ConfigFileName: "+str(ConfigFileName)
 
-								f=open(ConfigFileName,'w')
-								f.write("\n#vars "+str(NumVars))
-								f.write("\n#dims "+str(NumDims))
-								f.write("\n#StreamDims "+str(NumStreamString))
-								f.write("\n#loop_iterations "+str(IterationsString))
-								#f.write("\n"+str(StrideString))
-								f.write("\n#size "+str(SizeString))
-								f.write("\n#allocation "+str(AllocString) )
-								f.write("\n#init "+str(InitExpression))
-								f.write("\n#datastructure "+str(DSString))
+										f=open(ConfigFileName,'w')
+										f.write("\n#vars "+str(NumVars))
+										f.write("\n#dims "+str(NumDims))
+										f.write("\n#StreamDims "+str(NumStreamString))
+										f.write("\n#RandomAccess "+str(RandomAccessString))
+										f.write("\n#loop_iterations "+str(IterationsString))
+										#f.write("\n"+str(StrideString))
+										f.write("\n#size "+str(SizeString))
+										f.write("\n#allocation "+str(AllocString) )
+										f.write("\n#init "+str(InitExpression))
+										f.write("\n#datastructure "+str(DSString))
 								
-								for CurrCombi in CurrCombiAccumulation:
-									#print "\n\t CurrCombi: "+str(CurrCombi)
-									f.write("\n"+str(CurrCombi))
+										for CurrCombi in CurrCombiAccumulation:
+											print "\n\t CurrCombi: "+str(CurrCombi)
+											f.write("\n"+str(CurrCombi))
 									
-								f.write("\n\n")
-								f.close()
-								OutputFileName='Duh.log'
-								CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
-								commands.getoutput(CMDrunStrideBenchmarks)
-								#print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
-								OutputFile=open(OutputFileName)
-								ReadOutput=OutputFile.readlines()
-								OutputFile.close()
-								for CurrLine in ReadOutput:
-									FileName=re.match('^\s*Source\s*file\s*name\:\s*(.*).c',CurrLine)
-									if FileName:
-										print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
-										SRCFileName=str(FileName.group(1))+'.c'
-										CMDCompileFile='gcc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
-										print "\n\t CMDCompileFile: "+str(CMDCompileFile)
-										commands.getoutput(CMDCompileFile)
-								sys.exit()
+										f.write("\n\n")
+										f.close()
+										OutputFileName='Duh.log'
+										CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
+										commands.getoutput(CMDrunStrideBenchmarks)
+										print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
+										OutputFile=open(OutputFileName)
+										ReadOutput=OutputFile.readlines()
+										OutputFile.close()
+										for CurrLine in ReadOutput:
+											FileName=re.match('^\s*Source\s*file\s*name\:\s*(.*).c',CurrLine)
+											if FileName:
+												print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
+												SRCFileName=str(FileName.group(1))+'.c'
+												CMDCompileFile='gcc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
+												print "\n\t CMDCompileFile: "+str(CMDCompileFile)
+												commands.getoutput(CMDCompileFile)
+						#sys.exit()
 						
 
 
