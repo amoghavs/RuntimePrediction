@@ -68,6 +68,8 @@ def main(argv):
 	CurrSrcFileParams={}
 	CurrStatsFileName=''
 	CurrStatsFile=''
+	SpatialWindow=[32,128]
+	
 	for idx,CurrSrcFile in enumerate(SrcFile):
 		CurrSrcFileParams[idx]={}
 		ExtractFileName=re.match('\s*(.*)\.c',CurrSrcFile)
@@ -89,9 +91,7 @@ def main(argv):
 				CurrSrcFileParams[idx]['Dims']=CheckParams.group(5)
 				CurrSrcFileParams[idx]['Size']=CheckParams.group(6)
 				CurrSrcFileParams[idx]['Random']=CheckParams.group(7)
-				"""CurrSrcFileParams[idx]['Streams']=CheckParams.group(8)
-				CurrSrcFileParams[idx]['Ops']=CheckParams.group(9)
-				CurrSrcFileParams[idx]['Stride']=CheckParams.group(10)"""
+
 				TempStatsFileName='Stats'
 				for CurrFeature in CurrSrcFileParams[idx]:
 					#print "\n\t Feature: "+str(CurrFeature)+" value: "+str(CurrSrcFileParams[idx][CurrFeature])
@@ -109,6 +109,51 @@ def main(argv):
 						print "\n\t Yaay!! "			
 
 				CurrStatsFile.write("\n\t Src File Name: "+str(CurrSrcFileParams[idx]['FileName']))
+				
+				CMDPebil='pebil --typ jbb --app '+str(FileName)
+				commands.getoutput(CMDPebil)
+				CMDJbb='./'+str(FileName)+'.jbbinst'
+				commands.getoutput(CMDJbb)
+				JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
+				JbbFileHandle=open(JbbFileName)
+				JbbFile=JbbFileHandle.readlines()
+				JbbFileHandle.close()
+				BBFileName='BB_'+str(FileName)+'.txt'
+				BBFile=open(BBFileName,'w')
+				for CurrLine in JbbFile:
+					CheckBlk=re.match('\s*BLK',CurrLine)
+					if CheckBlk:
+						BreakFields=re.split('\t',CurrLine)
+						#print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
+						CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
+						if CheckFuncVar:
+							print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])							
+							BBFile.write('\n\t '+str(BreakFields[2]))
+				BBFile.write("\n\n")
+				BBFile.close()
+				
+				CMDPebilSim='pebil --typ sim --inp '+str(BBFileName)+' --app '+str(FileName)
+				print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
+				commands.getoutput(CMDPebilSim)
+				SimInstFile=str(FileName)+'.siminst'
+				for CurrSW in SpatialWindow:
+					
+					SimRunScript=open('SimRun.sh','w')
+					print "\n\t CurrSW: "+str(CurrSW)
+					SimRunScript.write('\n\t export METASIM_SAMPLE_ON=1 ')
+					SimRunScript.write('\n\t export METASIM_SAMPLE_OFF=0 ')			
+					SimRunScript.write('\n\t export METASIM_REUSE_WINDOW=8 ')			
+					SimRunScript.write('\n\t export METASIM_SPATIAL_WINDOW='+str(CurrSW))
+					SimRunScript.write('\n\t export METASIM_CACHE_SIMULATION=1 ')			
+					SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=1 ')	
+					SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
+					SimRunScript.write('\n\t ./'+str(SimInstFile))	
+					SimRunScript.write('\n\n')							
+					SimRunScript.close()
+					#commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
+					commands.getoutput('sh SimRun.sh ')
+							
+				
 	CurrStatsFile.write("\n\n")
 	CurrStatsFile.close()
 
