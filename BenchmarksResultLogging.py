@@ -69,6 +69,8 @@ def main(argv):
 	CurrStatsFileName=''
 	CurrStatsFile=''
 	SpatialWindow=[32,128]
+	FilesToRename=['.siminst','.dist','.spatial']
+	FilesToExtract=['.dist','.spatial']
 	
 	for idx,CurrSrcFile in enumerate(SrcFile):
 		CurrSrcFileParams[idx]={}
@@ -108,7 +110,7 @@ def main(argv):
 						CurrStatsFile=open(CurrStatsFileName,'w')
 						print "\n\t Yaay!! "			
 
-				CurrStatsFile.write("\n\t Src File Name: "+str(CurrSrcFileParams[idx]['FileName']))
+				CurrStatsFile.write("\n\t *** Src File Name: "+str(CurrSrcFileParams[idx]['FileName']))
 				
 				CMDPebil='pebil --typ jbb --app '+str(FileName)
 				commands.getoutput(CMDPebil)
@@ -136,6 +138,9 @@ def main(argv):
 				print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
 				commands.getoutput(CMDPebilSim)
 				SimInstFile=str(FileName)+'.siminst'
+				DirName='Dir'+str(FileName)
+				CMDMkdir='mkdir '+str(DirName)
+				commands.getoutput(CMDMkdir)
 				for CurrSW in SpatialWindow:
 					
 					SimRunScript=open('SimRun.sh','w')
@@ -150,8 +155,40 @@ def main(argv):
 					SimRunScript.write('\n\t ./'+str(SimInstFile))	
 					SimRunScript.write('\n\n')							
 					SimRunScript.close()
-					#commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
-					commands.getoutput('sh SimRun.sh ')
+					commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
+					
+					CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
+					for CurrExt in FilesToExtract:
+						CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
+						DistFileHandle=open(CurrExtFile)
+						DistFile=DistFileHandle.readlines()
+					
+						BinsNotFound=1
+						KeepCopying=1
+						CurrStatsFile.write("\n\t Extension :"+str(CurrExt)+"\n")
+						for CurrLine in DistFile:
+							if BinsNotFound:
+								CheckBins=re.match('\s*Bin\s*Count',CurrLine)
+								if CheckBins:
+									BinsNotFound=0
+							else:
+								CheckTotal=re.match('\s*Total\s*Count\:',CurrLine)
+								if not(CheckTotal):
+									if KeepCopying:
+										CurrStatsFile.write("\t "+str(CurrLine))
+								else:
+									KeepCopying=0
+								
+					FilePrefix='SW_'+str(CurrSW)+'_'
+					#commands.getoutput(
+					for CurrExtension in FilesToRename:
+						CurrName=FileName+'.r00000000.t00000001'+str(CurrExtension)
+						MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
+						print "\n\t MVCommand: "+str(MVCommand)
+						commands.getoutput(MVCommand)
+					
+				CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
+				commands.getoutput(CMDMvFiles)
 							
 				
 	CurrStatsFile.write("\n\n")

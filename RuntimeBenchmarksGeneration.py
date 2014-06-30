@@ -529,9 +529,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		if(j==StrideDim):
 			#RHSindices+='['+str(ConfigParams['indices'][j])+']'
 			#ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 '+str(IndexInit)+';'+str(ConfigParams['indices'][j])+'<='+str(BoundForDim[j])+';'+str(IndexIncr)+')'
-		        if(ConfigParams['RandomAccess'][VarNum]>0):
-		    		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
-		    			ThisLoop.append(TabSpace+str(RandomAccessVarPerStream[CurrStream])+' =0;')
+		        #if(ConfigParams['RandomAccess'][VarNum]>0):
+		    	#	for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
+		    	#		ThisLoop.append(TabSpace+str(RandomAccessVarPerStream[CurrStream])+' =0;')
 			
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+str(InitForDim[j])+';'+str(ConfigParams['indices'][j])+'<='+str(BoundForDim[j])+';'+str(IndexIncr)+')'
 		elif(j!=StrideDim):
