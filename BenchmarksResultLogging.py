@@ -71,6 +71,8 @@ def main(argv):
 	SpatialWindow=[32,128]
 	FilesToRename=['.siminst','.dist','.spatial']
 	FilesToExtract=['.dist','.spatial']
+	NumRepeats=5
+	AverageRuntimeCollection={}
 	
 	for idx,CurrSrcFile in enumerate(SrcFile):
 		CurrSrcFileParams[idx]={}
@@ -103,6 +105,10 @@ def main(argv):
 				CurrSrcFileParams[idx]['FileName']=FileName
 				if(CurrStatsFileName!=TempStatsFileName):
 					if(CurrStatsFile):
+						CurrStatsFile.write("\n\t Average run times: ")
+						CurrStatfFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
+						for CurrFile in AverageRuntimeCollection:
+							CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(verageRuntimeCollection[CurrFile]))
 						CurrStatsFile.write("\n\n")
 						CurrStatsFile.close()
 					else:
@@ -122,6 +128,7 @@ def main(argv):
 				JbbFileHandle.close()
 				BBFileName='BB_'+str(FileName)+'.txt'
 				BBFile=open(BBFileName,'w')
+				
 				for CurrLine in JbbFile:
 					CheckBlk=re.match('\s*BLK',CurrLine)
 					if CheckBlk:
@@ -131,6 +138,7 @@ def main(argv):
 						if CheckFuncVar:
 							print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])							
 							BBFile.write('\n\t '+str(BreakFields[2]))
+
 				BBFile.write("\n\n")
 				BBFile.close()
 				
@@ -141,6 +149,27 @@ def main(argv):
 				DirName='Dir'+str(FileName)
 				CMDMkdir='mkdir '+str(DirName)
 				commands.getoutput(CMDMkdir)
+				
+				RunOutputFile='RunOutput.log'
+				RuntimeCollection=[]
+				AverageRunTime=0.0
+				for i in range(NumRepeats):
+					RunCmd='./'+str(FileName)+' > '+str(RunOutputFile)
+					commands.getoutput(RunCmd)
+					RunOutput=open(RunOutputFile)
+					for CurrLine in RunOutput:
+						CheckRuntime=re.match('\s*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine)
+						if CheckRuntime:
+							#CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
+							Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
+							Temp=float(Temp)
+							AverageRunTime+=Temp
+							
+						
+				AverageRunTime/=NumRepeats
+				AverageRuntimeCollection[FileName]=AverageRunTime
+				#CurrStatsFile.write("\n\t AverageRunTime: "+str(AverageRunTime))
+				
 				for CurrSW in SpatialWindow:
 					
 					SimRunScript=open('SimRun.sh','w')
@@ -165,7 +194,7 @@ def main(argv):
 					
 						BinsNotFound=1
 						KeepCopying=1
-						CurrStatsFile.write("\n\t Extension :"+str(CurrExt)+"\n")
+						CurrStatsFile.write("\n\t Extension: "+str(CurrExt)+"\n")
 						for CurrLine in DistFile:
 							if BinsNotFound:
 								CheckBins=re.match('\s*Bin\s*Count',CurrLine)
@@ -191,8 +220,13 @@ def main(argv):
 				commands.getoutput(CMDMvFiles)
 							
 				
-	CurrStatsFile.write("\n\n")
-	CurrStatsFile.close()
+	if(CurrStatsFile):
+		CurrStatsFile.write("\n\t Average run times: ")
+		CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
+		for CurrFile in AverageRuntimeCollection:
+			CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
+		CurrStatsFile.write("\n\n")
+		CurrStatsFile.close()
 
 if __name__ == "__main__":
    main(sys.argv[1:])

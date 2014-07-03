@@ -1089,6 +1089,7 @@ def main(argv):
 		LibAlloc.append(tmp)
 		
 #LAURA ADDED
+		LibAlloc.append('#define __USE_GNU 1')
     		LibAlloc.append('#include <sched.h>')
     		LibAlloc.append('// pins this process to core c')
     		LibAlloc.append('void pinto(int c){')
