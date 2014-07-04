@@ -1,5 +1,5 @@
 
-import sys,subprocess,re,math,commands,time,copy,random
+import sys,subprocess,re,math,commands,time,copy,random,getopt
 
 ### WORKING ASSUMPTIONS:
 # NumVars is constant
@@ -10,40 +10,6 @@ import sys,subprocess,re,math,commands,time,copy,random
 	# Might work for now, but for generalizing the tool, will need this flexibility. Might not take too long to incorporate this!
 	# Even the intraoperanddelta generated is common across all streams.
 # 2. <>
-
-def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
-	#print "\n\t StartStream: "+str(StartStream)+' and NumStrides: '+str(NumStrides)
-	if(CurrStream==(NumStreams)):
-		#print "\n\t ++ CurrStream: "+str(CurrStream)
-		if(CurrString):
-			for i in range(StartStream,NumStrides):
-				Result=CurrString+','+str((2**i))
-				ResultString.append(Result)
-				print "\n\t 1. Result: "+Result
-		else:
-			#print "\n\t ---- StartStream: "+str(StartStream)+"\n"
-			for i in range(StartStream,StartStream+NumStrides):
-				Result=CurrString+str((2**i))
-				ResultString.append(Result)
-				#print "\n\t 2. Result: "+Result		
-			
-		CurrStream-=1
-		return 
-
- 	CurrPrefixPos=0
-  	StartStream+=1 
-	while(CurrPrefixPos!=(NumStrides-2)):
-		if(CurrPrefix==''):	
-			CurrString=CurrPrefix+str((2**CurrPrefixPos))	
-		else:
-			CurrString=CurrPrefix+','+str((2**CurrPrefixPos))
-		print "\n\t -- CurrPrefixPos: "+str(CurrPrefixPos)+' CurrStream: '+str(CurrStream)+" CurrString: "+str(CurrString)+" CurrPrefix: "+str(CurrPrefix)		
-		#print "\n\t $$ CurrStream: "+str(CurrStream)+" CurrPrefixPos: "+str(CurrPrefixPos)
-		RecursiveStrideGen(CurrStream+1,NumStreams,StartStream,NumStrides,CurrString,CurrString,CurrPrefixPos,ResultString)
-		CurrPrefixPos+=1
- 		
-	CurrStream-=1
- 	return  	
 	
 def IterationsCombination(LoopIterations,NumVars):
 	OutputSet=[]
@@ -207,7 +173,7 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 	return StrideConfigPrep
 
 ########		
-def main():
+def main(argv):
 
         Max={} #; Ensure Max is less than or equal to Min. 
         Min={}
@@ -263,6 +229,89 @@ def main():
 	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
  	#Operations['Operand']	
 	Operations['PermutationsFlag']=PermutationsFlag 
+	
+###
+
+        try:
+           optlist, args = getopt.getopt(argv,"h:d",['minDims=','maxDims=','minStreams=','maxStreams=','minStride=','maxStride=','Iter=','Size='])
+        except getopt.GetoptError,err:
+           #print str(err) # will print something like "option -a not recognized"
+           print "ERROR" + str(err)
+           usage()
+           sys.exit(2)
+
+    	for i in range(0,len(optlist),1):
+                #print "HERE AND LIST IS :" +str(len(optlist))+"   list="+str(sys.argv[1:]);
+		if optlist[i][0] == '--minDims':
+            		try:
+                		Min['Dims'] = int(optlist[i][1])
+                		print "min Dimensions set to : " +str(Min['Dims']) +"\n";
+                		if (Min['Dims'] < 1):
+                    			raise ValueError
+            		except ValueError:
+                        	print "argument to --minDims should be a positive int";
+          	if optlist[i][0] == '--maxDims':  
+            		try:                         
+                		Max['Dims'] = int(optlist[i][1])    
+                		if (Max['Dims'] < Min['Dims']):
+                    			raise ValueError
+            		except ValueError:
+				print "argument to --maxDims should be a positive int >= minDims";
+                if optlist[i][0] == '--minStreams':
+                        try:
+                                Min['NumStream'] = int(optlist[i][1])
+                                print "min Streams set to : " +str(Min['NumStream']) +"\n";
+                                if (Min['NumStream'] < 1):
+                                        raise ValueError
+                        except ValueError:
+                                print "argument to --minStreams should be a positive int";
+                if optlist[i][0] == '--maxStreams':
+                        try:
+                                Max['NumStream'] = int(optlist[i][1])
+                                if (Max['NumStream'] < Min['NumStream']):
+                                        raise ValueError
+                        except ValueError:
+                                print "argument to --maxStreams should be a positive int >= minStreams";
+                if optlist[i][0] == '--minStride':
+                        try:
+                                Min['Stride'] = int(optlist[i][1])
+                                print "min Stride set to : " +str(Min['Stride']) +"\n";
+                                if (Min['Stride'] < 1):
+                                        raise ValueError
+                        except ValueError:
+                                print "argument to --minStride should be a positive int";
+                if optlist[i][0] == '--maxStride':
+                        try:
+                                Max['Stride'] = int(optlist[i][1])
+                                if (Max['Stride'] < Min['Stride']):
+                                        raise ValueError
+                        except ValueError:
+                                print "argument to --maxStride should be a positive int >= minStride";
+                if optlist[i][0] == '--Iter':
+                        try:
+                                LoopIterations = int(optlist[i][1])
+                                print "--Iter set to : " +str(LoopIterations) +"\n";
+                                if (LoopIterations < 1):
+                                        raise ValueError
+                        except ValueError:
+                                print "argument to --Iter should be a positive int";
+                if optlist[i][0] == '--Size':
+                        try:
+                                MbyteSize = int(optlist[i][1])
+                                print "--Size set to : " +str(MbyteSize) +"\n";
+                                if (MbyteSize < 1):
+                                        raise ValueError
+                        except ValueError:
+                                print "argument to --Size should be a positive int";
+
+      	if len(args) == 0:
+        	print "PROBLEM arg len == 0 ";
+
+        print "STARTING \n";
+
+
+
+###	
  
         LoopIterations=[]
         for CurrVar in range(NumVars):
@@ -564,5 +613,5 @@ def main():
 
 
 if __name__=="__main__":
-	main() #sys.argv[1:])
+	main(sys.argv[1:])
 	

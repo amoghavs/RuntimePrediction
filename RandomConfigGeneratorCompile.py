@@ -10,40 +10,7 @@ import sys,subprocess,re,math,commands,time,copy,random
 	# Might work for now, but for generalizing the tool, will need this flexibility. Might not take too long to incorporate this!
 	# Even the intraoperanddelta generated is common across all streams.
 # 2. <>
-
-def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
-	#print "\n\t StartStream: "+str(StartStream)+' and NumStrides: '+str(NumStrides)
-	if(CurrStream==(NumStreams)):
-		#print "\n\t ++ CurrStream: "+str(CurrStream)
-		if(CurrString):
-			for i in range(StartStream,NumStrides):
-				Result=CurrString+','+str((2**i))
-				ResultString.append(Result)
-				print "\n\t 1. Result: "+Result
-		else:
-			#print "\n\t ---- StartStream: "+str(StartStream)+"\n"
-			for i in range(StartStream,StartStream+NumStrides):
-				Result=CurrString+str((2**i))
-				ResultString.append(Result)
-				#print "\n\t 2. Result: "+Result		
-			
-		CurrStream-=1
-		return 
-
- 	CurrPrefixPos=0
-  	StartStream+=1 
-	while(CurrPrefixPos!=(NumStrides-2)):
-		if(CurrPrefix==''):	
-			CurrString=CurrPrefix+str((2**CurrPrefixPos))	
-		else:
-			CurrString=CurrPrefix+','+str((2**CurrPrefixPos))
-		print "\n\t -- CurrPrefixPos: "+str(CurrPrefixPos)+' CurrStream: '+str(CurrStream)+" CurrString: "+str(CurrString)+" CurrPrefix: "+str(CurrPrefix)		
-		#print "\n\t $$ CurrStream: "+str(CurrStream)+" CurrPrefixPos: "+str(CurrPrefixPos)
-		RecursiveStrideGen(CurrStream+1,NumStreams,StartStream,NumStrides,CurrString,CurrString,CurrPrefixPos,ResultString)
-		CurrPrefixPos+=1
- 		
-	CurrStream-=1
- 	return  	
+	 	
 	
 def IterationsCombination(LoopIterations,NumVars):
 	OutputSet=[]
@@ -213,12 +180,12 @@ def main():
         Min={}
         Max['Vars']=1
         Min['Vars']=1
-        Max['Dims']=3
-        Min['Dims']=3
-        Max['NumStream']=1
+        Max['Dims']=4
+        Min['Dims']=2
+        Max['NumStream']=4
         Min['NumStream']=1
-        Max['Stride']=1 # ie., 2^4
-        Min['Stride']=1 # ie., 2^0=1
+        Max['Stride']=0 # ie., 2^4
+        Min['Stride']=0 # ie., 2^0=1
         Alloc=[['d']] #,'d','d','d']]    
         Init=['index0']#,'index0','index0','index0']
         DS=[['i']]#,'d','d','d']]    
@@ -243,12 +210,12 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
-        MbyteSize=16 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
+        MbyteSize=13 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         HigherDimSizeIndex=8
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
-        NumSizeIter=12
+        NumSizeIter=2
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
@@ -365,15 +332,45 @@ def main():
 			
 
 					for NumStreams in range(Min['NumStream'],Max['NumStream']+1):
-		 				CurrStream=1
-						NumStrides=((Max['Stride']-Min['Stride'])+1)	
 						CurrString=''
-						CurrPrefix=''
-						CurrPrefixPos=0
-						StartStream=0 #Min['Stride'] 
+						RestrictLength=3
+						print "\n --- NumStreams: "+str(NumStreams)
+						if(NumStreams>=RestrictLength):
+							for i in range(NumStreams-RestrictLength):
+								CurrString+=str(1)+','
+							CurrString+=str(1)
+						print "\n\t PrevString: "+str(CurrString)
+						ResultString=[]
+						PrefixString=CurrString
 						StrideSet=[]
-						RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,StrideSet)
-		
+						PrefixString=CurrString
+						for HigherIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
+							print "\n\t CurrString: "+str(CurrString)
+					
+							if(NumStreams<RestrictLength-1):
+								CurrString=str(2**(HigherIndex))
+								StrideSet.append(CurrString)
+								print "\n\t RESult: "+str(CurrString)
+					
+							else:
+							   	if(PrefixString!=''):
+							   		CurrString=PrefixString+','+str(2**(HigherIndex))
+							   	else:
+							   		CurrString=PrefixString+str(2**(HigherIndex))
+							   	print "\n\t End: CurrString "+str(CurrString)						
+								for LowerIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
+							   	        if(CurrString!=''):
+								   		temp=CurrString+','+str(2**(LowerIndex))
+								   	else:
+								   		temp=str(2**(LowerIndex))
+							   		StrideSet.append(temp)
+							   		print "\n\t\t Result: "+str(temp)
+		 		
+						NumStreamString='#StreamDims '+str(NumStreams) # CAUTION: Should change this when NumVars > 1
+						StrideString=''
+						StrideName=''
+						print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
+						#sys.exit()
 						for i in range(NumVars):	
 							if(i):
 								NumStreamString+=','+str(NumStreams) 
@@ -431,19 +428,20 @@ def main():
 												for Idx in range((CurrNumOperands[CurrVar])):
 													if(Idx):
 														CurrOpCombo+=','
-													PickDelta=random.randrange(StreamConfig['CurrNumDims'])
-													Duh=int(StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
+													
 													if(CurrRandomAccess[CurrVar]):
 														PickIdx=0
 														PickDelta=Idx
-														PickIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)
+														OperandIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)
 													else:
-														PickIdx=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickDelta],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickDelta])
-														
+														PickIdx=random.randrange(StreamConfig['CurrNumDims'])
+														PickDelta=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickIdx],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickIdx])
 														if(random.randrange(2)==0):
-															PickIdx=str(Operations['DimLookup'][PickIdx])+'-'+str(PickDelta)
+															OperandIdx=str(Operations['DimLookup'][PickIdx])+'-'+str(PickDelta)
 														else:
-															PickIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)	
+															OperandIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)	
+													CurrOpCombo+=str(OperandIdx)
+
 													print "\n\t CurrRandomAccess[CurrVar]: "+str(CurrRandomAccess[CurrVar])+" PickIdx "+str(PickIdx)+" PickDelta "+str(PickDelta)
 													CurrOpCombo+=str(PickIdx)
 												CurrOpCombo+=')'
