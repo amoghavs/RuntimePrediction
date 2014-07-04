@@ -1,0 +1,58 @@
+        Max={} #; Ensure Max is less than or equal to Min. 
+        Min={}
+        Max['Vars']=1 #  Maximum number of variables to be used in the file generated. Format: integer number.
+        Min['Vars']=1 #  Maximum number of variables to be used in the file generated. A test will have number of variables b/n Min['Vars'] to Max['Vars'], in steps of 1.  Format: integer number.
+        Max['Dims']=3 # Similar to Min['Vars'] and Max['Vars'], instead specifies the number of dimensions. Format: integer number.
+        Min['Dims']=3 # Format: integer number.
+        Max['NumStream']=2 # Refers to the number of streams, changes similar to Min['Vars']  to Max['Vars'] # Format: integer number.
+        Min['NumStream']=1 # Format: integer number.
+        Max['Stride']=3 # ie., 2^4 # Refers to the power of stride, ie., the max stride would be 2^(Max['Stride'])
+        Min['Stride']=1 # ie., 2^0=1
+        
+        Alloc=[['d']] #,'d','d','d']]    # Can specify different combinations of data allocation style. Format: 1 allocation should be ['d' or 's',..], the array should be as long the number of maximum variables.
+        Init=['index0+1']#,'index0','index0','index0'] # An array with initialization expression. Format: The initialization is an expression, should be represented as a string. index'n' refers to variable used in source file to refer to dimension 'n'.
+        
+        DS=[['d']]#,'d','d','d']]    # Similat to parameter 'Alloc', 'd' : double, 'i' : integer , 'f' : float. 
+        
+	RandomAccess=[[0]] # 1,1,1]] # Similar to parameter 'Alloc', accepted values 0 if variable should not have random access and 1 otherwise. 
+        #SpatWindow=[8,16,32];
+        LoopIterationBase=20;
+        #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]]; # Similar to Alloc, except each sub-array represents the different choices of exponent for number of iterations in the function, related to each variable. Eg: Variable 1 will have instances of same configuration with a test where nested loop repeats Base^1, Base^1.2, Base^1.4 . 
+        LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
+
+
+ 	NumVars=(Max['Vars']-Min['Vars']+1)
+ 	if(Max['Vars']==Min['Vars']):	
+ 		NumVars=(Min['Vars'])
+ 	NumVarsLessOne=NumVars-1
+ 	print "\n\t WARNING: NumVars is assumed to be equal, you have been warned!! "
+
+	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
+   
+        MbyteSize=24 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB # Format: Maximum size of the array. 
+        MaxSize=2**MbyteSize
+        HigherDimSizeIndex=8 # This is the size(exponent) of dimensions 2 to N. 
+        Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
+        HigherDimSize= MaxSize/ Dim0Size
+        
+	Max['NumOperands']=[3] #,2,1,4] # Array which represents maximum number of operands in RHS for each variable.  
+	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1  # Array, represents minimum number of operands.
+
+	Operations={}
+	Operations['MainOperations']=['+','-','*','/'] # Operations b/n RHS operands, only '+ - * / ' are supported.
+
+	PermutationsFlag={}
+	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of # Whether all of the operations combinations should be tried out. eg: if ['MainOperations']=['+','-','*'] and expression should have 2 operands, if this flag is set to zero, only one of the three operations will be chosen for every expression having 2 operands. Similarly if this flag is 1, for an expression having 3 operands, the set of expressions will have ++,--,**,+-,+*,-* combinations.
+	
+	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
+	
+	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
+	Max['IntraOperandDelta']=[(+3,+4,2)]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ] 
+	Min['IntraOperandDelta']=[(0,+1,0) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
+	
+	Max['Constant']=10
+	Min['Constant']=2
+	Operations['IntraOperandOperation']=['IntraOperandDelta','Constant']
+ 	#Operations['Operand']	
+	Operations['PermutationsFlag']=PermutationsFlag 
+	
