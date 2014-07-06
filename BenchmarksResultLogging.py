@@ -28,29 +28,62 @@ def RemoveBraces(Input):
 def main(argv):
 	SrcFileName=''
 	debug=0
+	spatial=''
+	reuse=''
+	AverageRun=0
 	try:
-	   opts, args = getopt.getopt(sys.argv[1:],"s:d:h:v",["source","deubg","help","verbose"])
+	   opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:h:v",["list","deubg","reuse","spatial","average","help","verbose"])
 	except getopt.GetoptError:
 		#print str(err) # will print something like "option -a not recognized"
 	   usage()
 	   sys.exit(2)
 	verbose=False   
 	for opt, arg in opts:
+	   print "\n\t Opt: "+str(opt)+" argument "+str(arg)	
 	   if opt == '-h':
 	      print 'test.py -i <inputfile> -o <outputfile>'
 	      sys.exit()
-	   elif opt in ("-s", "--source"):
+	   elif opt in ("-l", "--list"):
 	      SrcFileName=arg
 	      print "\n\t Source file is "+str(SrcFileName)+"\n";
 	   elif opt in ("-d", "--debug"):
 	      debug=int(arg)
-	      print "\n\t Debug option is "+str(debug)+"\n";	      
+	      print "\n\t Debug option is "+str(debug)+"\n";	
+	   elif opt in ("-r"):
+		reuse=RemoveWhiteSpace(arg)
+		print "\n\t Reuse info: "+str(reuse)+"\n"
+	   elif opt in ("-s"):
+		spatial=RemoveWhiteSpace(arg)
+		print "\n\t Spatial info: "+str(spatial)+" arg "+str(arg)+"\n"
+	   elif opt in ("-a"):
+		AverageRun=int(RemoveWhiteSpace(arg))
+		print "\n\t AverageRun: "+str(AverageRun)+"\n"
            else:
    		usage()
 
 	# If execution has come until this point, the script should have already identified the config file.
 	if(SrcFileName==''):
 		usage()
+	if( (spatial=='') and (reuse=='')):
+		spatial="16,32"
+		reuse='16'
+		print "\n\t Using default spatial value: "+str(spatial)+" reuse value "+str(16)
+	if(AverageRun==0):
+		AverageRun=5
+		print "\n\t Using default average run value: "+str(AverageRun)
+
+	SpatialWindow=[]
+	if(spatial!=''):
+		ThisSet=re.split(',',spatial)
+		for CurrSW in ThisSet:
+			SpatialWindow.append(CurrSW)
+	else:
+		SpatialWindow.append(0)
+
+        ReuseWindow=0
+	if(reuse!=''):
+		print "\n\t Reuse window:"+str(reuse)+"--"
+		ReuseWindow=int(reuse)
 	SrcFileHandle=open(SrcFileName)
 	SrcFile=SrcFileHandle.readlines()
 	SrcFileHandle.close()
@@ -68,10 +101,10 @@ def main(argv):
 	CurrSrcFileParams={}
 	CurrStatsFileName=''
 	CurrStatsFile=''
-	SpatialWindow=[32,128]
+	#SpatialWindow=[32,128]
 	FilesToRename=['.siminst','.dist','.spatial']
-	FilesToExtract=['.dist','.spatial']
-	NumRepeats=5
+	#FilesToExtract=['.dist','.spatial']
+	#AverageRun=5
 	AverageRuntimeCollection={}
 	
 	for idx,CurrSrcFile in enumerate(SrcFile):
@@ -87,7 +120,7 @@ def main(argv):
 
 			if CheckParams:
 				#if debug:
-				print "\n\t Found all of the params! "
+				#print "\n\t Found all of the params! "
 				CurrSrcFileParams[idx]['Iters']=CheckParams.group(1)
 				CurrSrcFileParams[idx]['Vars']=CheckParams.group(2)
 				CurrSrcFileParams[idx]['DS']=CheckParams.group(3)
@@ -117,6 +150,33 @@ def main(argv):
 						print "\n\t Yaay!! "			
 
 				CurrStatsFile.write("\n\t *** Src File Name: "+str(CurrSrcFileParams[idx]['FileName']))
+
+				RunOutputFile='RunOutput.log'
+				RuntimeCollection=[]
+				AverageRunTime=0.0
+				for i in range(AverageRun):
+					RunCmd='./'+str(FileName)+' > '+str(RunOutputFile)
+					commands.getoutput(RunCmd)
+					RunOutput=open(RunOutputFile)
+					for CurrLine in RunOutput:
+						#print "\n\t CurrLine: "+str(CurrLine)
+						#CheckTime=re.match('^\s*app.*time\:',CurrLine)
+						CheckTime=re.match('\s*Run\-time.*\:',CurrLine)
+						if CheckTime:
+							CheckRuntime=re.match('\s*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) # 
+							if CheckRuntime:
+								#CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
+								Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
+								Temp=float(Temp)
+								AverageRunTime+=Temp
+								#print "\n\t Runtime: "+str(Temp)
+							else:
+								print "\n\t ERROR: Cannot extract runtime! \n" 
+								sys.exit()							
+						
+				AverageRunTime/=AverageRun
+				AverageRuntimeCollection[FileName]=AverageRunTime
+				#sys.exit()
 				
 				CMDPebil='pebil --typ jbb --app '+str(FileName)
 				commands.getoutput(CMDPebil)
@@ -150,33 +210,21 @@ def main(argv):
 				CMDMkdir='mkdir '+str(DirName)
 				commands.getoutput(CMDMkdir)
 				
-				RunOutputFile='RunOutput.log'
-				RuntimeCollection=[]
-				AverageRunTime=0.0
-				for i in range(NumRepeats):
-					RunCmd='./'+str(FileName)+' > '+str(RunOutputFile)
-					commands.getoutput(RunCmd)
-					RunOutput=open(RunOutputFile)
-					for CurrLine in RunOutput:
-						CheckRuntime=re.match('\s*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine)
-						if CheckRuntime:
-							#CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
-							Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
-							Temp=float(Temp)
-							AverageRunTime+=Temp
-							
-						
-				AverageRunTime/=NumRepeats
-				AverageRuntimeCollection[FileName]=AverageRunTime
 				#CurrStatsFile.write("\n\t AverageRunTime: "+str(AverageRunTime))
-				
+				FilesToExtract=[]
+				if(ReuseWindow!=0):
+					FilesToExtract.append('.dist')
+				if(spatial!=''):
+					FilesToExtract.append('.spatial')
+
 				for CurrSW in SpatialWindow:
 					
 					SimRunScript=open('SimRun.sh','w')
 					print "\n\t CurrSW: "+str(CurrSW)
 					SimRunScript.write('\n\t export METASIM_SAMPLE_ON=1 ')
 					SimRunScript.write('\n\t export METASIM_SAMPLE_OFF=0 ')			
-					SimRunScript.write('\n\t export METASIM_REUSE_WINDOW=8 ')			
+					MetasimReuseWindow='export METASIM_REUSE_WINDOW='+str(ReuseWindow)
+					SimRunScript.write("\n\t "+str(MetasimReuseWindow))
 					SimRunScript.write('\n\t export METASIM_SPATIAL_WINDOW='+str(CurrSW))
 					SimRunScript.write('\n\t export METASIM_CACHE_SIMULATION=1 ')			
 					SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=1 ')	
@@ -195,6 +243,7 @@ def main(argv):
 						BinsNotFound=1
 						KeepCopying=1
 						CurrStatsFile.write("\n\t Extension: "+str(CurrExt)+"\n")
+						#print("\n\t Extension: "+str(CurrExt)+"\n")
 						for CurrLine in DistFile:
 							if BinsNotFound:
 								CheckBins=re.match('\s*Bin\s*Count',CurrLine)
@@ -213,7 +262,7 @@ def main(argv):
 					for CurrExtension in FilesToRename:
 						CurrName=FileName+'.r00000000.t00000001'+str(CurrExtension)
 						MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
-						print "\n\t MVCommand: "+str(MVCommand)
+						#print "\n\t MVCommand: "+str(MVCommand)
 						commands.getoutput(MVCommand)
 					
 				CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
@@ -227,6 +276,8 @@ def main(argv):
 			CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
 		CurrStatsFile.write("\n\n")
 		CurrStatsFile.close()
+	RemoveWorkingFiles='rm -f RunOutput.log SimRun.sh *Inst* '
+	commands.getoutput(RemoveWorkingFiles)
 
 if __name__ == "__main__":
    main(sys.argv[1:])
