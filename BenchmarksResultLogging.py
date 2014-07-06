@@ -177,96 +177,98 @@ def main(argv):
 				AverageRunTime/=AverageRun
 				AverageRuntimeCollection[FileName]=AverageRunTime
 				#sys.exit()
+			
+				if( not( (ReuseWindow==0) and (spatial=='0')) ):	
+					CMDPebil='pebil --typ jbb --app '+str(FileName)
+					commands.getoutput(CMDPebil)
+					CMDJbb='./'+str(FileName)+'.jbbinst'
+					commands.getoutput(CMDJbb)
+					JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
+					JbbFileHandle=open(JbbFileName)
+					JbbFile=JbbFileHandle.readlines()
+					JbbFileHandle.close()
+					BBFileName='BB_'+str(FileName)+'.txt'
+					BBFile=open(BBFileName,'w')
 				
-				CMDPebil='pebil --typ jbb --app '+str(FileName)
-				commands.getoutput(CMDPebil)
-				CMDJbb='./'+str(FileName)+'.jbbinst'
-				commands.getoutput(CMDJbb)
-				JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
-				JbbFileHandle=open(JbbFileName)
-				JbbFile=JbbFileHandle.readlines()
-				JbbFileHandle.close()
-				BBFileName='BB_'+str(FileName)+'.txt'
-				BBFile=open(BBFileName,'w')
-				
-				for CurrLine in JbbFile:
-					CheckBlk=re.match('\s*BLK',CurrLine)
-					if CheckBlk:
-						BreakFields=re.split('\t',CurrLine)
-						#print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
-						CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
-						if CheckFuncVar:
-							print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])							
-							BBFile.write('\n\t '+str(BreakFields[2]))
+					for CurrLine in JbbFile:
+						CheckBlk=re.match('\s*BLK',CurrLine)
+						if CheckBlk:
+							BreakFields=re.split('\t',CurrLine)
+							#print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
+							CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
+							if CheckFuncVar:
+								print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])							
+								BBFile.write('\n\t '+str(BreakFields[2]))
 
-				BBFile.write("\n\n")
-				BBFile.close()
+					BBFile.write("\n\n")
+					BBFile.close()
 				
-				CMDPebilSim='pebil --typ sim --inp '+str(BBFileName)+' --app '+str(FileName)
-				print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
-				commands.getoutput(CMDPebilSim)
-				SimInstFile=str(FileName)+'.siminst'
-				DirName='Dir'+str(FileName)
-				CMDMkdir='mkdir '+str(DirName)
-				commands.getoutput(CMDMkdir)
+					CMDPebilSim='pebil --typ sim --inp '+str(BBFileName)+' --app '+str(FileName)
+					print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
+					commands.getoutput(CMDPebilSim)
+					SimInstFile=str(FileName)+'.siminst'
+					DirName='Dir'+str(FileName)
+					CMDMkdir='mkdir '+str(DirName)
+					commands.getoutput(CMDMkdir)
 				
 				#CurrStatsFile.write("\n\t AverageRunTime: "+str(AverageRunTime))
-				FilesToExtract=[]
-				if(ReuseWindow!=0):
-					FilesToExtract.append('.dist')
-				if(spatial!=''):
-					FilesToExtract.append('.spatial')
+					FilesToExtract=[]
+					if(ReuseWindow!=0):
+						FilesToExtract.append('.dist')
+					if(spatial!=''):
+						if(spatial!='0'):
+							FilesToExtract.append('.spatial')
 
-				for CurrSW in SpatialWindow:
+					for CurrSW in SpatialWindow:
 					
-					SimRunScript=open('SimRun.sh','w')
-					print "\n\t CurrSW: "+str(CurrSW)
-					SimRunScript.write('\n\t export METASIM_SAMPLE_ON=1 ')
-					SimRunScript.write('\n\t export METASIM_SAMPLE_OFF=0 ')			
-					MetasimReuseWindow='export METASIM_REUSE_WINDOW='+str(ReuseWindow)
-					SimRunScript.write("\n\t "+str(MetasimReuseWindow))
-					SimRunScript.write('\n\t export METASIM_SPATIAL_WINDOW='+str(CurrSW))
-					SimRunScript.write('\n\t export METASIM_CACHE_SIMULATION=1 ')			
-					SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=1 ')	
-					SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
-					SimRunScript.write('\n\t ./'+str(SimInstFile))	
-					SimRunScript.write('\n\n')							
-					SimRunScript.close()
-					commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
+						SimRunScript=open('SimRun.sh','w')
+						print "\n\t CurrSW: "+str(CurrSW)
+						SimRunScript.write('\n\t export METASIM_SAMPLE_ON=1 ')
+						SimRunScript.write('\n\t export METASIM_SAMPLE_OFF=0 ')			
+						MetasimReuseWindow='export METASIM_REUSE_WINDOW='+str(ReuseWindow)
+						SimRunScript.write("\n\t "+str(MetasimReuseWindow))
+						SimRunScript.write('\n\t export METASIM_SPATIAL_WINDOW='+str(CurrSW))
+						SimRunScript.write('\n\t export METASIM_CACHE_SIMULATION=1 ')			
+						SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=1 ')	
+						SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
+						SimRunScript.write('\n\t ./'+str(SimInstFile))	
+						SimRunScript.write('\n\n')							
+						SimRunScript.close()
+						commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
 					
-					CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
-					for CurrExt in FilesToExtract:
-						CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
-						DistFileHandle=open(CurrExtFile)
-						DistFile=DistFileHandle.readlines()
+						CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
+						for CurrExt in FilesToExtract:
+							CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
+							DistFileHandle=open(CurrExtFile)
+							DistFile=DistFileHandle.readlines()
 					
-						BinsNotFound=1
-						KeepCopying=1
-						CurrStatsFile.write("\n\t Extension: "+str(CurrExt)+"\n")
-						#print("\n\t Extension: "+str(CurrExt)+"\n")
-						for CurrLine in DistFile:
-							if BinsNotFound:
-								CheckBins=re.match('\s*Bin\s*Count',CurrLine)
-								if CheckBins:
-									BinsNotFound=0
-							else:
-								CheckTotal=re.match('\s*Total\s*Count\:',CurrLine)
-								if not(CheckTotal):
-									if KeepCopying:
-										CurrStatsFile.write("\t "+str(CurrLine))
+							BinsNotFound=1
+							KeepCopying=1
+							CurrStatsFile.write("\n\t Extension: "+str(CurrExt)+"\n")
+							#print("\n\t Extension: "+str(CurrExt)+"\n")
+							for CurrLine in DistFile:
+								if BinsNotFound:
+									CheckBins=re.match('\s*Bin\s*Count',CurrLine)
+									if CheckBins:
+										BinsNotFound=0
 								else:
-									KeepCopying=0
-								
-					FilePrefix='SW_'+str(CurrSW)+'_'
-					#commands.getoutput(
-					for CurrExtension in FilesToRename:
-						CurrName=FileName+'.r00000000.t00000001'+str(CurrExtension)
-						MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
-						#print "\n\t MVCommand: "+str(MVCommand)
-						commands.getoutput(MVCommand)
+									CheckTotal=re.match('\s*Total\s*Count\:',CurrLine)
+									if not(CheckTotal):
+										if KeepCopying:
+											CurrStatsFile.write("\t "+str(CurrLine))
+									else:
+										KeepCopying=0
+										
+						FilePrefix='SW_'+str(CurrSW)+'_'
+						#commands.getoutput(
+						for CurrExtension in FilesToRename:
+							CurrName=FileName+'.r00000000.t00000001'+str(CurrExtension)
+							MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
+							#print "\n\t MVCommand: "+str(MVCommand)
+							commands.getoutput(MVCommand)
 					
-				CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
-				commands.getoutput(CMDMvFiles)
+					CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
+					commands.getoutput(CMDMvFiles)
 							
 				
 	if(CurrStatsFile):
