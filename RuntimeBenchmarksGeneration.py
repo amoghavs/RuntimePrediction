@@ -86,7 +86,8 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
     	LHSindices=''
     	RHSindices=''
     
-	print "\n\t Operand: "+str(VarNum)+" Stream: "+str(StreamNum)+" and I have "+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+" operands in me! "+" my random acess status is "+str(ConfigParams['RandomAccess'][VarNum])	
+	if debug:
+		print "\n\t Operand: "+str(VarNum)+" Stream: "+str(StreamNum)+" and I have "+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+" operands in me! "+" my random acess status is "+str(ConfigParams['RandomAccess'][VarNum])	
     	for j in range(NumForLoops):
 		TabSpace='\t'
 		for k in range(j):
@@ -118,7 +119,7 @@ def InitVar(A,VarNum,StreamNum,ConfigParams,debug):
 					ThisLoop.append(CurrLine)
 				DontSkip=0
 			else:
-				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1 )'
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['MaxStream'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1 )'
 			
 		else:
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'		
@@ -711,15 +712,16 @@ def main(argv):
 				if DimsLine:
 					Temp=RemoveWhiteSpace(DimsLine.group(1))
 					RandomAccessString=re.split(',',Temp)
-					print "\n\t RandomAccessString: "+str(RandomAccessString)
+					if debug:
+						print "\n\t RandomAccessString: "+str(RandomAccessString)
 					for CurrRandomAccess in RandomAccessString:
 						if(IsNumber(CurrRandomAccess)):
 							ConfigParams['RandomAccess'].append(int(CurrRandomAccess))
 					#if debug:
 					if not(NumVarNotFound):
 						if( len(ConfigParams['RandomAccess']) == ConfigParams['NumVars']):
-							#if debug:
-							print "\n\t RandomAccess found for all variables "
+							if debug:
+								print "\n\t RandomAccess found for all variables "
 							RandomAccessNotFound=0	
 						else:
 							print "\n\t ERROR: RandomAccess found for "+str(len(ConfigParams['RandomAccess']))+" expected it for "+str(ConfigParams['NumVars'])
@@ -727,7 +729,8 @@ def main(argv):
 					else:
 						RandomAccessExtracted=1
 						print "\n\t RandomAccessExtracted: "+str(RandomAccessExtracted)+" RandomAccessNotFound "+str(RandomAccessNotFound)
-				print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
+				if debug:
+					print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
 				LineNotProcessed=0
 							
 							
@@ -1058,7 +1061,8 @@ def main(argv):
 	else:
 		print "\n\t AllStridesAvailable: "+str(AllStridesAvailable)+" ConfigParams['NumVars'] "+str(ConfigParams['NumVars'])
 	#sys.exit()
-	print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
+	if debug:
+		print "\n\t 2. RandomAccessNotFound: "+str(RandomAccessNotFound)
 	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0)):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
@@ -1128,12 +1132,25 @@ def main(argv):
 					print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
 					print "\t\t Var: "+str(StrideVar)+" StrideVarDecl "+str(StrideVarDecl)
 
+		ConfigParams['GlobalVar']['MaxStream']={}
+		for index in range(ConfigParams['NumVars']):
+			MaxStride=0
+			MaxStrideIdx=-1
+			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
+				if( MaxStride < ConfigParams['StrideinStream'][index][CurrStream]):
+					if debug:
+						print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" existing max stride "+str(MaxStride)+" new max stride "+str(ConfigParams['StrideinStream'][index][CurrStream])
+					MaxStride= ConfigParams['StrideinStream'][index][CurrStream] 
+					MaxStrideIdx=CurrStream
+			ConfigParams['GlobalVar']['MaxStream'][index]=ConfigParams['GlobalVar']['Stream'][index][MaxStrideIdx]
+			
 		ConfigParams['GlobalVar']['DimsSize']=[]
 		ConfigParams['GlobalVar']['DimsSizeDecl']=[]
 		for index in range(ConfigParams['Dims']):
 			SizeVar='Size_Dim'+str(index)
 			SizeVarDecl='long int '+str(SizeVar)+' = '+str(ConfigParams['size'][index])+' ;'
-			print "\n\t Dim: "+str(index)+" Var: "+str(SizeVar)+" declaration "+str(SizeVarDecl)
+			if debug:
+				print "\n\t Dim: "+str(index)+" Var: "+str(SizeVar)+" declaration "+str(SizeVarDecl)
 			ConfigParams['GlobalVar']['DimsSize'].append(SizeVar)
 			ConfigParams['GlobalVar']['DimsSizeDecl'].append(SizeVarDecl)
 ###
@@ -1179,7 +1196,8 @@ def main(argv):
 							print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
 						DynAlloc.append(VarDecl)
 						if(ConfigParams['Dims']==1):
-							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+'*'+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		
+							# tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+'*'+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'		
+							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+'*'+str(ConfigParams['GlobalVar']['MaxStream'][index])+' * sizeof('+datatype+suffix+'))'+';'
 						else:
 							tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+' * sizeof('+datatype+suffix+'))'+';'
 				
@@ -1209,7 +1227,8 @@ def main(argv):
 							for CurrStream in range(ConfigParams['NumStreaminVar'][index]):  
 								var=' Var'+str(index)+'_Stream'+str(CurrStream) 
 								if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
-									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * '+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'
+									# MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * '+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'
+									 MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * '+str(ConfigParams['GlobalVar']['MaxStream'][index])+' * sizeof('+datatype+suffix+'))'+';'
 								else:
 									MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
 								DynAlloc.append(MallocEqn)
@@ -1255,8 +1274,8 @@ def main(argv):
 		index=ConfigParams['NumVars']-1
 		
 		for CurrStream in range(ConfigParams['NumStreaminVar'][index]-1):
-			#if debug:
-			print "\n\t 2. CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])+" StrideString: "+str(StrideString)
+			if debug:
+				print "\n\t 2. CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])+" StrideString: "+str(StrideString)
 			StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		if( (StrideString!='' ) and ( ConfigParams['NumStreaminVar'][index]==1 ) ):
 			StrideString+='_'+str(ConfigParams['StrideinStream'][index][(ConfigParams['NumStreaminVar'][index]-1)])
@@ -1294,8 +1313,8 @@ def main(argv):
 							Temp+='D'
 					if(CurrOperatn==''):
 						Temp+='0'
-					#if debug:
-					print "\n\t CurrVar: "+str(CurrVar)+" CurrStream "+str(CurrStream)+" CurrOperatn "+str(CurrOperatn)+" Temp "+str(Temp)
+					if debug:
+						print "\n\t CurrVar: "+str(CurrVar)+" CurrStream "+str(CurrStream)+" CurrOperatn "+str(CurrOperatn)+" Temp "+str(Temp)
 				if(len(ConfigParams['StrideVar'][CurrVar][CurrStream]['ExprnOperations'])==0):
 					Temp+='0'
 					if debug:
