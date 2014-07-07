@@ -31,8 +31,9 @@ def main(argv):
 	spatial=''
 	reuse=''
 	AverageRun=0
+	CacheSimulation=0
 	try:
-	   opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:h:v",["list","deubg","reuse","spatial","average","help","verbose"])
+	   opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:c:h:v",["list","deubg","reuse","spatial","average","cachesim","help","verbose"])
 	except getopt.GetoptError:
 		#print str(err) # will print something like "option -a not recognized"
 	   usage()
@@ -58,13 +59,17 @@ def main(argv):
 	   elif opt in ("-a"):
 		AverageRun=int(RemoveWhiteSpace(arg))
 		print "\n\t AverageRun: "+str(AverageRun)+"\n"
+	   elif opt in ("-c"):
+		CacheSimulation=int(RemoveWhiteSpace(arg))
+		print "\n\t CacheSimulation: "+str(CacheSimulation)+"\n"
+
            else:
    		usage()
 
 	# If execution has come until this point, the script should have already identified the config file.
 	if(SrcFileName==''):
 		usage()
-	if( (spatial=='') and (reuse=='')):
+	if( (CacheSimulation==0) and (spatial=='') and (reuse=='')):
 		spatial="16,32"
 		reuse='16'
 		print "\n\t Using default spatial value: "+str(spatial)+" reuse value "+str(16)
@@ -106,8 +111,9 @@ def main(argv):
 	#FilesToExtract=['.dist','.spatial']
 	#AverageRun=5
 	AverageRuntimeCollection={}
-	
+	FileNameCollection=[]
 	for idx,CurrSrcFile in enumerate(SrcFile):
+		print "\n\t CurrSrcFile: "+str(CurrSrcFile)
 		CurrSrcFileParams[idx]={}
 		ExtractFileName=re.match('\s*(.*)\.c',CurrSrcFile)
 		if ExtractFileName:
@@ -139,15 +145,19 @@ def main(argv):
 				if(CurrStatsFileName!=TempStatsFileName):
 					if(CurrStatsFile):
 						CurrStatsFile.write("\n\t Average run times: ")
-						CurrStatfFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
-						for CurrFile in AverageRuntimeCollection:
-							CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(verageRuntimeCollection[CurrFile]))
+						CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
+						for CurrFile in FileNameCollection:
+							CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
 						CurrStatsFile.write("\n\n")
 						CurrStatsFile.close()
+						AverageRuntimeCollection={}
+						FileNameCollection=[]
 					else:
 						CurrStatsFileName=TempStatsFileName
 						CurrStatsFile=open(CurrStatsFileName,'w')
-						print "\n\t Yaay!! "			
+						AverageRuntimeCollection={}
+						FileNameCollection=[]						
+						#print "\n\t Yaay!! "			
 
 				CurrStatsFile.write("\n\t *** Src File Name: "+str(CurrSrcFileParams[idx]['FileName']))
 
@@ -161,7 +171,7 @@ def main(argv):
 					for CurrLine in RunOutput:
 						#print "\n\t CurrLine: "+str(CurrLine)
 						#CheckTime=re.match('^\s*app.*time\:',CurrLine)
-						CheckTime=re.match('\s*Run\-time.*\:',CurrLine)
+						CheckTime=re.match('\s*Run\-time',CurrLine)
 						if CheckTime:
 							CheckRuntime=re.match('\s*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) # 
 							if CheckRuntime:
@@ -176,9 +186,10 @@ def main(argv):
 						
 				AverageRunTime/=AverageRun
 				AverageRuntimeCollection[FileName]=AverageRunTime
+				FileNameCollection.append(FileName)
 				#sys.exit()
 			
-				if( not( (ReuseWindow==0) and (spatial=='0')) ):	
+				if( not( (ReuseWindow==0) and (spatial=='0') and (CacheSimulation==0) ) ):	
 					CMDPebil='pebil --typ jbb --app '+str(FileName)
 					commands.getoutput(CMDPebil)
 					CMDJbb='./'+str(FileName)+'.jbbinst'
@@ -274,7 +285,7 @@ def main(argv):
 	if(CurrStatsFile):
 		CurrStatsFile.write("\n\t Average run times: ")
 		CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
-		for CurrFile in AverageRuntimeCollection:
+		for CurrFile in FileNameCollection:
 			CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
 		CurrStatsFile.write("\n\n")
 		CurrStatsFile.close()
