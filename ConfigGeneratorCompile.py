@@ -214,7 +214,7 @@ def main():
         Max['Vars']=1
         Min['Vars']=1
         Max['Dims']=3
-        Min['Dims']=3
+        Min['Dims']=2
         Max['NumStream']=2
         Min['NumStream']=1
         Max['Stride']=3 # ie., 2^4
@@ -224,7 +224,7 @@ def main():
         DS=[['d']]#,'d','d','d']]    
 	RandomAccess=[[0]] # 1,1,1]]
         #SpatWindow=[8,16,32];
-        LoopIterationBase=20;
+        LoopIterationBase=4;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
         LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
 
@@ -293,11 +293,14 @@ def main():
    	for CurrSetIterations in OutputSet:	
 	   	
 	   	IterationsString=''
+	   	IterationsName=''
 	   	for i,CurrVarIterations in enumerate(CurrSetIterations):
 	   		if(i):
 	   			IterationsString+=','+str(CurrVarIterations)
+	   			IterationsName+='_'+str(CurrVarIterations)
 	   		else:
 	   			IterationsString+=str(CurrVarIterations)
+	   			IterationsName+=str(CurrVarIterations)
  		
  		print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" IterationsString: "+str(IterationsString)
  		
@@ -394,6 +397,10 @@ def main():
 				StreamConfigCollection={}
 				CurrStrideStringSet=[]
 				
+				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'.log'
+				print "\n\t SourceFilesLogName: "+str(SourceFilesLogName)
+				
+				SourceFilesLog=open(SourceFilesLogName,'w')
 				for CurrStrideSet in StrideSet:
 					
 					ExtractStrideforStream=re.split(',',CurrStrideSet)
@@ -544,7 +551,7 @@ def main():
 										f.write("\n\n")
 										f.close()
 										OutputFileName='Duh.log'
-										CMDrunStrideBenchmarks='python MPIRuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
+										CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
 										commands.getoutput(CMDrunStrideBenchmarks)
 										print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
 										OutputFile=open(OutputFileName)
@@ -555,9 +562,13 @@ def main():
 											if FileName:
 												print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
 												SRCFileName=str(FileName.group(1))+'.c'
-												CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
+												CMDCompileFile='gcc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
 												print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 												commands.getoutput(CMDCompileFile)
+												SourceFilesLog.write("\n\t "+str(SRCFileName))
+				SourceFilesLog.write("\n\n")
+				SourceFilesLog.close()
+									
 						#sys.exit()
 						
 

@@ -443,7 +443,7 @@ def main():
 													CurrOpCombo+=str(OperandIdx)
 
 													print "\n\t CurrRandomAccess[CurrVar]: "+str(CurrRandomAccess[CurrVar])+" PickIdx "+str(PickIdx)+" PickDelta "+str(PickDelta)
-													CurrOpCombo+=str(PickIdx)
+													#CurrOpCombo+=str(PickIdx)
 												CurrOpCombo+=')'
 												OpComboSet.append(CurrOpCombo)
 		## $$$$$$$$$$$$$$$$$							
