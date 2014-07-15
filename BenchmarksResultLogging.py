@@ -140,7 +140,7 @@ def main(argv):
 					#print "\n\t Feature: "+str(CurrFeature)+" value: "+str(CurrSrcFileParams[idx][CurrFeature])
 					TempStatsFileName+='_'+str(CurrFeature)+'_'+str(CurrSrcFileParams[idx][CurrFeature])
 				TempStatsFileName+='.log'
-				print "\n\t TempStatsFileName: "+str(TempStatsFileName)
+				#print "\n\t TempStatsFileName: "+str(TempStatsFileName)
 				CurrSrcFileParams[idx]['FileName']=FileName
 				if(CurrStatsFileName!=TempStatsFileName):
 					if(CurrStatsFile):
@@ -150,14 +150,13 @@ def main(argv):
 							CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
 						CurrStatsFile.write("\n\n")
 						CurrStatsFile.close()
-						AverageRuntimeCollection={}
-						FileNameCollection=[]
-					else:
-						CurrStatsFileName=TempStatsFileName
-						CurrStatsFile=open(CurrStatsFileName,'w')
-						AverageRuntimeCollection={}
-						FileNameCollection=[]						
-						#print "\n\t Yaay!! "			
+					AverageRuntimeCollection={}
+					FileNameCollection=[]
+					CurrStatsFileName=TempStatsFileName
+					CurrStatsFile=open(CurrStatsFileName,'w')
+					AverageRuntimeCollection={}
+					FileNameCollection=[]						
+					print "\n\t TempStatsFileName: "+str(TempStatsFileName)
 
 				CurrStatsFile.write("\n\t *** Src File Name: "+str(CurrSrcFileParams[idx]['FileName']))
 
@@ -170,10 +169,12 @@ def main(argv):
 					RunOutput=open(RunOutputFile)
 					for CurrLine in RunOutput:
 						#print "\n\t CurrLine: "+str(CurrLine)
-						#CheckTime=re.match('^\s*app.*time\:',CurrLine)
-						CheckTime=re.match('\s*Run\-time',CurrLine)
+						CheckTime=re.match('^\s*.*app.*time\:',CurrLine)
+						#CheckTime=re.match('\s*Run\-time',CurrLine)
 						if CheckTime:
-							CheckRuntime=re.match('\s*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) # 
+							#print "\n\t CurrLine: "+str(CurrLine)
+							CheckRuntime=re.match('\s*.*app.*time\:\s*(\d+)*\.(\d+)*',CurrLine) # 
+							#CheckRuntime=re.match('\s*.*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) 
 							if CheckRuntime:
 								#CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
 								Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
@@ -206,9 +207,10 @@ def main(argv):
 						if CheckBlk:
 							BreakFields=re.split('\t',CurrLine)
 							#print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
-							CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
+							#CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
+							CheckFuncVar=re.match('.*\.c\:171',BreakFields[5])
 							if CheckFuncVar:
-								print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])							
+								print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])+" LineNm: "+str(BreakFileds[5])							
 								BBFile.write('\n\t '+str(BreakFields[2]))
 
 					BBFile.write("\n\n")

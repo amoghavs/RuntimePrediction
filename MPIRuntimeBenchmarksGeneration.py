@@ -77,7 +77,7 @@ def InitIndirArray(A,VarNum,InitExp,ConfigParams,debug):
 	return ThisLoop
 
 
-def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,debug):
+def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 
 	ThisLoop=[]
 	tmp=' This is the variable I am using: '+str(CurrVarName)
@@ -90,41 +90,42 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,debug):
 	
 	FlushForLoop=[]	
 	if(ConfigParams['RandomAccess'][VarNum]>0):
-		FlushVarName= 'FlushVar_'+str(VarNum)+	
+		TabSpace=''
+		FlushVarName= 'FlushVar'+str(VarNum)+'_Stream'+str(StreamNum)	
+	    	BoundVar=WorkingVars['BoundVar'] #'bound'
+    		#BoundVarDecl=TabSpace+'long int '+BoundVar+' =0; '
+    		#ThisLoop.append(BoundVarDecl);
+    		InnerLoopVar=WorkingVars['InnerLoopVar']
+    		#InnerLoopVarDecl=TabSpace+'long int '+InnerLoopVar+' =0;'
+    		#ThisLoop.append(InnerLoopVarDecl)
+    		#TempVar='temp'
+    		#TempVarDecl=TabSpace+'long int '+str(TempVar)+';'
+    		#ThisLoop.append(TempVarDecl);
+    		NumOperandsVar=WorkingVars['NumOperandsVar']
+    		NumOperandsVarDecl=TabSpace+' '+str(NumOperandsVar)+'= '+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+' ;'
+    		ThisLoop.append(NumOperandsVarDecl)
+     		PermuteArrayVar='PermuteArray'+str(VarNum)+'_'+str(StreamNum)
+    		PermuteArrayVarDecl=TabSpace+'int* '+str(PermuteArrayVar)+';'
+    		ThisLoop.append(PermuteArrayVarDecl)    
+    		PermuteSizeVar='PermuteSize'+str(VarNum)+'_'+str(StreamNum)
+    		PermuteSizeVarDecl=TabSpace+'int '+str(PermuteSizeVar)+';'
+    		ThisLoop.append(PermuteSizeVarDecl)
+    		LastDim=NumForLoops-1
+    		PermuteSizeCalc=TabSpace+str(PermuteSizeVar)+' = (int) ( ( '+str(ConfigParams['GlobalVar']['DimsSize'][LastDim])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ) / '+str(NumOperandsVar)+' );'
+    		ThisLoop.append(PermuteSizeCalc)
+    		CallPermuteFunc=TabSpace+str(PermuteArrayVar)+' = RandomPermutationGeneration( '+str(PermuteSizeVar)+' );'
+    		ThisLoop.append(CallPermuteFunc)
+    		PermuteIndexVar='PermuteIndex'
+    		PermuteIndexVarInit=' PermuteIndex=0 ;'
+    		ThisLoop.append(PermuteIndexVarInit)		
+
     	for j in range(NumForLoops):
 		TabSpace='\t'
 		for k in range(j):
 			TabSpace+='\t'
     		DontSkip=1
-    		
     		if(j==NumForLoops-1):
-    			if(ConfigParams['RandomAccess'][VarNum]>0):
-	    			#BoundVar='bound'
-    				#BoundVarDecl=TabSpace+'long int '+BoundVar+' =0; '
-    				#ThisLoop.append(BoundVarDecl);
-    				#InnerLoopVar='InnerLoopVar'
-    				#InnerLoopVarDecl=TabSpace+'long int '+InnerLoopVar+' =0;'
-    				#ThisLoop.append(InnerLoopVarDecl)
-    				#TempVar='temp'
-    				#TempVarDecl=TabSpace+'long int '+str(TempVar)+';'
-    				#ThisLoop.append(TempVarDecl);
-    				NumOperandsVar='NumOperands'
-    				NumOperandsVarDecl=TabSpace+' '+str(NumOperandsVar)+'= '+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+' ;'
-    				ThisLoop.append(NumOperandsVarDecl)
-     				PermuteArrayVar='PermuteArray'+str(VarNum)+'_'+str(StreamNum)
-    				PermuteArrayVarDecl=TabSpace+'int* '+str(PermuteArrayVar)+';'
-    				ThisLoop.append(PermuteArrayVarDecl)    
-    				PermuteSizeVar='PermuteSize'+str(VarNum)+'_'+str(StreamNum)
-    				PermuteSizeVarDecl=TabSpace+'int '+str(PermuteSizeVar)+';'
-    				ThisLoop.append(PermuteSizeVarDecl)
-    				PermuteSizeCalc=TabSpace+str(PermuteSizeVar)+' = (int) ( ( '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ) / '+str(NumOperandsVar)+' );'
-    				ThisLoop.append(PermuteSizeCalc)
-    				CallPermuteFunc=TabSpace+str(PermuteArrayVar)+' = RandomPermutationGeneration( '+str(PermuteSizeVar)+' );'
-    				ThisLoop.append(CallPermuteFunc)
-    				PermuteIndexVar='PermuteIndex'
-    				PermuteIndexVarDecl='int PermuteIndex=0 ;'
-    				ThisLoop.append(PermuteIndexVarDecl)
-
+	    		if(ConfigParams['RandomAccess'][VarNum]>0):
     				LoopStmt=[]
 				LoopStmt.append(TabSpace+'for('+str(ConfigParams['indices'][j])+'=0 , '+str(PermuteIndexVar)+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+='+str(NumOperandsVar)+' , '+str(PermuteIndexVar)+'+=1 )')
 				LoopStmt.append(TabSpace+'{')
@@ -145,13 +146,15 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,debug):
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'	
 			if(ConfigParams['RandomAccess'][VarNum]>0):
 				ThisFlushForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'	
-				FlushForLoop.append(ThisFlushForLoop)
+				FlushForLoop.append(TabSpace+ThisFlushForLoop)
 					
 		if DontSkip:
 			ThisForLoop=TabSpace+ThisForLoop
 			ThisLoop.append(ThisForLoop)
 			ThisLoop.append(TabSpace+'{')
 			LHSindices+='['+str(ConfigParams['indices'][j])+']'
+			if(ConfigParams['RandomAccess'][VarNum]>0):
+				FlushForLoop.append(TabSpace+'{')
 		else:
 			LHSindices+='['+str(InnerLoopVar)+']'
 
@@ -162,6 +165,8 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,debug):
     	if(ConfigParams['RandomAccess'][VarNum]):
 	    	#eqn="\t\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+str(TempVar)+';' #+str(ConfigParams['init'][VarNum])+';'
 	    	eqn="\t\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+']'+';'
+	    	FlushEqn="\t\t"+TabSpace+str(FlushVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+']'+';'
+	    	FlushForLoop.append(FlushEqn)
 	else:
 		eqn="\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+str(ConfigParams['init'][VarNum])+';'
     	
@@ -172,6 +177,12 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,debug):
     		for l in range(NumForLoops-k):
     			TabSpace+="\t"
 	    	ThisLoop.append(TabSpace+'}')
+	    	if(ConfigParams['RandomAccess'][VarNum]>0):
+	    		FlushForLoop.append(TabSpace+'}')
+	
+	for CurrLine in FlushForLoop:
+		#print "\n\t FlushForLoop: "+str(CurrLine)
+		ThisLoop.append(CurrLine)
      
 	return ThisLoop
 
@@ -624,14 +635,15 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	for l in range(NumDims-k):
     		TabSpace+="\t"
     	ThisLoop.append(TabSpace+'}')
-    PrintStmt='printf("\\n\t '
-    PrintSuffix=''
-    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-	PrintStmt+=str((RandomAccessVarPerStream[CurrStream]))+' :%d '
-	PrintSuffix+=','+str((RandomAccessVarPerStream[CurrStream]))
-    PrintStmt+='"'+str(PrintSuffix)+');'
-    #ThisLoop.append('printf(" ");')
-    ThisLoop.append(PrintStmt)
+    if(ConfigParams['RandomAccess'][VarNum]>0):	
+	    PrintStmt='printf("\\n\t '
+	    PrintSuffix=''
+	    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+		PrintStmt+=str((RandomAccessVarPerStream[CurrStream]))+' :%d '
+		PrintSuffix+=','+str((RandomAccessVarPerStream[CurrStream]))
+	    PrintStmt+='"'+str(PrintSuffix)+');'
+	    #ThisLoop.append('printf(" ");')
+	    ThisLoop.append(PrintStmt)
     AccumEqn=' Sum+=(';
     for k in range(ConfigParams['NumStreaminVar'][VarNum]-1):
     	    AccumEqn+=AccumVar[k]+'+'
@@ -1493,27 +1505,39 @@ def main(argv):
 	WriteFile=open(SrcFileName,'w')			
 	InitLoop=[]
 	
+	WorkigVarsDecl=[]
+	WorkingVars={}
 	for VarNum in range(ConfigParams['NumVars']):
 		if(ConfigParams['RandomAccess'][VarNum]>0):
+			TabSpace='\t'
+			#for Idx in range(ConfigParams['Dims']):
+			#	TabSpace+='\t'
 			BoundVar='bound'
+			WorkingVars['BoundVar']=BoundVar
 			BoundVarDecl=TabSpace+'long int '+BoundVar+' =0; '
-			ThisLoop.append(BoundVarDecl);
+			WorkigVarsDecl.append(BoundVarDecl);
 			InnerLoopVar='InnerLoopVar'
+			WorkingVars['InnerLoopVar']=InnerLoopVar
 			InnerLoopVarDecl=TabSpace+'long int '+InnerLoopVar+' =0;'
-			ThisLoop.append(InnerLoopVarDecl)
+			WorkigVarsDecl.append(InnerLoopVarDecl)
 			TempVar='temp'
 			TempVarDecl=TabSpace+'long int '+str(TempVar)+';'
 			NumOperandsVar='NumOperands'
+			WorkingVars['NumOperandsVar']=NumOperandsVar
 			NumOperandsVarDecl=TabSpace+'int '+str(NumOperandsVar)+';'#+'= '+str(ConfigParams['StrideVar'][VarNum][StreamNum]['NumOperands'])+' ;'
-			ThisLoop.append(TempVarDecl);
-			ThisLoop.append(NumOperandsVarDecl)
+			WorkigVarsDecl.append(TempVarDecl);
+			WorkigVarsDecl.append(NumOperandsVarDecl)
+    			PermuteIndexVar='PermuteIndex'
+    			WorkingVars['PermuteIndexVar']=PermuteIndexVar
+    			PermuteIndexVarDecl='int PermuteIndex=0 ;'
+    			WorkigVarsDecl.append(PermuteIndexVarDecl)			
 			break;
-
+	
 	for VarNum in range(ConfigParams['NumVars']):
 		ThisVarInit=[]
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 			CurrVarName='Var'+str(VarNum)+'_Stream'+str(CurrStream)
-			Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,debug)	
+			Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
 			ThisVarInit.append(Temp)
 		InitLoop.append(ThisVarInit)
 
@@ -1610,7 +1634,7 @@ def main(argv):
         WriteFile.write("\n\t srand(currtime); ")
 
 
-
+	WriteArray(WorkigVarsDecl,WriteFile)
 	for VarNum in range(ConfigParams['NumVars']):
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 			WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	
