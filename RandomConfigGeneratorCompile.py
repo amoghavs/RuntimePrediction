@@ -180,9 +180,9 @@ def main():
         Min={}
         Max['Vars']=1
         Min['Vars']=1
-        Max['Dims']=4
-        Min['Dims']=2
-        Max['NumStream']=4
+        Max['Dims']=1
+        Min['Dims']=1
+        Max['NumStream']=1
         Min['NumStream']=1
         Max['Stride']=0 # ie., 2^4
         Min['Stride']=0 # ie., 2^0=1
@@ -255,7 +255,7 @@ def main():
 	
  	for CurrIter in range(NumSizeIter):
 		
-		MbyteSize=MbyteSize+1
+		MbyteSize=MbyteSize#+1
 		MaxSize=2**(MbyteSize)
 		HigherDimSizeIndex=8
 		Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
@@ -443,7 +443,6 @@ def main():
 													CurrOpCombo+=str(OperandIdx)
 
 													print "\n\t CurrRandomAccess[CurrVar]: "+str(CurrRandomAccess[CurrVar])+" PickIdx "+str(PickIdx)+" PickDelta "+str(PickDelta)
-													#CurrOpCombo+=str(PickIdx)
 												CurrOpCombo+=')'
 												OpComboSet.append(CurrOpCombo)
 		## $$$$$$$$$$$$$$$$$							
