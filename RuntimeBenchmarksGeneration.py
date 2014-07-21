@@ -118,6 +118,7 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 		FlushForLoop.append(CallPermuteFunc)
     		PermuteIndexVar='PermuteIndex'
     		PermuteIndexVarInit=' PermuteIndex=0 ;'
+			CountVar=WorkingVars['CountVar']
     		ThisLoop.append(PermuteIndexVarInit)		
 
     	for j in range(NumForLoops):
@@ -134,7 +135,7 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 				LoopStmt.append(TabSpace+'\t if( '+str(BoundVar)+' > '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' )')
 				LoopStmt.append(TabSpace+'\t\t '+str(BoundVar)+' = '+str(ConfigParams['GlobalVar']['DimsSize'][j])+';')
 				#LoopStmt.append(TabSpace+'\t '+str(TempVar)+' = (long int) ( rand() % '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' );')
-				LoopStmt.append(TabSpace+'\t for('+str(InnerLoopVar)+'='+str(ConfigParams['indices'][j])+' ; '+ str(InnerLoopVar)+' < '+str(BoundVar)+' ; '+str(InnerLoopVar)+'+=1)')
+				LoopStmt.append(TabSpace+'\t for('+str(InnerLoopVar)+'='+str(ConfigParams['indices'][j])+','+str(CountVar)+'='+str(ConfigParams['indices'][j])+' ; ( ( '+str(CountVar)+' < '+str(BoundVar)+' ) && ( '+ str(InnerLoopVar)+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ) ) ; '+str(CountVar)+'+=1,'+str(InnerLoopVar)+'+='+str(ConfigParams['OpDiff'][VarNum])+')')
 				for CurrLine in LoopStmt:
 					ThisLoop.append(CurrLine)
 					FlushForLoop.append(CurrLine)
@@ -705,6 +706,7 @@ def main(argv):
 	ConfigParams['StrideinStream']=[]
 	ConfigParams['StrideVar']={}
 	ConfigParams['RandomAccess']=[]
+	ConfigParams['OpDiff']=[]
 		
 	LineCount=0;
 	DimNotFound=1;
@@ -722,6 +724,7 @@ def main(argv):
 	FoundStrideForDims=0
 	LoopIterationsNotFound=1
 	RandomAccessNotFound=1
+	OpDiffNotFound=1
 	RandomAccessExtracted=0
 	StrideExtracted=[]
 
@@ -1094,6 +1097,31 @@ def main(argv):
 						else:
 							InitNotFound=0		
 
+			if OpDiffNotFound:
+				MatchObj=re.match(r'\s*\#OpDiff',CurrLine)
+				if MatchObj:
+					tmp=re.split(' ',CurrLine)
+					OpDiff=re.split(',',tmp[1])
+					if Init:
+						LineNotProcessed=0
+						VarCount=0;
+						for CurrOpDiff in OpDiff:
+							CheckSpace=re.match(r'^\s*$',str(CurrInit))
+						        if(CheckSpace):
+						       		if debug:
+						       			print "\n\t For init parameter, the input is not in the appropriate format. Please check! \n"
+						       		sys.exit(0)						
+							else:
+								CurrOpDiff=int(RemoveWhiteSpace(CurrOpDiff))#re.sub(r'\s*$','',CurrInit)
+								ConfigParams['OpDiff'].append(CurrOpDiff);
+								VarCount+=1				
+								if debug:
+						       			print "\n\t OpDiff for var "+str(CurrDim)+" is "+str(CurrOpDiff)+"\n" 					
+						if(VarCount!= ConfigParams['NumVars']):
+							print "\n\t The init expression is not specified for each variable. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
+							sys.exit(0)
+						else:
+							OpDiffNotFound=0	
 
 
 
@@ -1121,7 +1149,7 @@ def main(argv):
 	#sys.exit()
 	if debug:
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
-	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0)):
+	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0) and (OpDiffNotFound==0) ):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
 		LibAlloc=[]
@@ -1229,6 +1257,19 @@ def main(argv):
 				print "\n\t Dim: "+str(index)+" Var: "+str(SizeVar)+" declaration "+str(SizeVarDecl)
 			ConfigParams['GlobalVar']['DimsSize'].append(SizeVar)
 			ConfigParams['GlobalVar']['DimsSizeDecl'].append(SizeVarDecl)
+			
+		ConfigParams['GlobalVar']['SuccessiveOperandDiff']=[]
+		ConfigParams['GlobalVar']['SuccessiveOperandDiffDecl']=[]
+		for index in range(ConfigParams['NumVars']):
+			OpDiffVar='OpDiffVar'+str(index)
+			OpDiffVarDecl='int '+str(OpDiffVar)+' = '+str(ConfigParams['OpDiff'][index])+' ;'
+			#if debug:
+			print "\n\t Var: "+str(index)+" OpDiffVar "+str(OpDiffVar)+" Decl: "+str(OpDiffVarDecl)
+			ConfigParams['GlobalVar']['SuccessiveOperandDiff'].append(OpDiffVar)
+			ConfigParams['GlobalVar']['SuccessiveOperandDiffDecl'].append(OpDiffVarDecl)
+		
+
+
 ###
 		
 		ConfigParams['DSforPrintf']=[]			
@@ -1484,7 +1525,8 @@ def main(argv):
 		print "\n\t (NumVarNotFound) "+str(NumVarNotFound)+" (DimNotFound) "+str(DimNotFound)+" SizeNotFound: "+str(SizeNotFound)
 		print "\n\t StrideNotFound "+str(StrideNotFound)+" AllocNotFound: "+str(AllocNotFound)+" InitNotFound: "+str(InitNotFound)
 		print "\n\t NumStreamsDimsNotFound=: "+str(NumStreamsDimsNotFound)+" LoopIterationsNotFound: "+str(LoopIterationsNotFound)
-		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
+		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)+" OpDiffNotFound: "+str(OpDiffNotFound)
+		print "\n\n"
  		sys.exit(0)
 	
 	SrcFileName='StrideBenchmarks_Iters'+str(IterString)+'_Vars_'+str(ConfigParams['NumVars'])+"_DS_"+str(DSString)+'_Alloc_'+alloc_str+'_Dims_'+str(ConfigParams['Dims'])+'_Size_'+str(SizeString)+'_Random_'+str(RandomAccessString)+'_Streams_'+str(StreamString)+'_Ops_'+str(OpStream)+'_Stride_'+str(StrideString)+'.c'
@@ -1516,7 +1558,11 @@ def main(argv):
     			PermuteIndexVar='PermuteIndex'
     			WorkingVars['PermuteIndexVar']=PermuteIndexVar
     			PermuteIndexVarDecl='int PermuteIndex=0 ;'
-    			WorkigVarsDecl.append(PermuteIndexVarDecl)			
+    			WorkigVarsDecl.append(PermuteIndexVarDecl)	
+   				CountVar='CountVar'
+    			CountVarDecl='int '+str(CountVar)+' = 0;'
+    			WorkingVars['CountVar']=CountVar
+    			WorkigVarsDecl.append(CountVarDecl)	
 			break;
 	
 	for VarNum in range(ConfigParams['NumVars']):
