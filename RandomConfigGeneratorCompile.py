@@ -211,13 +211,14 @@ def main():
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
 	Min['MbyteSize']=11
-	Max['MbyteSize']=14
+	Max['MbyteSize']=12
         MbyteSize=13 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         HigherDimSizeIndex=8
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
-        NumSizeIter=16
+        NumSizeIter=4
+        SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
@@ -303,6 +304,14 @@ def main():
 			   			IterationsString+=str(CurrVarIterations)
 		 		
 		 		print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" IterationsString: "+str(IterationsString)
+		 		
+		 		SuccessiveOperandsDiffString=''
+		 		for i,CurrOpDiff in enumerate(SuccessiveOperandDiff):
+		 			if(i):
+		 				SuccessiveOperandsDiffString+=','+str(CurrOpDiff)
+		 			else:
+		 				SuccessiveOperandsDiffString+=str(CurrOpDiff)
+		 				
 		 		
 		 		#MasterSWStats.write("\n\n\t ################################ \n\n");
 		 		for NumDims in range(Min['Dims'],Max['Dims']+1):
@@ -433,7 +442,7 @@ def main():
 													
 													if(CurrRandomAccess[CurrVar]):
 														PickIdx=0
-														PickDelta=Idx
+														PickDelta=(Idx*SuccessiveOperandDiff[CurrVar])
 														OperandIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)
 													else:
 														PickIdx=random.randrange(StreamConfig['CurrNumDims'])
@@ -535,6 +544,7 @@ def main():
 												f.write("\n#size "+str(SizeString))
 												f.write("\n#allocation "+str(AllocString) )
 												f.write("\n#init "+str(InitExpression))
+												f.write("\n#OpDiff "+str(SuccessiveOperandsDiffString))
 												f.write("\n#datastructure "+str(DSString))
 								
 												for CurrCombi in CurrCombiAccumulation:
