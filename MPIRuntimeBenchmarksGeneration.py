@@ -203,19 +203,37 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	VarDeclString+='Var'+str(VarNum)+'_Stream'+str(CurrStream)+','
  
     FuncName='Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)	 
-    FuncCall='Sum='+str(FuncName)+'('+VarDeclString+str(Stride)+',Sum'+');'	    
+    FuncCall='Sum='+str(FuncName)+'('+VarDeclString+str(Stride)+',Sum'+');'	
+    #FuncNamePrint='StrideBenchmarks_Iters'+str(ConfigParams['NumIters'])+'_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_stride_'+str(StrideString)
+    FuncNamePrint='Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)    #LAURA    
     ThisLoop=[]
     PopCode=0	
     ThisLoop.append('Sum=2;')
-    ThisLoop.append('gettimeofday(&start,NULL);')
+    #LAURA ThisLoop.append('gettimeofday(&start,NULL);')
+    ThisLoop.append('MPI_Barrier(MPI_COMM_WORLD);');  #LAURA
+    ThisLoop.append('stime=rtclock();')               #LAURA
     ThisLoop.append(FuncCall) 
-    ThisLoop.append('gettimeofday(&end,NULL);')
-    ThisLoop.append('currtime=(end.tv_sec+end.tv_usec/1000000.0 )-(start.tv_sec+start.tv_usec/1000000.0);') 
-    ThisLoop.append('printf("\\n\\t Run-time for function- '+str(FuncName)+': %lf ",currtime);')
-    ThisLoop.append('printf("\\n\\t Start time: %lf End time: %lf ",(start.tv_sec+start.tv_usec/1000000.0),(end.tv_sec+end.tv_usec/1000000.0 ));')
-    PrintResult='printf("\\n\\t Sum: %ld ",Sum);'
-    ThisLoop.append(PrintResult)
-    PopCode+=8
+    #LAURA ThisLoop.append('gettimeofday(&end,NULL);')
+    #LAURA ThisLoop.append('currtime=(end.tv_sec+end.tv_usec/1000000.0 )-(start.tv_sec+start.tv_usec/1000000.0);') 
+#LAURA ADD
+    ThisLoop.append('etime=rtclock();')
+    ThisLoop.append('currtime=etime-stime;')  
+    #ThisLoop.append('double time_buf[MPI_Size];')
+    ThisLoop.append('MPI_Gather(&currtime, 1, MPI_DOUBLE, time_buf, 1, MPI_DOUBLE,0,MPI_COMM_WORLD); ')
+    ThisLoop.append('if(rank==0) { ')
+    #AVS #ThisLoop.append('   printf("app ' +str(FuncNamePrint)+' time: "); ')
+    ThisLoop.append(' printf("app '+str(FuncNamePrint)+' "); ');
+    ThisLoop.append('   int ii; ')
+    ThisLoop.append('   for(ii=0; ii<MPI_Size; ii++) ')
+    #AVS # ThisLoop.append(' printf (" %f ",time_buf[ii]); ')
+    ThisLoop.append('      printf("\t time: %f start: %lf end: %lf  ", time_buf[ii],stime,etime); ')
+    ThisLoop.append('      printf("\\n"); ')
+    ThisLoop.append('} ')
+#LAURA END ADD
+    #LAURA ThisLoop.append('printf("\\n\\t Run-time for function- '+str(FuncName)+': %lf from rank: %d",currtime,rank);')
+    #LAURA PrintResult='printf("\\n\\t Sum: %ld ",Sum);'
+    #LAURA ThisLoop.append(PrintResult)
+    PopCode+=14  #LAURA was PopCode+=8
     
     if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
 	    FuncDecl='long int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' long int Stride, int Sum )'
@@ -1133,10 +1151,49 @@ def main(argv):
 		tmp='#include <time.h>'
 		LibAlloc.append(tmp)
 		
+#LAURA ADDED
+		LibAlloc.append('#define __USE_GNU 1')
+    		LibAlloc.append('#include <sched.h>')
+    		LibAlloc.append('// pins this process to core c')
+    		LibAlloc.append('void pinto(int c){')
+    		LibAlloc.append('   cpu_set_t cpuset;')
+    		LibAlloc.append('   CPU_ZERO(&cpuset);')
+    		LibAlloc.append('   CPU_SET(c, &cpuset);')
+    		LibAlloc.append(' ')
+    		LibAlloc.append('   if(sched_setaffinity(getpid(), sizeof(cpu_set_t), &cpuset) < 0) {')
+    		LibAlloc.append('      fprintf(stderr, "Cannot pin process %d to core %d\\n", getpid(), c);')
+    		LibAlloc.append('      exit(1);')
+    		LibAlloc.append('   }')
+    		LibAlloc.append('   if(c==0)')
+    		LibAlloc.append('   fprintf(stdout, "Setting affinity to cpu%u for caller task pid %d\\n", c, getpid());')
+    		LibAlloc.append('}')
+		LibAlloc.append('#include <sys/time.h>')
+		LibAlloc.append('double rtclock()')
+		LibAlloc.append('{')
+    		LibAlloc.append('struct timezone Tzp;')
+    		LibAlloc.append('struct timeval Tp;')
+    		LibAlloc.append('int stat;')
+    		LibAlloc.append('stat = gettimeofday (&Tp, &Tzp);')
+    		LibAlloc.append('if (stat != 0) printf("Error return from gettimeofday: %d",stat);')
+    		LibAlloc.append('return(Tp.tv_sec + Tp.tv_usec*1.0e-6);')
+		LibAlloc.append('}')
+#LAURA END ADD
+		LibAlloc.append('#include <mpi.h>')
+
+		MainFunc=[]	
+		tmp='int main(int argc,char* argv[])'	
+		MainFunc.append(tmp)
+		MainFunc.append('\n\t{')	
+		MPI_Stuff=[]
+		MPI_Stuff.append('int rank,MPI_Size;');
+		MPI_Stuff.append('MPI_Init(&argc,&argv);');
+		MPI_Stuff.append('MPI_Comm_rank( MPI_COMM_WORLD, &rank);');
+                MPI_Stuff.append('pinto(rank);');   #LAURA
+		MPI_Stuff.append('MPI_Comm_size( MPI_COMM_WORLD, &MPI_Size);');
 			
-		tmp='int main()'	
-		InitAlloc.append(tmp)
-		InitAlloc.append('\n\t{')				
+		#tmp='int main()'	
+		#InitAlloc.append(tmp)
+		#InitAlloc.append('\n\t{')				
 		for i in range(ConfigParams['Dims']):
 			ConfigParams['indices'].append('index'+str(i))
 				
@@ -1219,7 +1276,8 @@ def main(argv):
 					MaxStride= ConfigParams['StrideinStream'][index][CurrStream] 
 					MaxStrideIdx=CurrStream
 			ConfigParams['GlobalVar']['MaxStream'][index]=ConfigParams['GlobalVar']['Stream'][index][MaxStrideIdx]
-			
+
+
 		ConfigParams['GlobalVar']['DimsSize']=[]
 		ConfigParams['GlobalVar']['DimsSizeDecl']=[]
 		for index in range(ConfigParams['Dims']):
@@ -1400,8 +1458,8 @@ def main(argv):
 		index=ConfigParams['NumVars']-1
 		
 		for CurrStream in range(ConfigParams['NumStreaminVar'][index]-1):
-			if debug:
-				print "\n\t 2. CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])+" StrideString: "+str(StrideString)
+			#if debug:
+			print "\n\t 2. CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])+" StrideString: "+str(StrideString)
 			StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		if( (StrideString!='' ) and ( ConfigParams['NumStreaminVar'][index]==1 ) ):
 			StrideString+='_'+str(ConfigParams['StrideinStream'][index][(ConfigParams['NumStreaminVar'][index]-1)])
@@ -1607,18 +1665,22 @@ def main(argv):
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)
 	
+	WriteArray(MainFunc,WriteFile)
+	WriteArray(MPI_Stuff,WriteFile)
 	WriteArray(InitAlloc,WriteFile)
 	WriteArray(DynAlloc,WriteFile)
 	WriteFile.write("\n\t long int Sum=0;")
 	WriteFile.write("\n\t struct timeval start,end;")
+        WriteFile.write("\n\t double etime,stime;")
+        WriteFile.write("\n\t double time_buf[MPI_Size];")
 	WriteFile.write("\n\t double currtime;")
-	
-	WriteArray(WorkigVarsDecl,WriteFile)
+
         WriteFile.write('\n\t gettimeofday(&start,NULL);')
         WriteFile.write('\n\t currtime=(start.tv_sec+start.tv_usec/1000000.0); ')
-    	WriteFile.write("\n\t srand(currtime); ")
+        WriteFile.write("\n\t srand(currtime); ")
 
 
+	WriteArray(WorkigVarsDecl,WriteFile)
 	for VarNum in range(ConfigParams['NumVars']):
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 			WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	
@@ -1637,13 +1699,18 @@ def main(argv):
 	WriteFile.write(PrintFlushVar)
 	#print "\n\t "+str(PrintFlushVar)
 			#print "\n\t VarNum: "+str(VarNum)
-
+			
 	WriteFile.write('\n\t printf("\\n");')
+	WriteFile.write('\n\tMPI_Finalize();')
 	WriteFile.write("\n\t return 0;")
 	WriteFile.write("\n\t}")
 	WriteFile.close()		
 		
+	
+		
+					
+
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])
-
