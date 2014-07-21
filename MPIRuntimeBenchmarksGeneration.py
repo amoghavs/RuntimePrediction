@@ -115,6 +115,7 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
     		ThisLoop.append(PermuteSizeCalc)
     		CallPermuteFunc=TabSpace+str(PermuteArrayVar)+' = RandomPermutationGeneration( '+str(PermuteSizeVar)+' );'
     		ThisLoop.append(CallPermuteFunc)
+		FlushForLoop.append(CallPermuteFunc)
     		PermuteIndexVar='PermuteIndex'
     		PermuteIndexVarInit=' PermuteIndex=0 ;'
     		ThisLoop.append(PermuteIndexVarInit)		
@@ -220,10 +221,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     #ThisLoop.append('double time_buf[MPI_Size];')
     ThisLoop.append('MPI_Gather(&currtime, 1, MPI_DOUBLE, time_buf, 1, MPI_DOUBLE,0,MPI_COMM_WORLD); ')
     ThisLoop.append('if(rank==0) { ')
-    ThisLoop.append('   printf("app ' +str(FuncNamePrint)+' time: "); ')
+    #AVS #ThisLoop.append('   printf("app ' +str(FuncNamePrint)+' time: "); ')
+    ThisLoop.append(' printf("app '+str(FuncNamePrint)+' "); ');
     ThisLoop.append('   int ii; ')
     ThisLoop.append('   for(ii=0; ii<MPI_Size; ii++) ')
-    ThisLoop.append('      printf(" %f ", time_buf[ii]); ')
+    #AVS # ThisLoop.append(' printf (" %f ",time_buf[ii]); ')
+    ThisLoop.append('      printf("\t time: %f start: %lf end: %lf  ", time_buf[ii],stime,etime); ')
     ThisLoop.append('      printf("\\n"); ')
     ThisLoop.append('} ')
 #LAURA END ADD
@@ -364,7 +367,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		    			if BreakIndexChange:
 		    				AppendIndexChange=BreakIndexChange.group(1)+str(BreakIndexChange.group(2))	
 		    				IndexChangeBreakdown['Sign']=BreakIndexChange.group(1)
-		    				IndexChangeBreakdown['Delta']=BreakIndexChange.group(2)
+		    				IndexChangeBreakdown['Delta']=int(BreakIndexChange.group(2))
 		    				if debug:
 		    					print "\n\t -- Sign: "+str(IndexChangeBreakdown['Sign'])+" Delta "+str(IndexChangeBreakdown['Delta'])
 		    			else:
@@ -520,7 +523,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 					LargestIndexNotFound=0
 					if(ConfigParams['RandomAccess'][VarNum]>0):
 						#bounds= '(' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' - ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  
-						bounds= '(' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' - '+str(FinalStreamIndexChange[StrideDim]['Final'])+')'  		
+						bounds= '( ( ' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' * '+str(ConfigParams['GlobalVar']['NumItersLastDimVar'][VarNum])+' ) '+' - '+str(FinalStreamIndexChange[StrideDim]['Final'])+')'  		
 					else:
 						bounds= '((' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  	
 					BoundForDim.append(str(bounds))#BoundForDim.insert(0,str(bounds))
@@ -622,7 +625,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		if(ConfigParams['RandomAccess'][VarNum]):
 			#AccumExprn=str(AccumVar[VarNum])+' += '+str(RandomAccessVarPerStream[CurrStream])+';'
 			#ThisLoop.append(AccumExprn)
-			StreamExprn=LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) % '+str(ConfigParams['GlobalVar']['DimsSize'][(NumDims-1)])+';'
+			StreamExprn=LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) % ( '+str(ConfigParams['GlobalVar']['DimsSize'][(NumDims-1)])+' - '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][CurrStream])+' ) ;'
 		else:
 			StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
 		if debug:
@@ -639,11 +642,23 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    PrintStmt='printf("\\n\t '
 	    PrintSuffix=''
 	    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-		PrintStmt+=str((RandomAccessVarPerStream[CurrStream]))+' :%d '
-		PrintSuffix+=','+str((RandomAccessVarPerStream[CurrStream]))
+			PrintStmt+=str((RandomAccessVarPerStream[CurrStream]))+' :%d '
+			PrintSuffix+=','+str((RandomAccessVarPerStream[CurrStream]))
 	    PrintStmt+='"'+str(PrintSuffix)+');'
 	    #ThisLoop.append('printf(" ");')
 	    ThisLoop.append(PrintStmt)
+    else:
+	    PrintStmt='printf("\\n\t '
+	    PrintSuffix=''
+    	    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+			StreamVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)
+			for CurrDim in range(NumDims):
+				StreamVar+='[('+str(LHSIndicesPerStream[CurrStream][CurrDim])+'-1)]'
+			PrintStmt+=str(StreamVar)+' :%'+str(ConfigParams['DSforPrintf'][VarNum])
+			PrintSuffix+=','+str(StreamVar)
+	    PrintStmt+='"'+str(PrintSuffix)+');'
+	    #ThisLoop.append('printf(" ");')
+	    ThisLoop.append(PrintStmt)	    
     AccumEqn=' Sum+=(';
     for k in range(ConfigParams['NumStreaminVar'][VarNum]-1):
     	    AccumEqn+=AccumVar[k]+'+'
@@ -1209,25 +1224,43 @@ def main(argv):
 		ConfigParams['GlobalVar']={}
 		ConfigParams['GlobalVar']['NumIters']=[]
 		ConfigParams['GlobalVar']['NumItersDecl']=[]
+		ConfigParams['GlobalVar']['NumItersLastDimVar']=[]
+		ConfigParams['GlobalVar']['NumItersLastDimVarDecl']=[]
+
 		for i in range(ConfigParams['NumVars']):
 			CurrVarNumLoopVar='NumLoops_Var'+str(i)
 			CurrVarNumLoopVarDecl='long int '+str(CurrVarNumLoopVar)+' = '+str(ConfigParams['NumIters'][i])+' ;'
+			CurrVarNumLoopLastDimVar='NumLoops_VarLastDim'+str(i)
+			CurrVarNumLoopLastDimVarDecl='long int '+str(CurrVarNumLoopLastDimVar)+' = ( '+str(ConfigParams['NumIters'][i])+' * 1000 ) ;'
 			#print "\n\t CurrVar: "+str(i)+" CurrVarNumLoopVar: "+str(CurrVarNumLoopVar)+" CurrVarNumLoopVarDecl "+str(CurrVarNumLoopVarDecl)
 			ConfigParams['GlobalVar']['NumIters'].append(CurrVarNumLoopVar)
 			ConfigParams['GlobalVar']['NumItersDecl'].append(CurrVarNumLoopVarDecl)
+			ConfigParams['GlobalVar']['NumItersLastDimVar'].append(CurrVarNumLoopLastDimVar)
+			ConfigParams['GlobalVar']['NumItersLastDimVarDecl'].append(CurrVarNumLoopLastDimVarDecl)
+			
 
 		ConfigParams['GlobalVar']['Stream']={}	
 		ConfigParams['GlobalVar']['Stream']['StrideVarDecl']=[]				
+		ConfigParams['GlobalVar']['NumOperandsVar']={}
+		ConfigParams['GlobalVar']['NumOperandsVar']['NumOperandsVarDecl']=[]
+
 		for index in range(ConfigParams['NumVars']):
 			ConfigParams['GlobalVar']['Stream'][index]=[]
+			ConfigParams['GlobalVar']['NumOperandsVar'][index]=[]
 			
 			if debug:
 				print "\n -- NumStreams: "+str(ConfigParams['NumStreaminVar'][index])
 			for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
 				StrideVar='StrideVar'+str(index)+"_Stream"+str(CurrStream)
 				StrideVarDecl='int '+str(StrideVar)+' = '+str(ConfigParams['StrideinStream'][index][CurrStream])+' ;'
+				NumOperandsVar='NumOperandsVar'+str(index)+'_Stream'+str(CurrStream)
+				NumOperandsVarDecl='int '+str(NumOperandsVar)+' = '+str(ConfigParams['StrideVar'][index][CurrStream]['NumOperands'])+' ; '
+
 				ConfigParams['GlobalVar']['Stream'][index].append(StrideVar)
 				ConfigParams['GlobalVar']['Stream']['StrideVarDecl'].append(StrideVarDecl)
+				ConfigParams['GlobalVar']['NumOperandsVar'][index].append(NumOperandsVar)
+				ConfigParams['GlobalVar']['NumOperandsVar']['NumOperandsVarDecl'].append(NumOperandsVarDecl)
+
 				if debug:
 					print "\n\t CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])
 					print "\t\t Var: "+str(StrideVar)+" StrideVarDecl "+str(StrideVarDecl)
@@ -1256,6 +1289,7 @@ def main(argv):
 			ConfigParams['GlobalVar']['DimsSizeDecl'].append(SizeVarDecl)
 ###
 		
+		ConfigParams['DSforPrintf']=[]			
 		for index in range(ConfigParams['NumVars']):
 				VarDeclStmt=[]
 			
@@ -1264,16 +1298,25 @@ def main(argv):
 				if(ConfigParams['datastructure'][index]=='f' or ConfigParams['datastructure'][index]=='float'):
 					VarDecl='float' 
 					datatype=VarDecl
+					ConfigParams['DSforPrintf'].append('f')
 					if debug:
 						print "\n\t Allocated float to variable "+str(index)
 				elif(ConfigParams['datastructure'][index]=='d' or ConfigParams['datastructure'][index]=='double'):
 					VarDecl='double' 
 					datatype=VarDecl
+					ConfigParams['DSforPrintf'].append('lf')
 					if debug:
 						print "\n\t Allocated double to variable "+str(index)				
 				elif(ConfigParams['datastructure'][index]=='i' or ConfigParams['datastructure'][index]=='integer'):
 					VarDecl='int' 
 					datatype=VarDecl
+					ConfigParams['DSforPrintf'].append('d')
+					if debug:
+						print "\n\t Allocated integer to variable "+str(index)								
+				elif(ConfigParams['datastructure'][index]=='l' or ConfigParams['datastructure'][index]=='long'):
+					VarDecl='long int' 
+					datatype=VarDecl
+					ConfigParams['DSforPrintf'].append('ld')
 					if debug:
 						print "\n\t Allocated integer to variable "+str(index)								
 				else:
@@ -1304,7 +1347,8 @@ def main(argv):
 							#FlushVar=
 							FlushVarDecl=datatype+prefix+FlushVar+';'
 							DynAlloc.append(FlushVarDecl)
-							print "\n\t FlushVarDecl: "+str(FlushVarDecl)
+							if debug:
+								print "\n\t FlushVarDecl: "+str(FlushVarDecl)
 							
 							if(ConfigParams['Dims']==1):
 								#tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+'*'+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+datatype+suffix+'))'+';'	
@@ -1613,7 +1657,9 @@ def main(argv):
 	WriteArray(LibAlloc,WriteFile)	
 	WriteArray(PermuteGenFuncArray,WriteFile)	
 	WriteArray(ConfigParams['GlobalVar']['NumItersDecl'],WriteFile)
+	WriteArray(ConfigParams['GlobalVar']['NumItersLastDimVarDecl'],WriteFile)
 	WriteArray(ConfigParams['GlobalVar']['Stream']['StrideVarDecl'],WriteFile)
+	WriteArray( ConfigParams['GlobalVar']['NumOperandsVar']['NumOperandsVarDecl'],WriteFile)
 	WriteArray(ConfigParams['GlobalVar']['DimsSizeDecl'],WriteFile)
 	
 	for VarNum in range(ConfigParams['NumVars']):
@@ -1642,7 +1688,18 @@ def main(argv):
  
 	WriteArray(Comments,WriteFile)	
 
-
+	for VarNum in range(ConfigParams['NumVars']):
+		prefix='printf(" \\n\\t '
+		if(ConfigParams['RandomAccess'][VarNum]>0):
+			for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+				FlushVar='FlushVar'+str(VarNum)+'_Stream'+str(CurrStream)
+				prefix+=str(FlushVar)+' %d '
+				suffix+=','+str(FlushVar)+'[(int) ( rand() % '+str(ConfigParams['size'][ConfigParams['Dims']-1]) +' )]'
+	PrintFlushVar=str(prefix)+' \\n " '+str(suffix)+' ); '
+	WriteFile.write(PrintFlushVar)
+	#print "\n\t "+str(PrintFlushVar)
+			#print "\n\t VarNum: "+str(VarNum)
+			
 	WriteFile.write('\n\t printf("\\n");')
 	WriteFile.write('\n\tMPI_Finalize();')
 	WriteFile.write("\n\t return 0;")

@@ -208,14 +208,13 @@ def main(argv):
 							BreakFields=re.split('\t',CurrLine)
 							#print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
 							#CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
-							CheckFuncVar=re.match('.*\.c\:171',BreakFields[5])
+							CheckFuncVar=re.match('.*\.c\:168',BreakFields[5])
 							if CheckFuncVar:
-								print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])+" LineNm: "+str(BreakFileds[5])							
+								print "\n\t BBID: "+str(BreakFields[2])+" Function: "+str(BreakFields[6])+" LineNm: "+str(BreakFields[5])							
 								BBFile.write('\n\t '+str(BreakFields[2]))
 
 					BBFile.write("\n\n")
 					BBFile.close()
-				
 					CMDPebilSim='pebil --typ sim --inp '+str(BBFileName)+' --app '+str(FileName)
 					print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
 					commands.getoutput(CMDPebilSim)

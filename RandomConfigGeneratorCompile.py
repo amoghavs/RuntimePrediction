@@ -191,7 +191,7 @@ def main():
         DS=[['i']]#,'d','d','d']]    
 	RandomAccess=[[1]] # 1,1,1]]
         #SpatWindow=[8,16,32];
-        LoopIterationBase=10;
+        LoopIterationBase=1;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
         LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
 
@@ -210,12 +210,14 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
+	Min['MbyteSize']=11
+	Max['MbyteSize']=14
         MbyteSize=13 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         HigherDimSizeIndex=8
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
-        NumSizeIter=2
+        NumSizeIter=16
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
@@ -254,8 +256,8 @@ def main():
  	OutputSet=IterationsCombination(LoopIterations,NumVars)
 	
  	for CurrIter in range(NumSizeIter):
-		
-		MbyteSize=MbyteSize#+1
+	 for CurrMbyteSize in range(Min['MbyteSize'],Max['MbyteSize']):	
+		MbyteSize=CurrMbyteSize#+1
 		MaxSize=2**(MbyteSize)
 		HigherDimSizeIndex=8
 		Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
@@ -442,7 +444,7 @@ def main():
 															OperandIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)	
 													CurrOpCombo+=str(OperandIdx)
 
-													print "\n\t CurrRandomAccess[CurrVar]: "+str(CurrRandomAccess[CurrVar])+" PickIdx "+str(PickIdx)+" PickDelta "+str(PickDelta)
+													#print "\n\t CurrRandomAccess[CurrVar]: "+str(CurrRandomAccess[CurrVar])+" PickIdx "+str(PickIdx)+" PickDelta "+str(PickDelta)
 												CurrOpCombo+=')'
 												OpComboSet.append(CurrOpCombo)
 		## $$$$$$$$$$$$$$$$$							
@@ -553,7 +555,7 @@ def main():
 													if FileName:
 														print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
 														SRCFileName=str(FileName.group(1))+'.c'
-														CMDCompileFile='mpicc -g '+str(SRCFileName)+' -o '+str(FileName.group(1))
+														CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
 														print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 														commands.getoutput(CMDCompileFile)
 							#sys.exit()
