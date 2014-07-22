@@ -129,13 +129,13 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
     		if(j==NumForLoops-1):
 	    		if(ConfigParams['RandomAccess'][VarNum]>0):
     				LoopStmt=[]
-				LoopStmt.append(TabSpace+'for('+str(ConfigParams['indices'][j])+'=0 , '+str(PermuteIndexVar)+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+='+str(NumOperandsVar)+' , '+str(PermuteIndexVar)+'+=1 )')
+				LoopStmt.append(TabSpace+'for('+str(ConfigParams['indices'][j])+'=0 , '+str(PermuteIndexVar)+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(PermuteSizeVar)+' ; '+str(ConfigParams['indices'][j])+'+='+str(1)+' , '+str(PermuteIndexVar)+'+=1 )')
 				LoopStmt.append(TabSpace+'{')
 				LoopStmt.append(TabSpace+'\t '+str(BoundVar)+'= '+str(ConfigParams['indices'][j])+' + '+str(NumOperandsVar)+' ;')
 				LoopStmt.append(TabSpace+'\t if( '+str(BoundVar)+' > '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' )')
 				LoopStmt.append(TabSpace+'\t\t '+str(BoundVar)+' = '+str(ConfigParams['GlobalVar']['DimsSize'][j])+';')
 				#LoopStmt.append(TabSpace+'\t '+str(TempVar)+' = (long int) ( rand() % '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' );')
-				LoopStmt.append(TabSpace+'\t for('+str(InnerLoopVar)+'='+str(ConfigParams['indices'][j])+','+str(CountVar)+'='+str(ConfigParams['indices'][j])+' ; ( ( '+str(CountVar)+' < '+str(BoundVar)+' ) && ( '+ str(InnerLoopVar)+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ) ) ; '+str(CountVar)+'+=1,'+str(InnerLoopVar)+'+='+str(ConfigParams['OpDiff'][VarNum])+')')
+				LoopStmt.append(TabSpace+'\t for('+str(InnerLoopVar)+'='+str(ConfigParams['indices'][j])+','+str(CountVar)+'='+str(ConfigParams['indices'][j])+' ; ( ( '+str(CountVar)+' < '+str(PermuteSizeVar)+' ) && ( '+ str(InnerLoopVar)+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ) ) ; '+str(CountVar)+'+=1,'+str(InnerLoopVar)+'+='+str(PermuteSizeVar)+')')
 				for CurrLine in LoopStmt:
 					ThisLoop.append(CurrLine)
 					FlushForLoop.append(CurrLine)
@@ -274,13 +274,21 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
    		VarDecl='int '+str(Temp)+'=0;'
     		ShouldDeclareVars.append(VarDecl)
     		
-    		
+    PermuteSizeVarforStream={}    		
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 	    #eqn="\t"+TabSpace+str(A)+LHSindices+' = '+'Sum'+' + '+str(A)+RHSindices+';'
 	    LHSindices=''
 	    RHSindices=''
 	    indices=''
  
+ 	    LastDim=ConfigParams['Dims']-1
+ 	    PermuteSizeVar='PermuteSizeVar'+str(VarNum)+'_'+str(CurrStream)
+ 	    PermuteSizeVarforStream[CurrStream]=PermuteSizeVar
+ 	    NumOperandsVar='NumOperandsVar'+str(VarNum)+'_Stream'+str(CurrStream)
+	    PermuteSizeCalc=' (int) ( ( '+str(ConfigParams['GlobalVar']['DimsSize'][LastDim])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][CurrStream])+' ) / '+str(NumOperandsVar)+' );'
+	    PermuteSizeVarDecl='int '+str(PermuteSizeVar)+' = '+str(PermuteSizeCalc)+';'
+	    ShouldDeclareVars.append(PermuteSizeVarDecl)
+	    
  	    StreamVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)
 	
 	    RHSExprnPerStream[CurrStream]=[]
@@ -369,6 +377,18 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		    				AppendIndexChange=BreakIndexChange.group(1)+str(BreakIndexChange.group(2))	
 		    				IndexChangeBreakdown['Sign']=BreakIndexChange.group(1)
 		    				IndexChangeBreakdown['Delta']=int(BreakIndexChange.group(2))
+		    				
+		    				if(ConfigParams['RandomAccess'][VarNum]>0):
+		    					#AppendIndexChange='+ ( '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+' * '+str(CurrOperandIdx)+')'
+		    					AppendIndexChange='+ ( '+str(PermuteSizeVarforStream[CurrStream])+' * '+str(CurrOperandIdx)+')'
+		    					IndexChangeParameterized=ConfigParams['OpDiff'][VarNum] * CurrOperandIdx
+		    					if( IndexChangeParameterized == IndexChangeBreakdown['Delta'] ):
+			    					if debug:
+										print "\n\t Yaay Parameterized delta "+str(IndexChangeParameterized)+" is equal to specified delta: "+str(IndexChangeBreakdown['Delta'])
+			    					#sys.exit()
+		    					else:
+		    						print "\n\t ERROR: Parameterized delta "+str(IndexChangeParameterized)+" is not equal to specified delta: "+str(IndexChangeBreakdown['Delta'])
+		    						sys.exit()
 		    				if debug:
 		    					print "\n\t -- Sign: "+str(IndexChangeBreakdown['Sign'])+" Delta "+str(IndexChangeBreakdown['Delta'])
 		    			else:
@@ -524,7 +544,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 					LargestIndexNotFound=0
 					if(ConfigParams['RandomAccess'][VarNum]>0):
 						#bounds= '(' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' - ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  
-						bounds= '( ( ' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' * '+str(ConfigParams['GlobalVar']['NumItersLastDimVar'][VarNum])+' ) '+' - '+str(FinalStreamIndexChange[StrideDim]['Final'])+')'  		
+						bounds= '( ( ' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' * '+str(ConfigParams['GlobalVar']['NumItersLastDimVar'][VarNum])+' ) '+' - '+str(FinalStreamIndexChange[StrideDim]['Final'])+')' 		
 					else:
 						bounds= '((' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' * '+str(ConfigParams['StrideinStream'][VarNum][i] )+' )- ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  	
 					BoundForDim.append(str(bounds))#BoundForDim.insert(0,str(bounds))
@@ -626,7 +646,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		if(ConfigParams['RandomAccess'][VarNum]):
 			#AccumExprn=str(AccumVar[VarNum])+' += '+str(RandomAccessVarPerStream[CurrStream])+';'
 			#ThisLoop.append(AccumExprn)
-			StreamExprn=LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) % ( '+str(ConfigParams['GlobalVar']['DimsSize'][(NumDims-1)])+' - '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][CurrStream])+' ) ;'
+			#StreamExprn=LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) % ( '+str(ConfigParams['GlobalVar']['DimsSize'][(NumDims-1)])+' - '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][CurrStream])+' ) ;'
+			StreamExprn=LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) % ( '+str(PermuteSizeVarforStream[CurrStream])+' ) ;'
 		else:
 			StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
 		if debug:
@@ -1179,31 +1200,32 @@ def main(argv):
 		LibAlloc.append(tmp)
 		
 #LAURA ADDED
-		LibAlloc.append('#define __USE_GNU 1')
-    		LibAlloc.append('#include <sched.h>')
-    		LibAlloc.append('// pins this process to core c')
-    		LibAlloc.append('void pinto(int c){')
-    		LibAlloc.append('   cpu_set_t cpuset;')
-    		LibAlloc.append('   CPU_ZERO(&cpuset);')
-    		LibAlloc.append('   CPU_SET(c, &cpuset);')
-    		LibAlloc.append(' ')
-    		LibAlloc.append('   if(sched_setaffinity(getpid(), sizeof(cpu_set_t), &cpuset) < 0) {')
-    		LibAlloc.append('      fprintf(stderr, "Cannot pin process %d to core %d\\n", getpid(), c);')
-    		LibAlloc.append('      exit(1);')
-    		LibAlloc.append('   }')
-    		LibAlloc.append('   if(c==0)')
-    		LibAlloc.append('   fprintf(stdout, "Setting affinity to cpu%u for caller task pid %d\\n", c, getpid());')
-    		LibAlloc.append('}')
-		LibAlloc.append('#include <sys/time.h>')
-		LibAlloc.append('double rtclock()')
-		LibAlloc.append('{')
-    		LibAlloc.append('struct timezone Tzp;')
-    		LibAlloc.append('struct timeval Tp;')
-    		LibAlloc.append('int stat;')
-    		LibAlloc.append('stat = gettimeofday (&Tp, &Tzp);')
-    		LibAlloc.append('if (stat != 0) printf("Error return from gettimeofday: %d",stat);')
-    		LibAlloc.append('return(Tp.tv_sec + Tp.tv_usec*1.0e-6);')
-		LibAlloc.append('}')
+		PinToFunc=[]
+		PinToFunc.append('#define __USE_GNU 1')
+    		PinToFunc.append('#include <sched.h>')
+    		PinToFunc.append('// pins this process to core c')
+    		PinToFunc.append('void pinto(int c){')
+    		PinToFunc.append('   cpu_set_t cpuset;')
+    		PinToFunc.append('   CPU_ZERO(&cpuset);')
+    		PinToFunc.append('   CPU_SET(c, &cpuset);')
+    		PinToFunc.append(' ')
+    		PinToFunc.append('   if(sched_setaffinity(getpid(), sizeof(cpu_set_t), &cpuset) < 0) {')
+    		PinToFunc.append('      fprintf(stderr, "Cannot pin process %d to core %d\\n", getpid(), c);')
+    		PinToFunc.append('      exit(1);')
+    		PinToFunc.append('   }')
+    		PinToFunc.append('   if(c==0)')
+    		PinToFunc.append('   fprintf(stdout, "Setting affinity to cpu%u for caller task pid %d\\n", c, getpid());')
+    		PinToFunc.append('}')
+		PinToFunc.append('#include <sys/time.h>')
+		PinToFunc.append('double rtclock()')
+		PinToFunc.append('{')
+    		PinToFunc.append('struct timezone Tzp;')
+    		PinToFunc.append('struct timeval Tp;')
+    		PinToFunc.append('int stat;')
+    		PinToFunc.append('stat = gettimeofday (&Tp, &Tzp);')
+    		PinToFunc.append('if (stat != 0) printf("Error return from gettimeofday: %d",stat);')
+    		PinToFunc.append('return(Tp.tv_sec + Tp.tv_usec*1.0e-6);')
+		PinToFunc.append('}')
 #LAURA END ADD
 		LibAlloc.append('#include <mpi.h>')
 
@@ -1257,8 +1279,8 @@ def main(argv):
 		for i in range(ConfigParams['NumVars']):
 			CurrVarNumLoopVar='NumLoops_Var'+str(i)
 			CurrVarNumLoopVarDecl='long int '+str(CurrVarNumLoopVar)+' = '+str(ConfigParams['NumIters'][i])+' ;'
-			CurrVarNumLoopLastDimVar='NumLoops_VarLastDim'+str(i)
-			CurrVarNumLoopLastDimVarDecl='long int '+str(CurrVarNumLoopLastDimVar)+' = ( '+str(ConfigParams['NumIters'][i])+' * 1000 ) ;'
+			CurrVarNumLoopLastDimVar='NumLoops_Var'+str(i)+'_LastDim'
+			CurrVarNumLoopLastDimVarDecl='long int '+str(CurrVarNumLoopLastDimVar)+' = ( '+str(ConfigParams['NumIters'][i])+' * 10 ) ;'
 			#print "\n\t CurrVar: "+str(i)+" CurrVarNumLoopVar: "+str(CurrVarNumLoopVar)+" CurrVarNumLoopVarDecl "+str(CurrVarNumLoopVarDecl)
 			ConfigParams['GlobalVar']['NumIters'].append(CurrVarNumLoopVar)
 			ConfigParams['GlobalVar']['NumItersDecl'].append(CurrVarNumLoopVarDecl)
@@ -1496,8 +1518,8 @@ def main(argv):
 		index=ConfigParams['NumVars']-1
 		
 		for CurrStream in range(ConfigParams['NumStreaminVar'][index]-1):
-			#if debug:
-			print "\n\t 2. CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])+" StrideString: "+str(StrideString)
+			if debug:
+				print "\n\t 2. CurrStream: "+str(CurrStream)+" index "+str(index)+" stride<><> "+str(ConfigParams['StrideinStream'][index][CurrStream])+" StrideString: "+str(StrideString)
 			StrideString+=str(ConfigParams['StrideinStream'][index][CurrStream])+'_'
 		if( (StrideString!='' ) and ( ConfigParams['NumStreaminVar'][index]==1 ) ):
 			StrideString+='_'+str(ConfigParams['StrideinStream'][index][(ConfigParams['NumStreaminVar'][index]-1)])
@@ -1698,13 +1720,14 @@ def main(argv):
 	PermuteGenFuncArray.append('}')
 		
 	WriteArray(LibAlloc,WriteFile)	
-	WriteArray(PermuteGenFuncArray,WriteFile)	
 	WriteArray(ConfigParams['GlobalVar']['NumItersDecl'],WriteFile)
 	WriteArray(ConfigParams['GlobalVar']['NumItersLastDimVarDecl'],WriteFile)
 	WriteArray(ConfigParams['GlobalVar']['Stream']['StrideVarDecl'],WriteFile)
 	WriteArray( ConfigParams['GlobalVar']['NumOperandsVar']['NumOperandsVarDecl'],WriteFile)
 	WriteArray(ConfigParams['GlobalVar']['DimsSizeDecl'],WriteFile)
 	WriteArray(ConfigParams['GlobalVar']['SuccessiveOperandDiffDecl'],WriteFile)
+	WriteArray(PinToFunc,WriteFile)
+	WriteArray(PermuteGenFuncArray,WriteFile)	
 	
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)

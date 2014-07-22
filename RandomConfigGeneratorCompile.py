@@ -210,14 +210,14 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
-	Min['MbyteSize']=11
-	Max['MbyteSize']=12
+	Min['MbyteSize']=23
+	Max['MbyteSize']=24
         MbyteSize=13 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         HigherDimSizeIndex=8
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
-        NumSizeIter=4
+        NumSizeIter=3
         SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
@@ -554,7 +554,7 @@ def main():
 												f.write("\n\n")
 												f.close()
 												OutputFileName='Duh.log'
-												CMDrunStrideBenchmarks='python MPIRuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
+												CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
 												commands.getoutput(CMDrunStrideBenchmarks)
 												print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
 												OutputFile=open(OutputFileName)
