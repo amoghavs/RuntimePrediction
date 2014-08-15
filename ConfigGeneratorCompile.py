@@ -150,8 +150,8 @@ def PerStreamConfig(Max,Min,Operations):
 	StreamConfig['IntraOperandDelta']['Max']=Max['IntraOperandDelta']
 	StreamConfig['IntraOperandDelta']['Min']=Min['IntraOperandDelta']
 		
-	StreamConfig['CurrNumDims']=Max['Dims'] 
-	print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
+	#StreamConfig['CurrNumDims']=Max['Dims'] 
+	#print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
 	print "\n "
 	return	StreamConfig	
 
@@ -213,18 +213,18 @@ def main():
         Min={}
         Max['Vars']=1
         Min['Vars']=1
-        Max['Dims']=3
-        Min['Dims']=2
-        Max['NumStream']=2
-        Min['NumStream']=1
-        Max['Stride']=3 # ie., 2^4
-        Min['Stride']=1 # ie., 2^0=1
+        Max['Dims']=1
+        Min['Dims']=1
+        Max['NumStream']=3
+        Min['NumStream']=3
+        Max['Stride']=4 # ie., 2^4
+        Min['Stride']=0 # ie., 2^0=1
         Alloc=[['d']] #,'d','d','d']]    
-        Init=['index0+1']#,'index0','index0','index0']
-        DS=[['d']]#,'d','d','d']]    
+        Init=['index0*3+4']#,'index0','index0','index0']
+        DS=[['i']]#,'d','d','d']]    
 	RandomAccess=[[0]] # 1,1,1]]
         #SpatWindow=[8,16,32];
-        LoopIterationBase=4;
+        LoopIterationBase=60;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
         LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
 
@@ -237,17 +237,24 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
-        MbyteSize=24 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
+        MbyteSize=25 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         HigherDimSizeIndex=8
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
+
+	Min['Size']=22
+	Max['Size']=23
         
+        SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
+	Min['NumOperandsIdx']=1
+	Max['NumOperandsIdx']=3
+
 	Operations={}
-	Operations['MainOperations']=['+','-','*','/']
+	Operations['MainOperations']=['+']#,'-','*','/']
 
 	PermutationsFlag={}
 	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of 
@@ -255,8 +262,8 @@ def main():
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
 	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
-	Max['IntraOperandDelta']=[(+3,+4,2)]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
-	Min['IntraOperandDelta']=[(0,+1,0) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
+	Max['IntraOperandDelta']=[(+1,+1,1)]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
+	Min['IntraOperandDelta']=[(0,+0,0) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
 	
 	Max['Constant']=10
 	Min['Constant']=2
@@ -280,8 +287,8 @@ def main():
  		Prefix.append(0)
  	OutputSet=IterationsCombination(LoopIterations,NumVars)
 
-  	StreamConfig=PerStreamConfig(Max,Min,Operations)
-  	StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
+  	#StreamConfig=PerStreamConfig(Max,Min,Operations)
+  	#StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
   	
   	InitExpression=''
   	for i,CurrVarInit in enumerate(Init):
@@ -291,7 +298,23 @@ def main():
   			InitExpression+=str(CurrVarInit)
 	
    	for CurrSetIterations in OutputSet:	
-	   	
+	 for CurrNumOperandsIdx in range(Min['NumOperandsIdx'],Max['NumOperandsIdx']):
+	  Min['NumOperands']=[]
+	  Max['NumOperands']=[]
+	  Min['NumOperands'].append((2**CurrNumOperandsIdx))
+	  Max['NumOperands'].append((2**CurrNumOperandsIdx))
+	  print "\n\t --NumOperands: "+str(CurrNumOperandsIdx)+" 6 "+str(2**CurrNumOperandsIdx)
+	  for CurrMbyteSize in range(Min['Size'],Max['Size']):
+		print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)
+		MaxSize=2**CurrMbyteSize
+		HigherDimSizeIndex=8
+		Dim0Size=2**(CurrMbyteSize-HigherDimSizeIndex)
+		HigherDimSize= MaxSize/ Dim0Size
+
+		StreamConfig=PerStreamConfig(Max,Min,Operations)
+		StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
+
+   		print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)+" Dim0Size "+str(Dim0Size)+" HigherDimSize "+str(HigherDimSize)
 	   	IterationsString=''
 	   	IterationsName=''
 	   	for i,CurrVarIterations in enumerate(CurrSetIterations):
@@ -303,9 +326,18 @@ def main():
 	   			IterationsName+=str(CurrVarIterations)
  		
  		print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" IterationsString: "+str(IterationsString)
+
+ 		SuccessiveOperandsDiffString=''
+ 		for i,CurrOpDiff in enumerate(SuccessiveOperandDiff):
+ 			if(i):
+ 				SuccessiveOperandsDiffString+=','+str(CurrOpDiff)
+ 			else:
+ 				SuccessiveOperandsDiffString+=str(CurrOpDiff)
+
  		
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
  		for NumDims in range(Min['Dims'],Max['Dims']+1):
+			StreamConfig['CurrNumDims']=NumDims
 			SizeString=''
 			SizeName=''				
 			if (NumDims>1):
@@ -380,7 +412,7 @@ def main():
 				NumStreamString='#StreamDims '+str(NumStreams) # CAUTION: Should change this when NumVars > 1
 				StrideString=''
 				StrideName=''
-				print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
+				#print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
 				#sys.exit()	
 		
 				for i in range(NumVars):	
@@ -396,8 +428,9 @@ def main():
 
 				StreamConfigCollection={}
 				CurrStrideStringSet=[]
-				
-				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'.log'
+				print "\n\t CurrNumOperands "+str(CurrNumOperandsIdx)
+			        ActualCurrNumOperands=2**CurrNumOperandsIdx 	
+				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'_NumOperands_'+str(ActualCurrNumOperands)+'.log'
 				print "\n\t SourceFilesLogName: "+str(SourceFilesLogName)
 				
 				SourceFilesLog=open(SourceFilesLogName,'w')
@@ -415,14 +448,14 @@ def main():
 								CurrStrideString+=(CurrStride)
 								CurrStrideCombi+=str(CurrStride)
 								
-						print "\n\t DCurrStrideString: "+str(CurrStrideString)
+						#print "\n\t DCurrStrideString: "+str(CurrStrideString)
 						CurrStrideStringSet.append((CurrStrideString,CurrStrideCombi) )
 						StreamConfigCollection[CurrStrideString]={}
 					else:
 						print "\n\t ERROR: Some error with extracting stride for the stream. "
 
 					for CurrNumOperands in (StreamConfig['NumOperandsSet']):
-						
+					 	
 						CurrNumOperandsString=''
 						for i in CurrNumOperands:
 							CurrNumOperandsString+=str(i)	
@@ -467,7 +500,7 @@ def main():
 									for CurrOpCombo in OpComboSet:
 										Temp=[]
 										
-										#print "\n\t CurrOpCombo: "+str(CurrOpCombo)+' AccumCount: '+str(AccumCount)
+										#print "\n\t CurrOpCombo: "+str(CurrOpCombo)#+' AccumCount: '+str(AccumCount)
 										for CurrNumStream in range(NumStreams):	
 											Temp1=str(StrideOperationsPrefix[CurrNumStream])+' ; '+str(CurrOpCombo)+'>'
 											Temp.append(Temp1)
@@ -502,11 +535,8 @@ def main():
  									TempCombiAccumulation.append(Temp)
 								
 							CombiAccumulation=copy.deepcopy(TempCombiAccumulation)
-						print "\n\t AccumulationCount: "+str(AccumulationCount)+' * (NumOperands) '+str(len(StreamConfigCollection[CurrStrideString]))+' * '+str(len(CurrStrideStringSet))
-						
-
+						#print "\n\t AccumulationCount: "+str(AccumulationCount)+' * (NumOperands) '+str(len(StreamConfigCollection[CurrStrideString]))+' * '+str(len(CurrStrideStringSet))
 						for CurrCombiAccumulation in (CombiAccumulation):
-							
 							for CurrAllocSet in Alloc:
 								AllocString=''
 								for i,CurrAlloc in enumerate(CurrAllocSet):
@@ -542,16 +572,17 @@ def main():
 										f.write("\n#size "+str(SizeString))
 										f.write("\n#allocation "+str(AllocString) )
 										f.write("\n#init "+str(InitExpression))
+										f.write("\n#OpDiff "+str(SuccessiveOperandsDiffString))
 										f.write("\n#datastructure "+str(DSString))
 								
 										for CurrCombi in CurrCombiAccumulation:
-											print "\n\t CurrCombi: "+str(CurrCombi)
+											#print "\n\t CurrCombi: "+str(CurrCombi)
 											f.write("\n"+str(CurrCombi))
 									
 										f.write("\n\n")
 										f.close()
 										OutputFileName='Duh.log'
-										CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
+										CMDrunStrideBenchmarks='python MPIRuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
 										commands.getoutput(CMDrunStrideBenchmarks)
 										print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
 										OutputFile=open(OutputFileName)
@@ -562,10 +593,11 @@ def main():
 											if FileName:
 												print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
 												SRCFileName=str(FileName.group(1))+'.c'
-												CMDCompileFile='gcc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
+												CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
 												print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 												commands.getoutput(CMDCompileFile)
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
+										#sys.exit()
 				SourceFilesLog.write("\n\n")
 				SourceFilesLog.close()
 									

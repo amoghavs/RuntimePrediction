@@ -117,8 +117,8 @@ def PerStreamConfig(Max,Min,Operations):
 	StreamConfig['IntraOperandDelta']['Max']=Max['IntraOperandDelta']
 	StreamConfig['IntraOperandDelta']['Min']=Min['IntraOperandDelta']
 		
-	StreamConfig['CurrNumDims']=Max['Dims'] 
-	print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
+	#StreamConfig['CurrNumDims']=Max['Dims'] 
+	#print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
 	print "\n "
 	return	StreamConfig	
 
@@ -210,20 +210,20 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
-	Min['MbyteSize']=23
-	Max['MbyteSize']=24
+	Min['MbyteSize']=18
+	Max['MbyteSize']=22
         MbyteSize=13 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
         MaxSize=2**MbyteSize
         HigherDimSizeIndex=8
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
-        NumSizeIter=16
+        NumSizeIter=4
         SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
 	Operations={}
-	Operations['MainOperations']=['+'] #,'-','*','/']
+	Operations['MainOperations']=['|'] #,'+','-','*','/']
 
 	PermutationsFlag={}
 	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of 
@@ -256,7 +256,9 @@ def main():
  		Prefix.append(0)
  	OutputSet=IterationsCombination(LoopIterations,NumVars)
 	
- 	for CurrIter in range(NumSizeIter):
+ 	for CurrIterIdx in range(NumSizeIter):
+ 	 CurrIter=2**CurrIterIdx
+ 	 print "\n\t CurrIter: "+str(CurrIter)
 	 for CurrMbyteSize in range(Min['MbyteSize'],Max['MbyteSize']):	
 		MbyteSize=CurrMbyteSize#+1
 		MaxSize=2**(MbyteSize)
@@ -264,8 +266,8 @@ def main():
 		Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
 		HigherDimSize= MaxSize/ Dim0Size	
 		print "\n\t CurrIter: "+str(CurrIter)+" MbyteSize: "+str(MbyteSize)+" MaxSize: "+str(MaxSize)
-		Min['NumOperands'][0]=CurrIter+1
-		Max['NumOperands'][0]=CurrIter+1
+		Min['NumOperands'][0]=CurrIter#+1
+		Max['NumOperands'][0]=CurrIter#+1
 		
 		for CurrRandomAccess in RandomAccess:
 			for Idx,CurrVar in enumerate(CurrRandomAccess):
@@ -554,7 +556,7 @@ def main():
 												f.write("\n\n")
 												f.close()
 												OutputFileName='Duh.log'
-												CMDrunStrideBenchmarks='python RuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
+												CMDrunStrideBenchmarks='python MPIRuntimeBenchmarksGeneration.py -c '+str(ConfigFileName)+' > '+str(OutputFileName)
 												commands.getoutput(CMDrunStrideBenchmarks)
 												print "\n\t CMDrunStrideBenchmarks: "+str(CMDrunStrideBenchmarks)
 												OutputFile=open(OutputFileName)
