@@ -215,13 +215,14 @@ def main():
         Min['Vars']=1
         Max['Dims']=1
         Min['Dims']=1
-        Max['NumStream']=3
-        Min['NumStream']=3
+        Max['NumStream']=4
+        Min['NumStream']=1
         Max['Stride']=4 # ie., 2^4
         Min['Stride']=0 # ie., 2^0=1
         Alloc=[['d']] #,'d','d','d']]    
         Init=['index0*3+4']#,'index0','index0','index0']
         DS=[['i']]#,'d','d','d']]    
+	StrideScaling=[1]# 0 0 0 
 	RandomAccess=[[0]] # 1,1,1]]
         #SpatWindow=[8,16,32];
         LoopIterationBase=60;
@@ -243,8 +244,8 @@ def main():
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
 
-	Min['Size']=22
-	Max['Size']=23
+	Min['Size']=12
+	Max['Size']=13
         
         SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
@@ -334,46 +335,57 @@ def main():
  			else:
  				SuccessiveOperandsDiffString+=str(CurrOpDiff)
 
- 		
+		StideScalingString=''
+		StrideScalingName=''
+		for i,CurrStrideScaling in enumerate(StrideScaling):
+			if(i):
+				StrideScalingString+=','+str(CurrStrideScaling)
+			else:
+				StrideScalingString=str(CurrStrideScaling)
+			StrideScalingName+=str(CurrStrideScaling) 		
+
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
  		for NumDims in range(Min['Dims'],Max['Dims']+1):
 			StreamConfig['CurrNumDims']=NumDims
-			SizeString=''
-			SizeName=''				
-			if (NumDims>1):
-				ResolveBases=1
-				IncrementLastDim=0
-				while ResolveBases:
-					EachDimBase=( math.log(float(HigherDimSize),2) - IncrementLastDim)/(NumDims-1)
-					if(int(EachDimBase)==EachDimBase):
-						ResolveBases=0
-					else:
-						IncrementLastDim+=1					
-			
-				print "\n\t NumDims: "+str(NumDims)+" Each Dim Base: "+str(EachDimBase)+" IncrementLastDim: "+str(IncrementLastDim)+" CurrSetIterations: "+str(CurrSetIterations)
-				EachDimSize=int(2**EachDimBase)
-				for i in range(NumDims-2):
-					SizeString=str(EachDimSize)+','+str(SizeString)
-					SizeName=str(EachDimSize)+'_'+str(SizeName)
-				
-				SizeString=str(SizeString)+str(int(EachDimSize*(2**IncrementLastDim)))+','+str(Dim0Size)
-				SizeName=str(SizeName)+str(int(EachDimSize*(2**IncrementLastDim)))+'_'+str(Dim0Size)
-				
-			else:
-				SizeString=MaxSize
-				SizeName=MaxSize
-			print "\n\t SizeName: "+str(SizeName)+" SizeString "+str(SizeString)
-			
 
 			for NumStreams in range(Min['NumStream'],Max['NumStream']+1):
- 				"""CurrStream=1
-				NumStrides=((Max['Stride']-Min['Stride'])+1)	
-				CurrString=''
-				CurrPrefix=''
-				CurrPrefixPos=0
-				StartStream=0 #Min['Stride'] 
-				#StrideSet=[]
-				#RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,StrideSet)"""
+				LogNumStreams=int(math.ceil(math.log(NumStreams,2)))
+
+				LocalMbyteSize=CurrMbyteSize-LogNumStreams
+		                MaxSize=2**LocalMbyteSize
+
+                		HigherDimSizeIndex=8
+		                Dim0Size=2**(LocalMbyteSize-HigherDimSizeIndex)
+		                HigherDimSize= MaxSize/ Dim0Size
+		
+				print "\n\t LogNumStreams: "+str(LogNumStreams)+" LocalMbyteSize "+str(LocalMbyteSize)+" CurrMbyteSize "+str(CurrMbyteSize)+" MaxSize "+str(MaxSize)
+				
+	                        SizeString=''
+        	                SizeName=''
+              		        if (NumDims>1):
+                                	ResolveBases=1
+	                                IncrementLastDim=0
+	                                while ResolveBases:
+        	                                EachDimBase=( math.log(float(HigherDimSize),2) - IncrementLastDim)/(NumDims-1)
+                	                        if(int(EachDimBase)==EachDimBase):
+                        	                        ResolveBases=0
+                                	        else:
+                                        	        IncrementLastDim+=1
+
+	                                print "\n\t NumDims: "+str(NumDims)+" Each Dim Base: "+str(EachDimBase)+" IncrementLastDim: "+str(IncrementLastDim)+" CurrSetIterations: "+str(CurrSetIterations)
+	                                EachDimSize=int(2**EachDimBase)
+        	                        for i in range(NumDims-2):
+                	                        SizeString=str(EachDimSize)+','+str(SizeString)
+                        	                SizeName=str(EachDimSize)+'_'+str(SizeName)
+
+                                	SizeString=str(SizeString)+str(int(EachDimSize*(2**IncrementLastDim)))+','+str(Dim0Size)
+	                                SizeName=str(SizeName)+str(int(EachDimSize*(2**IncrementLastDim)))+'_'+str(Dim0Size)
+
+        	                else:
+                	                SizeString=MaxSize
+                        	        SizeName=MaxSize
+	                        print "\n\t SizeName: "+str(SizeName)+" SizeString "+str(SizeString)
+
 
  				CurrString=''
 				RestrictLength=3
@@ -430,7 +442,7 @@ def main():
 				CurrStrideStringSet=[]
 				print "\n\t CurrNumOperands "+str(CurrNumOperandsIdx)
 			        ActualCurrNumOperands=2**CurrNumOperandsIdx 	
-				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'_NumOperands_'+str(ActualCurrNumOperands)+'.log'
+				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'_NumOperands_'+str(ActualCurrNumOperands)+'_StrideScaling_'+str(StrideScalingString)+'.log'
 				print "\n\t SourceFilesLogName: "+str(SourceFilesLogName)
 				
 				SourceFilesLog=open(SourceFilesLogName,'w')
@@ -574,7 +586,8 @@ def main():
 										f.write("\n#init "+str(InitExpression))
 										f.write("\n#OpDiff "+str(SuccessiveOperandsDiffString))
 										f.write("\n#datastructure "+str(DSString))
-								
+										f.write("\n#stridescaling "+str(StrideScalingString) )	
+
 										for CurrCombi in CurrCombiAccumulation:
 											#print "\n\t CurrCombi: "+str(CurrCombi)
 											f.write("\n"+str(CurrCombi))
@@ -599,7 +612,7 @@ def main():
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
 										#sys.exit()
 				SourceFilesLog.write("\n\n")
-				SourceFilesLog.close()
+				SourceFilesLog.close() 
 									
 						#sys.exit()
 						
