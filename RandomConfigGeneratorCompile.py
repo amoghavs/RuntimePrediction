@@ -345,40 +345,45 @@ def main():
 			
 
 					for NumStreams in range(Min['NumStream'],Max['NumStream']+1):
+
 						CurrString=''
-						RestrictLength=3
-						print "\n --- NumStreams: "+str(NumStreams)
-						if(NumStreams>=RestrictLength):
-							for i in range(NumStreams-RestrictLength):
-								CurrString+=str(1)+','
-							CurrString+=str(1)
-						print "\n\t PrevString: "+str(CurrString)
-						ResultString=[]
-						PrefixString=CurrString
-						StrideSet=[]
-						PrefixString=CurrString
-						for HigherIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
-							print "\n\t CurrString: "+str(CurrString)
+						PrefixString=''
+						StreamCollection=['']
+				
+						for CurrLength in range(1,NumStreams+1):
+							print "\n\t CurrLength: "+str(CurrLength)
+							TempStreamCollection=[]
 					
-							if(NumStreams<RestrictLength-1):
-								CurrString=str(2**(HigherIndex))
-								StrideSet.append(CurrString)
-								print "\n\t RESult: "+str(CurrString)
+							for CurrStreamCombi in StreamCollection:
+								#print "\n\t CurrStreamCombi: "+str(CurrStreamCombi)
+								BreakCurrStreamCombi=re.split(',',str(CurrStreamCombi))
+								if(CurrLength>1):
+									if(len(BreakCurrStreamCombi)==(CurrLength-1)):
+										MinString=int(RemoveWhiteSpace(BreakCurrStreamCombi[len(BreakCurrStreamCombi)-1]))
+										MinStringIdx=int(math.log(float(MinString),2))
+										#print "\n\t MinString: "+str(MinString)+" MinStringIdx "+str(MinStringIdx)
+										#for CurrStride in range(Min['Stride'],Max['Stride']+1):
+										for CurrStride in range(MinStringIdx,Max['Stride']+1):
+											ActualStride=(2**CurrStride) 
+											NewStreamCombi=str(CurrStreamCombi)+','+str(ActualStride)
+											TempStreamCollection.append(NewStreamCombi)
+											#print "\n\t ActualStride: "+str(ActualStride)+"\t Newcombi: "+str(NewStreamCombi)
+									else:
+										print "\n\t len(BreakCurrStreamCombi): "+str(len(BreakCurrStreamCombi))+" BreakCurrStreamCombi "+str(BreakCurrStreamCombi)+" CurrLength: "+str(CurrLength)
+										
+								else:
+												
+										for CurrStride in range(Min['Stride'],Max['Stride']+1):
+											ActualStride=(2**CurrStride) 
+											TempStreamCollection.append(ActualStride)
+											print "\n\t ActualStride: "+str(ActualStride)
+						
 					
-							else:
-							   	if(PrefixString!=''):
-							   		CurrString=PrefixString+','+str(2**(HigherIndex))
-							   	else:
-							   		CurrString=PrefixString+str(2**(HigherIndex))
-							   	print "\n\t End: CurrString "+str(CurrString)						
-								for LowerIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
-							   	        if(CurrString!=''):
-								   		temp=CurrString+','+str(2**(LowerIndex))
-								   	else:
-								   		temp=str(2**(LowerIndex))
-							   		StrideSet.append(temp)
-							   		print "\n\t\t Result: "+str(temp)
+					StreamCollection=[]
+					StreamCollection=copy.deepcopy(TempStreamCollection)
+				StrideSet=StreamCollection
 		 		
+						
 						NumStreamString='#StreamDims '+str(NumStreams) # CAUTION: Should change this when NumVars > 1
 						StrideString=''
 						StrideName=''
@@ -391,6 +396,7 @@ def main():
 							else:
 								NumStreamString=str(NumStreams)
 								StreamName=str(NumStreams)
+								
 						StrideString=''
 						StrideName=''
 						print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
@@ -400,7 +406,7 @@ def main():
 				
 						for CurrStrideSet in StrideSet:
 					
-							ExtractStrideforStream=re.split(',',CurrStrideSet)
+							ExtractStrideforStream=re.split(',',str(CurrStrideSet))
 							if ExtractStrideforStream:
 								CurrStrideString=''
 								CurrStrideCombi=''

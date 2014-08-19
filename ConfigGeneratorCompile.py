@@ -11,6 +11,13 @@ import sys,subprocess,re,math,commands,time,copy,random
 	# Even the intraoperanddelta generated is common across all streams.
 # 2. <>
 
+
+def RemoveWhiteSpace(Input):
+	temp=re.sub('^\s*','',Input)
+	Output=re.sub('\s*$','',temp)
+	
+	return Output
+	
 def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
 	#print "\n\t StartStream: "+str(StartStream)+' and NumStrides: '+str(NumStrides)
 	if(CurrStream==(NumStreams)):
@@ -224,8 +231,9 @@ def main():
         DS=[['i']]#,'d','d','d']]    
 	StrideScaling=[1]# 0 0 0 
 	RandomAccess=[[0]] # 1,1,1]]
+	PAPIInst=[1] # 0,1,0
         #SpatWindow=[8,16,32];
-        LoopIterationBase=60;
+        LoopIterationBase=100;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
         LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
 
@@ -244,15 +252,15 @@ def main():
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
 
-	Min['Size']=12
-	Max['Size']=13
+	Min['Size']=15
+	Max['Size']=16
         
         SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
-	Min['NumOperandsIdx']=1
-	Max['NumOperandsIdx']=3
+	Min['NumOperandsIdx']=0
+	Max['NumOperandsIdx']=4
 
 	Operations={}
 	Operations['MainOperations']=['+']#,'-','*','/']
@@ -344,6 +352,16 @@ def main():
 				StrideScalingString=str(CurrStrideScaling)
 			StrideScalingName+=str(CurrStrideScaling) 		
 
+		PAPIInstString=''
+		PAPIInstName=''
+		for i,CurrPAPIInstFlag in enumerate(PAPIInst):
+			if(i):
+				PAPIInstString+=','+str(CurrPAPIInstFlag)
+			else:
+				PAPIInstString=str(CurrPAPIInstFlag)
+			PAPIInstName=str(CurrPAPIInstFlag)
+
+
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
  		for NumDims in range(Min['Dims'],Max['Dims']+1):
 			StreamConfig['CurrNumDims']=NumDims
@@ -359,6 +377,20 @@ def main():
 		                HigherDimSize= MaxSize/ Dim0Size
 		
 				print "\n\t LogNumStreams: "+str(LogNumStreams)+" LocalMbyteSize "+str(LocalMbyteSize)+" CurrMbyteSize "+str(CurrMbyteSize)+" MaxSize "+str(MaxSize)
+
+				IterationsString=''
+                 		IterationsName=''
+ 		                for i,CurrVarIterations in enumerate(CurrSetIterations):
+ 					CurrVarIterations*=(2**LogNumStreams)
+ 	                        	if(i):
+         			        	IterationsString+=','+str(CurrVarIterations)
+ 	                                	IterationsName+='_'+str(CurrVarIterations)
+         	                	else:
+                 	                	IterationsString+=str(CurrVarIterations)
+ 	                	                IterationsName+=str(CurrVarIterations)
+        			        print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" IterationsString: "+str(IterationsString)
+ 
+
 				
 	                        SizeString=''
         	                SizeName=''
@@ -385,47 +417,45 @@ def main():
                 	                SizeString=MaxSize
                         	        SizeName=MaxSize
 	                        print "\n\t SizeName: "+str(SizeName)+" SizeString "+str(SizeString)
-
-
- 				CurrString=''
-				RestrictLength=3
-				print "\n --- NumStreams: "+str(NumStreams)
-				if(NumStreams>=RestrictLength):
-					for i in range(NumStreams-RestrictLength):
-						CurrString+=str(1)+','
-					CurrString+=str(1)
-				print "\n\t PrevString: "+str(CurrString)
-				ResultString=[]
-				PrefixString=CurrString
-				StrideSet=[]
-				PrefixString=CurrString
-				for HigherIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
-					print "\n\t CurrString: "+str(CurrString)
+				
+				StreamCollection=['']
+				
+				for CurrLength in range(1,NumStreams+1):
+					print "\n\t CurrLength: "+str(CurrLength)
+					TempStreamCollection=[]
 					
-					if(NumStreams<RestrictLength-1):
-						CurrString=str(2**(HigherIndex))
-						StrideSet.append(CurrString)
-						print "\n\t Result: "+str(CurrString)
+					for CurrStreamCombi in StreamCollection:
+						#print "\n\t CurrStreamCombi: "+str(CurrStreamCombi)
+						BreakCurrStreamCombi=re.split(',',str(CurrStreamCombi))
+						if(CurrLength>1):
+							if(len(BreakCurrStreamCombi)==(CurrLength-1)):
+								MinString=int(RemoveWhiteSpace(BreakCurrStreamCombi[len(BreakCurrStreamCombi)-1]))
+								MinStringIdx=int(math.log(float(MinString),2))
+								#print "\n\t MinString: "+str(MinString)+" MinStringIdx "+str(MinStringIdx)
+								#for CurrStride in range(Min['Stride'],Max['Stride']+1):
+								for CurrStride in range(MinStringIdx,Max['Stride']+1):
+									ActualStride=(2**CurrStride) 
+									NewStreamCombi=str(CurrStreamCombi)+','+str(ActualStride)
+									TempStreamCollection.append(NewStreamCombi)
+									#print "\n\t ActualStride: "+str(ActualStride)+"\t Newcombi: "+str(NewStreamCombi)
+							else:
+								print "\n\t len(BreakCurrStreamCombi): "+str(len(BreakCurrStreamCombi))+" BreakCurrStreamCombi "+str(BreakCurrStreamCombi)+" CurrLength: "+str(CurrLength)
+										
+						else:
+												
+								for CurrStride in range(Min['Stride'],Max['Stride']+1):
+									ActualStride=(2**CurrStride) 
+									TempStreamCollection.append(ActualStride)
+									print "\n\t ActualStride: "+str(ActualStride)
+						
 					
-					else:
-					   	if(PrefixString!=''):
-					   		CurrString=PrefixString+','+str(2**(HigherIndex))
-					   	else:
-					   		CurrString=PrefixString+str(2**(HigherIndex))
-					   	print "\n\t End: CurrString "+str(CurrString)						
-						for LowerIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
-					   	        if(CurrString!=''):
-						   		temp=CurrString+','+str(2**(LowerIndex))
-						   	else:
-						   		temp=str(2**(LowerIndex))
-					   		StrideSet.append(temp)
-					   		print "\n\t\t Result: "+str(temp)
- 		
-				NumStreamString='#StreamDims '+str(NumStreams) # CAUTION: Should change this when NumVars > 1
-				StrideString=''
-				StrideName=''
-				#print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
-				#sys.exit()	
+					StreamCollection=[]
+					StreamCollection=copy.deepcopy(TempStreamCollection)
+				StrideSet=StreamCollection
+				print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
+				
+				#for CurrStrideCombi in StrideSet:
+				#	print "\t "+str(CurrStrideCombi)
 		
 				for i in range(NumVars):	
 					if(i):
@@ -442,13 +472,12 @@ def main():
 				CurrStrideStringSet=[]
 				print "\n\t CurrNumOperands "+str(CurrNumOperandsIdx)
 			        ActualCurrNumOperands=2**CurrNumOperandsIdx 	
-				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'_NumOperands_'+str(ActualCurrNumOperands)+'_StrideScaling_'+str(StrideScalingString)+'.log'
+				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'_NumOperands_'+str(ActualCurrNumOperands)+'_StrideScaling_'+str(StrideScalingString)+'_PAPIInst_'+str(PAPIInstName)+'.log'
 				print "\n\t SourceFilesLogName: "+str(SourceFilesLogName)
 				
 				SourceFilesLog=open(SourceFilesLogName,'w')
 				for CurrStrideSet in StrideSet:
-					
-					ExtractStrideforStream=re.split(',',CurrStrideSet)
+					ExtractStrideforStream=re.split(',',str(CurrStrideSet))
 					if ExtractStrideforStream:
 						CurrStrideString=''
 						CurrStrideCombi=''
@@ -587,6 +616,7 @@ def main():
 										f.write("\n#OpDiff "+str(SuccessiveOperandsDiffString))
 										f.write("\n#datastructure "+str(DSString))
 										f.write("\n#stridescaling "+str(StrideScalingString) )	
+										f.write("\n#papiinst "+str(PAPIInstString) )
 
 										for CurrCombi in CurrCombiAccumulation:
 											#print "\n\t CurrCombi: "+str(CurrCombi)
@@ -606,13 +636,13 @@ def main():
 											if FileName:
 												print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
 												SRCFileName=str(FileName.group(1))+'.c'
-												CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
+												CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' /usr/local/lib/libpapi.so -o '+str(FileName.group(1))
 												print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 												commands.getoutput(CMDCompileFile)
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
 										#sys.exit()
 				SourceFilesLog.write("\n\n")
-				SourceFilesLog.close() 
+				SourceFilesLog.close() #" ""
 									
 						#sys.exit()
 						

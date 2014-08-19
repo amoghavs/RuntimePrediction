@@ -170,6 +170,7 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 			if(ConfigParams['RandomAccess'][VarNum]>0):
 				ThisFlushForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'	
 				FlushForLoop.append(TabSpace+ThisFlushForLoop)
+			
 					
 		if DontSkip:
 			ThisForLoop=TabSpace+ThisForLoop
@@ -194,8 +195,9 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 	else:
 		eqn="\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+str(ConfigParams['init'][VarNum])+';'
     	
-    	#print "\n So, the equation is: "+str(eqn)	
+    	
 	ThisLoop.append(eqn)
+	#print "\n So, the equation should be: "+str(eqn)+" is it ?? "+str(ThisLoop[len(ThisLoop)-1])	
     	for k in range(NumForLoops):
     		TabSpace='' #\t'
     		for l in range(NumForLoops-k):
@@ -207,7 +209,8 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 	for CurrLine in FlushForLoop:
 		#print "\n\t FlushForLoop: "+str(CurrLine)
 		ThisLoop.append(CurrLine)
-     
+     	#for CurrLine in ThisLoop: 
+     	#	print "\t CurrLine: "+str(CurrLine)
 	return ThisLoop
 
 def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
@@ -225,6 +228,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream]+','
     	VarDeclString+='Var'+str(VarNum)+'_Stream'+str(CurrStream)+','
  
+    if(ConfigParams['PapiInst'][VarNum]):
+    	VarFuncDeclString+=' int* '+str(ConfigParams['PapiEventsArray'])+' , long long int* '+str( ConfigParams['PAPIValueVars'][VarNum])+','
+    	VarDeclString+=str(ConfigParams['PapiEventsArray'])+' , '+ConfigParams['PAPIValueVars'][VarNum]+' , '
     FuncName='Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)	 
     FuncCall='Sum='+str(FuncName)+'('+VarDeclString+str(Stride)+',Sum'+');'	
     #FuncNamePrint='StrideBenchmarks_Iters'+str(ConfigParams['NumIters'])+'_'+str(ConfigParams['NumVars'])+"vars_"+alloc_str+"_"+str(ConfigParams['Dims'])+'dims_'+str(SizeString)+'_streams_'+str(StreamString)+'_stride_'+str(StrideString)
@@ -245,8 +251,17 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     ThisLoop.append('MPI_Gather(&currtime, 1, MPI_DOUBLE, time_buf, 1, MPI_DOUBLE,0,MPI_COMM_WORLD); ')
     ThisLoop.append('if(rank==0) { ')
     #AVS #ThisLoop.append('   printf("app ' +str(FuncNamePrint)+' time: "); ')
-    ThisLoop.append(' printf("app '+str(FuncNamePrint)+' "); ');
     ThisLoop.append('   int ii; ')
+    if(ConfigParams['PapiInst'][VarNum]):
+	ThisLoop.append(' printf("Hardware counters: "); ');
+	ThisLoop.append('for(ii=0; ii< '+str(ConfigParams['NumPAPIHardwareCounters'])+'; ii++)')
+	ThisLoop.append('{')
+	ThisLoop.append('\t double tmp= ('+str(ConfigParams['PAPIValueVars'][VarNum])+'[ii]'+')/(1.0e9);')
+	#ThisLoop.append('printf("\\t %s %lf ",counters[ii],tmp);')
+	ThisLoop.append('printf("\\t %.6lf ",tmp);')
+	ThisLoop.append('}')
+	ThisLoop.append('printf("\\n ");')
+    ThisLoop.append(' printf("app '+str(FuncNamePrint)+' "); ');
     ThisLoop.append('   for(ii=0; ii<MPI_Size; ii++) ')
     #AVS # ThisLoop.append(' printf (" %f ",time_buf[ii]); ')
     ThisLoop.append('      printf("\t time: %f\\n\t Starttime: %lf\\n\t Endtime: %lf  ", time_buf[ii],stime,etime); ')
@@ -257,6 +272,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     #LAURA PrintResult='printf("\\n\\t Sum: %ld ",Sum);'
     #LAURA ThisLoop.append(PrintResult)
     PopCode+=14  #LAURA was PopCode+=8
+    if(ConfigParams['PapiInst'][VarNum]):
+	PopCode+=7
     
     if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
 	    FuncDecl='long int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' long int Stride, int Sum )'
@@ -640,7 +657,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			#print "\n\t --*-- IndexInit "+str(IndexInit)
 			InitForStrideDim='='+str(FinalStreamIndexChange[StrideDim]['Init'])+str(IndexInit)
 			if(ConfigParams['StrideScaling'][VarNum]):
-				InitForStrideDim+=str(IdxForBound)+'=0'
+				InitForStrideDim+=','+str(IdxForBound)+'=0'
 			#print "\n\t InitForStrideDim: "+str(InitForStrideDim)
 			InitForDim.append(InitForStrideDim)	    
 
@@ -661,7 +678,11 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
         	print "\n\t ShouldDeclareVars: "+str(CurrDeclareVar)+" --"	    	    
         #VarDeclareExprn='long int'+str(CurrDeclareVar)
         ThisLoop.append(CurrDeclareVar)
-    
+   
+    if(ConfigParams['PapiInst'][VarNum]):
+	PAPIStartStmt='PAPI_start_counters( '+str(ConfigParams['PapiEventsArray'])+' , '+str(ConfigParams['NumPAPIHardwareCounters'])+' );'	
+	ThisLoop.append('\t '+str(PAPIStartStmt))
+ 
     TabSpace='\t'
     # ConfigParams['GlobalVar']['NumItersDecl']
     ThisForLoop=TabSpace+'for('+str(LoopIter)+'=0; '+str(LoopIter)+' < '+str(ConfigParams['GlobalVar']['NumIters'][VarNum])+' ; '+str(LoopIter)+'+=1)'
@@ -682,7 +703,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		    	#	for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 		    	#		ThisLoop.append(TabSpace+str(RandomAccessVarPerStream[CurrStream])+' =0;')
 			if(ConfigParams['StrideScaling'][VarNum]):
-				ThisForLoop=='for('+str(ConfigParams['indices'][j])+str(InitForDim[j])+';'+str(IdxForBound)+'<='+str(BoundForDim[j])+';'+str(IndexIncr)+','+str(IdxForBound)+'+=1)'
+				ThisForLoop='for('+str(ConfigParams['indices'][j])+str(InitForDim[j])+';'+str(IdxForBound)+'<='+str(BoundForDim[j])+';'+str(IndexIncr)+','+str(IdxForBound)+'+=1)'
 			else:
 				ThisForLoop='for('+str(ConfigParams['indices'][j])+str(InitForDim[j])+';'+str(ConfigParams['indices'][j])+'<='+str(BoundForDim[j])+';'+str(IndexIncr)+')'
 		elif(j!=StrideDim):
@@ -732,6 +753,11 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     	for l in range(NumDims-k):
     		TabSpace+="\t"
     	ThisLoop.append(TabSpace+'}')
+    
+    if(ConfigParams['PapiInst'][VarNum]):
+    	StopCountersCall='PAPI_stop_counters( '+str(ConfigParams['PAPIValueVars'][VarNum])+' , '+str(ConfigParams['NumPAPIHardwareCounters'])+' );'
+	ThisLoop.append('\t '+str(StopCountersCall))
+    		
     if(ConfigParams['RandomAccess'][VarNum]>0):	
 	    PrintStmt='printf("\\n\t '
 	    PrintSuffix=''
@@ -819,6 +845,7 @@ def main(argv):
 	ConfigParams['RandomAccess']=[]
 	ConfigParams['OpDiff']=[]
 	ConfigParams['StrideScaling']=[]
+	ConfigParams['PapiInst']=[]
 		
 	LineCount=0;
 	DimNotFound=1;
@@ -839,6 +866,7 @@ def main(argv):
 	OpDiffNotFound=1
 	RandomAccessExtracted=0
 	StrideScalingNotFound=1
+	PAPIInstNotFound=1
 	StrideExtracted=[]
 
 	# Tabs: 1
@@ -1251,10 +1279,33 @@ def main(argv):
 								print "\n\t ERROR: Stride scaling parameter is provided in following form: "+str(tmp)+" which is illegal! "
 								sys.exit()
 						if(VarCount!=ConfigParams['NumVars']):
-							print "\n\t The stride scaling expression is not specified for each variable. It is specified only for "+str(VarCount)+" number of variables while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
+							print "\n\t The stride scaling expression is not specified for each variable. It is specified only for "+str(VarCount)+" number of variables while number of variables specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit()
 						else:
 							StrideScalingNotFound=0
+
+			if PAPIInstNotFound:
+				MatchObj=re.match('\s*\#papiinst',CurrLine)
+				if MatchObj:
+					tmp=re.split(' ',CurrLine)
+					PapiInst=re.split(',',tmp[1])
+					if PapiInst:
+						LineNotProcessed=0
+						VarCount=0
+						for CurrPapiInstFlag in PapiInst:
+							tmp=RemoveWhiteSpace(CurrPapiInstFlag)
+							if IsInt(tmp):
+								ConfigParams['PapiInst'].append(int(tmp))
+								VarCount+=1
+							else:
+								print "\n\t ERROR: Papi inst parameter is provided in following form: "+str(tmp)+" which is illegal! "
+								sys.exit()
+						if(VarCount!=ConfigParams['NumVars']):
+							print "\n\t The papi inst expression is not specified for each variable. It is specified only for "+str(VarCount)+" number of variables while number of variables specified is "+str(ConfigParams['NumVars'])+"\n";
+							sys.exit()
+						else:
+							PAPIInstNotFound=0
+
 
 		if LineNotProcessed:
 			if debug:
@@ -1278,9 +1329,17 @@ def main(argv):
 	else:
 		print "\n\t AllStridesAvailable: "+str(AllStridesAvailable)+" ConfigParams['NumVars'] "+str(ConfigParams['NumVars'])
 	#sys.exit()
+	
+
+	#ConfigParams['PAPIInstNeeded']=-1
+	PAPIInstNeeded=-1
+	NumPAPIHardwareCounters=6 # Currently designing it assuming we would use 6 energy related counters "
+	ConfigParams['NumPAPIHardwareCounters']='NUM_HWC' 
+	HWCountersStmt='#define '+str(ConfigParams['NumPAPIHardwareCounters'])+' '+str(NumPAPIHardwareCounters)
+	
 	if debug:
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
-	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0) and (OpDiffNotFound==0) and (StrideScalingNotFound==0) ):
+	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0) and (OpDiffNotFound==0) and (StrideScalingNotFound==0) and ( PAPIInstNotFound==0)):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
 		LibAlloc=[]
@@ -1291,6 +1350,20 @@ def main(argv):
 		LibAlloc.append(tmp)
 		tmp='#include <time.h>'
 		LibAlloc.append(tmp)
+		
+		for VarNum,CurrVarPapiInst in enumerate(ConfigParams['PapiInst']):	
+			if (CurrVarPapiInst>0):
+				PAPIInstNeeded=1
+			#if debug:
+			print "\n\t Var: "+str(VarNum)+" PAPIInstNeeded "+str(PAPIInstNeeded)+" CurrVarPapiInst: "+str(CurrVarPapiInst)
+		
+		if(PAPIInstNeeded):
+			tmp='#include <papi.h> '
+			LibAlloc.append(tmp)
+			tmp='#define NUM_HWC '+str(NumPAPIHardwareCounters)
+			LibAlloc.append(tmp)
+			
+		
 		
 #LAURA ADDED
 		PinToFunc=[]
@@ -1564,7 +1637,9 @@ def main(argv):
 							else:
 								tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+' * sizeof('+datatype+suffix+'))'+';'
 							DynAlloc.append(tmp);
+							#print "\n\t tmp "+str(tmp)
 						  		
+					
 					if debug:
 						print "\n\t This is how the first malloc statement look: "+str(tmp)+"\n"
 				
@@ -1619,6 +1694,7 @@ def main(argv):
 										MallocEqn=var+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
 						   		if debug:
 									print "\t The malloc equation is: "+str(MallocEqn)+"\n"
+								DynAlloc.append(MallocEqn)
 							for j in range(NumForLoops):
 								DynAlloc.append('}')
 					
@@ -1749,6 +1825,7 @@ def main(argv):
 		print "\n\t StrideNotFound "+str(StrideNotFound)+" AllocNotFound: "+str(AllocNotFound)+" InitNotFound: "+str(InitNotFound)
 		print "\n\t NumStreamsDimsNotFound=: "+str(NumStreamsDimsNotFound)+" LoopIterationsNotFound: "+str(LoopIterationsNotFound)
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)+" OpDiffNotFound: "+str(OpDiffNotFound)+" StrideScalingNotFound: "+str(StrideScalingNotFound)
+		print "\n\t PAPIInstNotFound: "+str(PAPIInstNotFound)
 		print "\n\n"
  		sys.exit(0)
 	
@@ -1800,6 +1877,42 @@ def main(argv):
 			ThisVarInit.append(Temp)
 		InitLoop.append(ThisVarInit)
 
+	ConfigParams['PapiEventsArray']=''
+	if(PAPIInstNeeded):
+		PAPIInitCode=[]
+		PAPICounters=[]
+		ConfigParams['PAPIValueVars']=[]
+		PAPICounters.append('"rapl:::PACKAGE_ENERGY:PACKAGE0"')
+		PAPICounters.append('"rapl:::PACKAGE_ENERGY:PACKAGE1"')
+		PAPICounters.append('"rapl:::DRAM_ENERGY:PACKAGE0"')
+		PAPICounters.append('"rapl:::DRAM_ENERGY:PACKAGE1"')
+		PAPICounters.append('"rapl:::PP0_ENERGY:PACKAGE0"')
+		PAPICounters.append('"rapl:::PP0_ENERGY:PACKAGE1"')
+	
+	
+		CountersArray='char counters[][PAPI_MAX_STR_LEN]= {'
+		for count,CurrCounter in enumerate(PAPICounters):
+			if(count):
+				CountersArray+=','+str(CurrCounter)
+			else:
+				CountersArray+=str(CurrCounter)
+		CountersArray+=' };'
+		print "\n\t CountersArray: "+str(CountersArray)
+		ConfigParams['PapiEventsArray']='events'
+		PAPIInitCode.append(CountersArray)
+		PAPIInitCode.append('int '+str(ConfigParams['PapiEventsArray'])+'[NUM_HWC];')
+		PAPIInitCode.append('PAPI_library_init(PAPI_VER_CURRENT);')
+		PAPIInitCode.append('for(index0=0;index0<NUM_HWC;index0++)')
+		PAPIInitCode.append('{'   )
+		PAPIInitCode.append('       PAPI_event_name_to_code(counters[index0],&(events[index0]));')
+		#PAPIInitCode.append('       printf("\\n\\t index0: %d Counter: %s Code: %d ",index0,counters[index0],events[index0]);')
+		PAPIInitCode.append('} '  )
+
+		for CurrVar in range(ConfigParams['NumVars']):
+			PAPIValueVars='ValuesVar'+str(CurrVar)
+			MemAllocStmt='long long int* '+str(PAPIValueVars)+' = (long long int*)calloc(NUM_HWC,sizeof(long long int));'
+			PAPIInitCode.append(MemAllocStmt)
+			ConfigParams['PAPIValueVars'].append(PAPIValueVars)
 
 	ThisLoop=[]
 	Comments=[]
@@ -1819,8 +1932,8 @@ def main(argv):
 			Comments.append(ThisLoop[VarNum].pop(0))
 
 		#WriteArray(ThisLoop,WriteFile)	
-		
-
+ 	 
+	#{"rapl:::PACKAGE_ENERGY:PACKAGE0","rapl:::PACKAGE_ENERGY:PACKAGE1","rapl:::DRAM_ENERGY:PACKAGE0","rapl:::DRAM_ENERGY:PACKAGE1","rapl:::PP0_ENERGY:PACKAGE0","ra    pl:::PP0_ENERGY:PACKAGE1"}')
 
 	print "\n\t Source file name: "+str(SrcFileName)+"\n"		
 	PermuteGenFuncArray=[]
@@ -1896,6 +2009,7 @@ def main(argv):
 
 
 	WriteArray(WorkigVarsDecl,WriteFile)
+	WriteArray(PAPIInitCode,WriteFile)
 	for VarNum in range(ConfigParams['NumVars']):
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
 			WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	
