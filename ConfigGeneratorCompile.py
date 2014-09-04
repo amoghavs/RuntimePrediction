@@ -222,12 +222,12 @@ def main():
         Min['Vars']=1
         Max['Dims']=1
         Min['Dims']=1
-        Max['NumStream']=4
-        Min['NumStream']=1
-        Max['Stride']=4 # ie., 2^4
+        Max['NumStream']=3
+        Min['NumStream']=2
+        Max['Stride']=3 # ie., 2^4
         Min['Stride']=0 # ie., 2^0=1
         Alloc=[['d']] #,'d','d','d']]    
-        Init=['index0*3+4']#,'index0','index0','index0']
+        Init=['index0+4']#,'index0','index0','index0']
         DS=[['i']]#,'d','d','d']]    
 	StrideScaling=[1]# 0 0 0 
 	RandomAccess=[[0]] # 1,1,1]]
@@ -235,7 +235,7 @@ def main():
         #SpatWindow=[8,16,32];
         LoopIterationBase=100;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
-        LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
+        LoopIterationsExponent=[[2.5]]# ,[1],[1],[1]];
 
 
  	NumVars=(Max['Vars']-Min['Vars']+1)
@@ -271,8 +271,8 @@ def main():
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
 	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
-	Max['IntraOperandDelta']=[(+1,+1,1)]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
-	Min['IntraOperandDelta']=[(0,+0,0) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
+	Max['IntraOperandDelta']=[(+9,+9,9)]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
+	Min['IntraOperandDelta']=[(1,+1,1) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
 	
 	Max['Constant']=10
 	Min['Constant']=2
@@ -305,7 +305,7 @@ def main():
   			InitExpression+=','+str(CurrVarInit)
   		else:
   			InitExpression+=str(CurrVarInit)
-	
+	SuperSourceFile=open('SuperSourceFiles.log','w')	
    	for CurrSetIterations in OutputSet:	
 	 for CurrNumOperandsIdx in range(Min['NumOperandsIdx'],Max['NumOperandsIdx']):
 	  Min['NumOperands']=[]
@@ -380,6 +380,7 @@ def main():
 
 				IterationsString=''
                  		IterationsName=''
+				LogNumStreams=0
  		                for i,CurrVarIterations in enumerate(CurrSetIterations):
  					CurrVarIterations*=(2**LogNumStreams)
  	                        	if(i):
@@ -472,7 +473,7 @@ def main():
 				CurrStrideStringSet=[]
 				print "\n\t CurrNumOperands "+str(CurrNumOperandsIdx)
 			        ActualCurrNumOperands=2**CurrNumOperandsIdx 	
-				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'_NumOperands_'+str(ActualCurrNumOperands)+'_StrideScaling_'+str(StrideScalingString)+'_PAPIInst_'+str(PAPIInstName)+'.log'
+				SourceFilesLogName='SourceFiles_Iters_'+str(IterationsName)+'_DS_'+str(DS[0][0])+'_Dims_'+str(NumDims)+'_Size_'+str(SizeName)+'_Stream_'+str(StreamName)+'_NumOperands_'+str(ActualCurrNumOperands)+'_StrideScaling_'+str(StrideScalingString)+'_PAPIInst_'+str(PAPIInstName)+'.log'
 				print "\n\t SourceFilesLogName: "+str(SourceFilesLogName)
 				
 				SourceFilesLog=open(SourceFilesLogName,'w')
@@ -520,7 +521,7 @@ def main():
 												CurrOpCombo+=','
 											PickIdx=random.randrange(StreamConfig['CurrNumDims'])
 											PickDelta=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickIdx],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickIdx])
-											if(random.randrange(2)==0):
+											if(0): #random.randrange(2)==0):
 												OperandIdx=str(Operations['DimLookup'][PickIdx])+'-'+str(PickDelta)
 											else:
 												OperandIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)	
@@ -640,9 +641,10 @@ def main():
 												print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 												commands.getoutput(CMDCompileFile)
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
-										#sys.exit()
+												SuperSourceFile.write("\n\t "+str(SRCFileName))				
+						#sys.exit()
 				SourceFilesLog.write("\n\n")
-				SourceFilesLog.close() #" ""
+				SourceFilesLog.close() #
 									
 						#sys.exit()
 						

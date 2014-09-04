@@ -253,14 +253,19 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     #AVS #ThisLoop.append('   printf("app ' +str(FuncNamePrint)+' time: "); ')
     ThisLoop.append('   int ii; ')
     if(ConfigParams['PapiInst'][VarNum]):
-	ThisLoop.append(' printf("Hardware counters: "); ');
+	ThisLoop.append(' char ConcatCounters[800]; ')	
+	ThisLoop.append(' strcpy(ConcatCounters,"Hardware counters: "); ');
 	ThisLoop.append('for(ii=0; ii< '+str(ConfigParams['NumPAPIHardwareCounters'])+'; ii++)')
 	ThisLoop.append('{')
-	ThisLoop.append('\t double tmp= ('+str(ConfigParams['PAPIValueVars'][VarNum])+'[ii]'+')/(1.0e9);')
+	ThisLoop.append('\t double tmp= ('+str(ConfigParams['PAPIValueVars'][VarNum])+'[ii]'+')/(1.0e9)/(time_buf[0]); char tmpStr[25]; ')
 	#ThisLoop.append('printf("\\t %s %lf ",counters[ii],tmp);')
-	ThisLoop.append('printf("\\t %.6lf ",tmp);')
+	ThisLoop.append('sprintf(tmpStr,"\\t %.6lf ",tmp);')
+	ThisLoop.append('strcat(ConcatCounters,tmpStr) ;')
 	ThisLoop.append('}')
+	ThisLoop.append('sleep(2);')
+	ThisLoop.append(' printf("\\n\t %s ",ConcatCounters);')
 	ThisLoop.append('printf("\\n ");')
+         	
     ThisLoop.append(' printf("app '+str(FuncNamePrint)+' "); ');
     ThisLoop.append('   for(ii=0; ii<MPI_Size; ii++) ')
     #AVS # ThisLoop.append(' printf (" %f ",time_buf[ii]); ')
@@ -273,7 +278,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     #LAURA ThisLoop.append(PrintResult)
     PopCode+=14  #LAURA was PopCode+=8
     if(ConfigParams['PapiInst'][VarNum]):
-	PopCode+=7
+	PopCode+=11
     
     if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
 	    FuncDecl='long int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' long int Stride, int Sum )'
@@ -649,7 +654,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 						CurrIndexIncr=','+str(index)+'+= '+str(ConfigParams['GlobalVar']['Stream'][VarNum][i])
 					IndexIncr+=CurrIndexIncr
 					IndexDecl+='long int '+str(index)+'='+str(FinalStreamIndexChange[StrideDim]['Init'])+';'
-					IndexInit+=','+str(index)+'=0'
+					IndexInit+=','+str(index)+'='+str(FinalStreamIndexChange[CurrDim]['Init'])
 					if debug:
 						print "\n\t The minnions are here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)+" IndexInit "+str(IndexInit)
 					StrideIndex.append(str(index))
@@ -657,7 +662,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 			#print "\n\t --*-- IndexInit "+str(IndexInit)
 			InitForStrideDim='='+str(FinalStreamIndexChange[StrideDim]['Init'])+str(IndexInit)
 			if(ConfigParams['StrideScaling'][VarNum]):
-				InitForStrideDim+=','+str(IdxForBound)+'=0'
+				InitForStrideDim+=','+str(IdxForBound)+'='+str(FinalStreamIndexChange[CurrDim]['Init'])
 			#print "\n\t InitForStrideDim: "+str(InitForStrideDim)
 			InitForDim.append(InitForStrideDim)	    
 
@@ -1350,7 +1355,8 @@ def main(argv):
 		LibAlloc.append(tmp)
 		tmp='#include <time.h>'
 		LibAlloc.append(tmp)
-		
+		tmp='#include <string.h>'
+		LibAlloc.append(tmp)	
 		for VarNum,CurrVarPapiInst in enumerate(ConfigParams['PapiInst']):	
 			if (CurrVarPapiInst>0):
 				PAPIInstNeeded=1
@@ -1518,13 +1524,17 @@ def main(argv):
 				NumberofBits=CurrPos+1
 				OverflowDetectValue=CheckSize-1
 				break
+			elif(CheckSize>int(LastDimSize)):
+				break
 
 		if (NumberofBits==-1):
-			print "\n\t ERROR: Last dimension size should be power of 2, while it is: "+str(LastDimSize)
-			sys.exit()
+			print "\n\t WARNING: Last dimension size should be power of 2, while it is: "+str(LastDimSize)
+			OverflowDetectValue=int(LastDimSize)-1
+			#sys.exit()
 			
-		if debug:
-			print "\n\t LastDim-size: "+str(LastDimSize)+" NumberofBits "+str(NumberofBits)+" OverflowDetectValue: "+str(OverflowDetectValue)
+			
+		#f debug:
+		print "\n\t LastDim-size: "+str(LastDimSize)+" NumberofBits "+str(NumberofBits)+" OverflowDetectValue: "+str(OverflowDetectValue)
 		
 		for CurrVar in range(ConfigParams['NumVars']):
 			OverflowDetectMask='Overflow_Var'+str(CurrVar)

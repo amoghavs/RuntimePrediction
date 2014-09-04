@@ -2,7 +2,7 @@
 import sys,getopt,subprocess,re,math,commands,time,copy,random
 
 def usage():
-	print "\n\t Usage: BenchmarksResultsLogging.py -l/--source file with all the source file that needs to be executed and logged -p <num-of-procs> -c CacheSimulationFlag <0/1> -r ReuseDistance -s SpatialDistanceFlag  -e EnergyMeasureFlag <0/1> -n Number of Counters -a Number of runs for averaging runtime. -p Number of Processors -d \n\t\t -s: .\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. \n "
+	print "\n\t Usage: BenchmarksResultsLogging.py -l/--source file with all the source file that needs to be executed and logged -p <num-of-procs> -c CacheSimulationFlag <0/1> -r ReuseDistance -s SpatialDistanceFlag  -e EnergyMeasureFlag <0/1> -n Number of Counters -a Number of runs for averaging runtime. -p Number of Processors -d \n\t\t -s: .\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. -o <Output-file-name> \n "
 	sys.exit()
 
 def RemoveWhiteSpace(Input):
@@ -35,8 +35,9 @@ def main(argv):
 	NumofProcs=''
 	EnergySim=''
 	NumCounters=''
+	OutputFileName=''
 	try:
-	   opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:p:c:e:n:h:v",["list","deubg","reuse","spatial","average","procs","cachesim","energysim","numcounters","help","verbose"])
+	   opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:p:c:e:n:o:h:v",["list","deubg","reuse","spatial","average","procs","cachesim","energysim","numcounters","output","help","verbose"])
 	except getopt.GetoptError:
 		#print str(err) # will print something like "option -a not recognized"
 	   usage()
@@ -74,6 +75,10 @@ def main(argv):
 	   elif opt in ("-n"):
 		NumCounters=int(RemoveWhiteSpace(arg))
 		print "\n\t Number of counters: "+str(NumCounters)+"\n"
+	   elif opt in ("-o"):
+		OutputFileName=RemoveWhiteSpace(arg)
+		print "\n\t Output file name is: "+str(OutputFileName)
+
            else:
    		usage()
 
@@ -94,7 +99,12 @@ def main(argv):
 	if(NumCounters==''):
 		NumCounters=0
 		print "\n\t INFO: Using default flag for NumCounter: "+str(NumCounters)
+	if(OutputFileName==''):
+		OutputFileName='MasterStatsFile.log'
+		print "\n\t INFO:  Using default output file name: "+str(OutputFileName)
 
+	LoopIntercept=0
+	print "\n\t INFO: By default not using LoopIntercept method for energy calculation "
 	SpatialWindow=[]
 	if(spatial!=''):
 		ThisSet=re.split(',',spatial)
@@ -132,6 +142,7 @@ def main(argv):
 	#FilesToExtract=['.dist','.spatial']
 	#AverageRun=5
 	AverageRuntimeCollection={}
+	PowerValueCollection={}
 	FileNameCollection=[]
 
 	EnviVars=[]
@@ -150,6 +161,9 @@ def main(argv):
 				Temp=RemoveWhiteSpace(ReadVar[0])
 				print "\n\t Environemnt var: "+str(Temp)
 				EnviVars.append(Temp)
+
+	MasterStatsFile=open(OutputFileName,'w')
+	MasterFileNameCollection=[]
 	for idx,CurrSrcFile in enumerate(SrcFile):
 		print "\n\t CurrSrcFile: "+str(CurrSrcFile)
 		CurrSrcFileParams[idx]={}
@@ -173,7 +187,9 @@ def main(argv):
 				CurrSrcFileParams[idx]['Size']=CheckParams.group(6)
 				CurrSrcFileParams[idx]['Random']=CheckParams.group(7)
 				CurrSrcFileParams[idx]['Stream']=CheckParams.group(8)
-
+				OpsLength=( len(CheckParams.group(9))/int(CurrSrcFileParams[idx]['Stream']) )+1;
+				CurrSrcFileParams[idx]['OpsLength']=OpsLength
+				#print "OpsLength: "+str(OpsLength)+" Stream "+str(CurrSrcFileParams[idx]['Stream'])
 				TempStatsFileName='Stats'
 				for CurrFeature in CurrSrcFileParams[idx]:
 					#print "\n\t Feature: "+str(CurrFeature)+" value: "+str(CurrSrcFileParams[idx][CurrFeature])
@@ -183,7 +199,7 @@ def main(argv):
 				CurrSrcFileParams[idx]['FileName']=FileName
 				if(CurrStatsFileName!=TempStatsFileName):
 					if(CurrStatsFile):
-						CurrStatsFile.write("\n\t Average run times: ")
+						CurrStatsFile.write("\n\t Average run times: ") ; 
 						CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
 						for CurrFile in FileNameCollection:
 							CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
@@ -193,29 +209,42 @@ def main(argv):
 							for CurrCounter in EnviVars:
 								CurrStatsFile.write("\t "+str(CurrCounter))
 				                        CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t Power from each counter ")
-				                        for CurrFile in FileNameCollection:
-                                				CurrStatsFile.write("\n")
-				                        	for CurrBB in (EnergyValueCollection[CurrFile]):
-                                					CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
-			                                        	for CurrCounter in (EnergyValueCollection[CurrFile][CurrBB]):
-										TmpPower=float(CurrCounter)/AverageRuntimeCollection[CurrFile]
-                        			                        	CurrStatsFile.write("\t "+str(round(float(TmpPower),4)))
+							if(LoopIntercept>0):
+				   				#CurrStatsFile.write("\n")
+								#print "\n\t CurrFile: "+str(CurrFile)
+								for CurrFile in FileNameCollection:
+								 #CurrStatsFile.write("\n")
+								 if(CurrFile in PowerValueCollection):
+									 for CurrBB in (PowerValueCollection[CurrFile]):
+										CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
+										for CurrPower in (PowerValueCollection[CurrFile][CurrBB]):
+											CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
+								 else:
+									CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
+							else:
+								for CurrFile in FileNameCollection:
+									if(CurrFile in PowerValueCollection):
+										CurrStatsFile.write("\n\t "+str(CurrFile))
+									        for CurrPower in (PowerValueCollection[CurrFile]):
+									                 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
+									else:
+										CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extr    acting power!!")
+
 
 
 						CurrStatsFile.write("\n\n")
 						CurrStatsFile.close()
-					AverageRuntimeCollection={}
-					FileNameCollection=[]
+					
 					CurrStatsFileName=TempStatsFileName
 					CurrStatsFile=open(CurrStatsFileName,'w')
-					AverageRuntimeCollection={}
-					EnergyValueCollection={}
+					#AverageRuntimeCollection={}
+					#PowerValueCollection={}
 					FileNameCollection=[]						
 					print "\n\t TempStatsFileName: "+str(TempStatsFileName)
 
 				CurrStatsFile.write("\n\t *** Src File Name: "+str(CurrSrcFileParams[idx]['FileName']))
 
-				RunOutputFile='RunOutput.log'
+				RunOutputFile='RunOutput'+str(FileName)+'.log'
 				RuntimeCollection=[]
 				AverageRunTime=0.00000000010000001
 				for i in range(AverageRun):
@@ -235,7 +264,7 @@ def main(argv):
 								Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
 								Temp=float(Temp)
 								AverageRunTime+=Temp
-								#print "\n\t Runtime: "+str(Temp)
+								print "\n\t--Runtime--: "+str(Temp)
 							else:
 								print "\n\t ERROR: Cannot extract runtime! \n" 
 								sys.exit()							
@@ -243,14 +272,59 @@ def main(argv):
 				AverageRunTime/=AverageRun
 				AverageRuntimeCollection[FileName]=AverageRunTime
 				FileNameCollection.append(FileName)
+				MasterFileNameCollection.append(FileName)
 				#sys.exit()
 			
 				if( not( (ReuseWindow==0) and (spatial=='0') and (CacheSimulation==0) and (EnergySim==0)) ):	
-					CMDPebil='pebil --typ jbb --app '+str(FileName)
-					commands.getoutput(CMDPebil)
-					CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
-					commands.getoutput(CMDJbb)
-				        if( not (EnergySim==0)):	
+					#CMDPebil='pebil --typ jbb --app '+str(FileName)
+					#commands.getoutput(CMDPebil)
+					#CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
+					#commands.getoutput(CMDJbb)
+				        if( not (EnergySim==0)):
+					 if(LoopIntercept==0):
+
+                                       		RunCmd='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+' > '+str(RunOutputFile)
+                                       		#commands.getoutput(RunCmd)
+                                       		RunOutput=open(RunOutputFile)
+                                       		for CurrLine in RunOutput:
+                                       		        #print "\n\t CurrLine: "+str(CurrLine)
+                                       		        CheckCounters=re.match('^\s*Hardware\s*counters\s*\:',CurrLine)
+                                       		        if CheckCounters:
+                                       		                #print "\n\t CurrLine: "+str(CurrLine)
+                                       		                CheckCounters=re.match('\s*Hardware\s*counters\s*:(.*)',CurrLine) # 
+                                       		                if CheckCounters:
+                                       		                        #CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
+                                       		                        SplitPowerValues=re.split('\t',CheckCounters.group(1)) #+'.'+CheckCounters.group(2)
+									if(len(SplitPowerValues)!=NumofProcs):
+										Temp=[]
+										for CurrPowerValues in SplitPowerValues:
+											if(IsNumber(CurrPowerValues)):
+												Temp.append(CurrPowerValues)	
+											if verbose:
+												print "\t "+str(CurrPowerValues)
+										PowerValueCollection[FileName]=Temp
+                                       		                        #Temp=float(Temp)
+                                       		                        #AverageRunTime+=Temp
+                                       		                        #print "\n\t--Runtime: "+str(Temp)+"~~"+str(CheckCounters.group(0))
+                                       		                else:
+                                       		                        print "\n\t ERROR: Cannot extract runtime! \n" 
+                                       		                        sys.exit()    
+						
+                                                if(CacheSimulation==0):
+                                                         DirName='Dir'+str(FileName)
+                                                         commands.getoutput('mkdir '+str(DirName))
+                                                         CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
+                                                         commands.getoutput(CMDMvFiles)
+                                                         CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
+                                                         commands.getoutput(CMDMvFiles)
+ 
+
+					 elif(LoopIntercept>0):
+
+                        	                CMDPebil='pebil --typ jbb --app '+str(FileName)
+                	                        commands.getoutput(CMDPebil)
+        	                                CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
+	                                        commands.getoutput(CMDJbb)	
 						jRunProcess='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --process > Duh.log '
 						print "\n\t -- "+str(jRunProcess)
 						commands.getoutput(jRunProcess)
@@ -276,8 +350,8 @@ def main(argv):
 						InsertEnergyProbes=' pebil --tool LoopIntercept --inp '+str(SortedBBsList)+' --app '+str(FileName)+' --lnc libpapi.so,libpapiinst.so '
 						print "\n\t CMD InsertEnergyProbes: "+str(InsertEnergyProbes)
 						commands.getoutput(InsertEnergyProbes)
-						ObtainEnergyValues='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.lpiinst > Duh3.log '
-						commands.getoutput(ObtainEnergyValues)
+						ObtainPowerValues='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.lpiinst > Duh3.log '
+						commands.getoutput(ObtainPowerValues)
 						
 						EnergyStatsFileName=str(FileName)+'.meta_0.lpiinst'
 						IpFile=open(EnergyStatsFileName)
@@ -310,9 +384,9 @@ def main(argv):
 											if(Idx):
 												#print "\n\t Counter num: "+str(Idx)+" value: "+str(CurrCounterReading)
 												Temp.append(RemoveWhiteSpace(CurrCounterReading))
-										if(not ( FileName in EnergyValueCollection)):
-											EnergyValueCollection[FileName]={}
-										EnergyValueCollection[FileName][BBID]=Temp	
+										if(not ( FileName in PowerValueCollection)):
+											PowerValueCollection[FileName]={}
+										PowerValueCollection[FileName][BBID]=Temp	
 								BBIDFound=0
 								BBIDLine=-1
 						if(CacheSimulation==0):
@@ -326,6 +400,13 @@ def main(argv):
 				        if( not (CacheSimulation==0) ):
 
 ######
+						if( (EnergySim==0) and (LoopIntercept>0) ):
+							
+		                                       CMDPebil='pebil --typ jbb --app '+str(FileName)
+                                		       commands.getoutput(CMDPebil)
+                		                       CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
+		                                       commands.getoutput(CMDJbb)
+
 	                                        JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
         	                                JbbFileHandle=open(JbbFileName)
         	                                JbbFile=JbbFileHandle.readlines()
@@ -434,23 +515,68 @@ def main(argv):
                         for CurrCounter in EnviVars:
                      		CurrStatsFile.write("\t "+str(CurrCounter))
                         CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t Power from each counter ")
-                        for CurrFile in FileNameCollection:
-				CurrStatsFile.write("\n")
+                        
+                        if(LoopIntercept>0):
+   				#CurrStatsFile.write("\n")
 				#print "\n\t CurrFile: "+str(CurrFile)
-				for CurrBB in (EnergyValueCollection[CurrFile]):
-        		        	CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
-     	                        	for CurrCounter in (EnergyValueCollection[CurrFile][CurrBB]):
-						if AverageRuntimeCollection[CurrFile]:
-							TmpPower=(float(CurrCounter)/AverageRuntimeCollection[CurrFile])
-						else:
-							CurrStatsFile.write("\t energy: ")							
-                	                	#CurrStatsFile.write("\t ("+str(CurrCounter)+","+str(TmpPower)+")")
-						CurrStatsFile.write("\t "+str(round(float(TmpPower),4)))
+				for CurrFile in FileNameCollection:
+				 #CurrStatsFile.write("\n")
+				 if(CurrFile in PowerValueCollection):
+					 for CurrBB in (PowerValueCollection[CurrFile]):
+        			        	CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
+     	        	                	for CurrPower in (PowerValueCollection[CurrFile][CurrBB]):
+							CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
+				 else:
+					 CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
+
+			else:
+				
+				for CurrFile in FileNameCollection:
+					if(CurrFile in PowerValueCollection):
+						CurrStatsFile.write("\n\t "+str(CurrFile))
+                                        	for CurrPower in (PowerValueCollection[CurrFile]):
+                                                	 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
+					else:
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
 
 			CurrStatsFile.write("\n\n\n")
-		CurrStatsFile.close()
+		CurrStatsFile.close()#"""
 
-	RemoveWorkingFiles='rm -f RunOutput.log SimRun.sh *Inst* Duh*.log'
+		MasterStatsFile.write("\n\t Average run times: ") ; 
+		MasterStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
+		for CurrFile in MasterFileNameCollection:
+			MasterStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
+
+                if(not(EnergySim==0)):
+                         MasterStatsFile.write("\n\n\t Energy probes value: ")
+                         MasterStatsFile.write("\n\t Counters : ")
+                         for CurrCounter in EnviVars:
+                                  MasterStatsFile.write("\t "+str(CurrCounter))
+                         MasterStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t Power from each counter ")
+                         if(LoopIntercept>0):
+                                 #print "\n\t CurrFile: "+str(CurrFile)
+                                 for CurrFile in MasterFileNameCollection:
+					if(CurrFile in PowerValueCollection):		
+                                	   for CurrBB in (PowerValueCollection[CurrFile]):
+                                        	 MasterStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
+	                                         for CurrPower in (PowerValueCollection[CurrFile][CurrBB]):
+        	                                         MasterStatsFile.write("\t "+str(round(float(CurrPower),4)))
+					else:
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
+                         else:
+                                 for CurrFile in MasterFileNameCollection:
+					if(CurrFile in PowerValueCollection):
+	                                         MasterStatsFile.write("\n\t "+str(CurrFile))
+        	                                 for CurrPower in (PowerValueCollection[CurrFile]):
+                	                                  MasterStatsFile.write("\t "+str(round(float(CurrPower),4)))	
+					else:	
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
+  
+                MasterStatsFile.write("\n\n")
+		MasterStatsFile.close()
+
+
+	RemoveWorkingFiles='rm -f RunOutput.log SimRun.sh *Instr* Duh*.log'
 	commands.getoutput(RemoveWorkingFiles)
 
 if __name__ == "__main__":
