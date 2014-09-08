@@ -11,6 +11,8 @@ import sys,subprocess,re,math,commands,time,copy,random
 	# Even the intraoperanddelta generated is common across all streams.
 # 2. <>
 
+# 09/08/2014:  
+# 1. Extension of multiple variables in one "stream" is done assuming script is used with var=1
 
 def RemoveWhiteSpace(Input):
 	temp=re.sub('^\s*','',Input)
@@ -105,6 +107,7 @@ def PerStreamConfig(Max,Min,Operations):
 
 	NumOperandsSet=[]
 	Temp=[]
+	OpComboKeys=[(0,'c'),(1,'d'),(2,'s')]
 	NumOperandsSet.append(Temp)
 	NeedToRepeat=0
 	for CurrVar in range(0,NumVars):
@@ -114,9 +117,49 @@ def PerStreamConfig(Max,Min,Operations):
 				Temp=copy.deepcopy(CurrSet)
 				Temp.append(CurrNumOperand)
 				TempNumOperandsSet.append(Temp)
-				#print "\n\t Temp: "+str(Temp)
+				print "\n\t Temp: "+str(Temp)			
 		NumOperandsSet=copy.deepcopy(TempNumOperandsSet)
 
+	OperandsCombo={}
+	for CurrNumOperandSet in NumOperandsSet:
+		for CurrNumOperand in CurrNumOperandSet: 
+			print "\n\t CurrNumOperands: "+str(CurrNumOperand)
+			NumOpComboMin=0
+			NumOpComboMax=0
+	  		for Idx,CurrOpCombo in (OpComboKeys):
+	  			NumOpComboMin+=Min['OperandsCombo'][Idx][1]
+	  			NumOpComboMax+=Max['OperandsCombo'][Idx][1]
+			  	print "\t Min: "+str(Min['OperandsCombo'][Idx])+" Max: "+str(Max['OperandsCombo'][Idx])	
+			
+			if(NumOpComboMin<=CurrNumOperand):
+				print "\n\t NumOpComboMin: "+str(NumOpComboMin)+"  NumOpComboMax: "+str(NumOpComboMax)+" NumOperands: "+str(CurrNumOperand)
+				CurrOpComboSet=[[]]
+				TempSet=[]
+				for Idx,CurrOpCombo in (OpComboKeys):
+					TempSet=[]
+					#TempSet=copy.deepcopy(CurrOpComboSet)
+					for CurrSet in CurrOpComboSet:
+						for CurrNumOpCombo in range(Min['OperandsCombo'][Idx][1],Max['OperandsCombo'][Idx][1]+1):
+							Temp=copy.deepcopy(CurrSet)
+							Temp.append(CurrNumOpCombo)
+							TempSet.append(Temp)
+							#print "\n\t CurrNumOpCombo: "+str(CurrNumOpCombo)+" TempSet: "+str(Temp)
+					CurrOpComboSet=copy.deepcopy(TempSet)
+					
+				print "\n\t Len(OperandsSet): "+str(len(CurrOpComboSet))
+				PopIdx=[]		
+				for OpComboSetIdx,CurrSet in enumerate(CurrOpComboSet):
+					#print " CurrSet "+str(CurrSet)
+					TotalNumOperands=0
+					for Idx,CurrKey in (OpComboKeys):
+						TotalNumOperands+=CurrSet[Idx]
+					if(TotalNumOperands>CurrNumOperand):
+						print "\t *+* CurrSet: "+str(CurrSet)+" CurrNumOperand: "+str(CurrNumOperand)+" TotalNumOperands: "+str(TotalNumOperands)
+						PopIdx.append(OpComboSetIdx)
+				for CurrIdx in PopIdx:
+					CurrOpComboSet.pop(CurrIdx)
+				print "\n\t Len(OperandsSet): "+str(len(CurrOpComboSet))
+		
 	ExpectedNumOperandsinSet=1
 	for i in range(NumVars):
 		ExpectedNumOperandsinSet*=len(RequiredNumOperandsRange[i])
@@ -216,26 +259,26 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 ########		
 def main():
 
-        Max={} #; Ensure Max is less than or equal to Min. 
-        Min={}
-        Max['Vars']=1
-        Min['Vars']=1
-        Max['Dims']=1
-        Min['Dims']=1
-        Max['NumStream']=3
-        Min['NumStream']=2
-        Max['Stride']=3 # ie., 2^4
-        Min['Stride']=0 # ie., 2^0=1
-        Alloc=[['d']] #,'d','d','d']]    
-        Init=['index0+4']#,'index0','index0','index0']
-        DS=[['i']]#,'d','d','d']]    
+	Max={} #; Ensure Max is less than or equal to Min. 
+	Min={}
+	Max['Vars']=1
+	Min['Vars']=1
+	Max['Dims']=1
+	Min['Dims']=1
+	Max['NumStream']=3
+	Min['NumStream']=2
+	Max['Stride']=3 # ie., 2^4
+	Min['Stride']=0 # ie., 2^0=1
+	Alloc=[['d']] #,'d','d','d']]    
+	Init=['index0+4']#,'index0','index0','index0']
+	DS=[['i']]#,'d','d','d']]    
 	StrideScaling=[1]# 0 0 0 
 	RandomAccess=[[0]] # 1,1,1]]
 	PAPIInst=[1] # 0,1,0
-        #SpatWindow=[8,16,32];
-        LoopIterationBase=100;
-        #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
-        LoopIterationsExponent=[[2.5]]# ,[1],[1],[1]];
+	#SpatWindow=[8,16,32];
+	LoopIterationBase=100;
+	#LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
+	LoopIterationsExponent=[[2.5]]# ,[1],[1],[1]];
 
 
  	NumVars=(Max['Vars']-Min['Vars']+1)
@@ -246,18 +289,38 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
-        MbyteSize=25 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
-        MaxSize=2**MbyteSize
-        HigherDimSizeIndex=8
-        Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
-        HigherDimSize= MaxSize/ Dim0Size
+	MbyteSize=25 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
+	MaxSize=2**MbyteSize
+	HigherDimSizeIndex=8
+	Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
+	HigherDimSize= MaxSize/ Dim0Size
 
 	Min['Size']=15
 	Max['Size']=16
-        
-        SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
+	
+	SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
+
+	OpComboKeys=['c','d','s'] #  'c': constant, 's': same, 'd': different	
+	OperandsCombo=[] #[('c','d','f'),('d','d','i','f')]] # i.e, Tuple[0]: See "OpComboKeys", Tuple[1..]: DS
+
+	Min['OperandsCombo']=[('c',1),('s',1),('d',0)]
+	Min['OperandsCombo']=[('c',1),('s',1),('d',1)]
+	
+	SameDSTuple=()
+	for CurrDSSet in DS:
+		for CurrDS in CurrDSSet:
+			Temp=[('c','d','f'),('d','d','i','f')]
+			SameDSTuple+=('s',CurrDS)
+			Temp.append(SameDSTuple)
+			OperandsCombo.append(Temp)
+			print "\t Same DS tuple: "+str(SameDSTuple)+" OpCombo: "+str(Temp)
+			SameDSTuple=()
+			
+	for CurrOpCombo in OperandsCombo:
+		print "\t CurrOpCombo: "+str(CurrOpCombo)
+	#sys.exit()
 
 	Min['NumOperandsIdx']=0
 	Max['NumOperandsIdx']=4
@@ -280,13 +343,13 @@ def main():
  	#Operations['Operand']	
 	Operations['PermutationsFlag']=PermutationsFlag 
  
-        LoopIterations=[]
-        for CurrVar in range(NumVars):
-        	Temp=[]
-        	for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
-        		CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
-        		Temp.append(CurrNumLoops)
-        		#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
+	LoopIterations=[]
+	for CurrVar in range(NumVars):
+		Temp=[]
+		for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
+			CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
+			Temp.append(CurrNumLoops)
+			#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
  		LoopIterations.append(Temp)
  
   	CurrVar=0
@@ -312,7 +375,84 @@ def main():
 	  Max['NumOperands']=[]
 	  Min['NumOperands'].append((2**CurrNumOperandsIdx))
 	  Max['NumOperands'].append((2**CurrNumOperandsIdx))
-	  print "\n\t --NumOperands: "+str(CurrNumOperandsIdx)+" 6 "+str(2**CurrNumOperandsIdx)
+	  print "\n\t --NumOperands: Idx"+str(CurrNumOperandsIdx)+" Value "+str(2**CurrNumOperandsIdx)
+	  
+	  Min['OperandsCombo']=[('c',1),('s',1),('d',0)]
+	  Min['OperandsCombo']=[('c',1),('s',1),('d',1)]
+	
+	  Min['OperandsCombo']=[]
+	  Max['OperandsCombo']=[]	  
+	  CurrNumOperands=Min['NumOperands'][0]
+	  NumOperandsAllocated=0
+
+	  for CurrOpCombo in OpComboKeys:
+	  	
+	  	if(CurrNumOperands > 2):
+	  		if(CurrOpCombo=='c'):
+	  			NumConstantOperands=1
+	  			TempTuple=('c',NumConstantOperands)
+	  			TempTuple1=('c',NumConstantOperands)
+	  			NumOperandsAllocated+=NumConstantOperands
+	  			print "\n\t 11. NumOperands: "+str(CurrNumOperands)+" NumOperandsAllocated "+str(NumOperandsAllocated)	  
+	  		elif(CurrOpCombo=='s'):
+	  			NumSameOperands=(CurrNumOperands-NumOperandsAllocated)/2
+	  			TempTuple=('s',NumSameOperands)
+	  			TempTuple1=('s',(CurrNumOperands-NumOperandsAllocated))
+				NumOperandsAllocated+=NumSameOperands
+				print "\n\t 12. NumOperands: "+str(CurrNumOperands)+" NumOperandsAllocated "+str(NumOperandsAllocated)	  
+	  		elif(CurrOpCombo=='d'):
+	  			NumDiffOperands=(CurrNumOperands-NumOperandsAllocated)/3
+	  			TempTuple=('d',NumDiffOperands)
+	  			TempTuple1=('d',NumDiffOperands+1)
+				NumOperandsAllocated+=NumDiffOperands
+				print "\n\t 13. NumOperands: "+str(CurrNumOperands)+" NumOperandsAllocated "+str(NumOperandsAllocated)+" NumDiffOperands "+str(NumDiffOperands)	  
+				
+	  		Min['OperandsCombo'].append(TempTuple)
+	  		Max['OperandsCombo'].append(TempTuple1)  	
+	  	elif(CurrNumOperands==2):
+	  		if(CurrOpCombo=='c'):
+	  			NumConstantOperands=0
+	  			TempTuple=('c',NumConstantOperands)
+	  			TempTuple1=('c',NumConstantOperands)
+	  			NumOperandsAllocated+=NumConstantOperands
+	  		elif(CurrOpCombo=='s'):
+	  			NumSameOperands=(CurrNumOperands/2)#-NumOperandsAllocated)/2
+	  			TempTuple=('s',NumSameOperands)
+	  			TempTuple1=('s',NumSameOperands)
+				NumOperandsAllocated+=NumSameOperands
+	  		elif(CurrOpCombo=='d'):
+	  			NumDiffOperands=CurrNumOperands/2 #(NumOperands-NumOperandsAllocated)/2
+	  			TempTuple=('d',NumDiffOperands)
+	  			TempTuple1=('d',NumDiffOperands)
+				NumOperandsAllocated+=NumDiffOperands
+				
+	  		Min['OperandsCombo'].append(TempTuple)
+	  		Max['OperandsCombo'].append(TempTuple1)
+	  		
+	  	elif(CurrNumOperands==1):
+	  		if(CurrOpCombo=='c'):
+	  			NumConstantOperands=0
+	  			TempTuple=('c',NumConstantOperands)
+	  			TempTuple1=('c',NumConstantOperands)
+	  			NumOperandsAllocated+=NumConstantOperands
+	  		elif(CurrOpCombo=='s'):
+	  			NumSameOperands=(CurrNumOperands)#-NumOperandsAllocated)/2
+	  			TempTuple=('s',NumSameOperands)
+	  			TempTuple1=('s',NumSameOperands)
+				NumOperandsAllocated+=NumSameOperands
+	  		elif(CurrOpCombo=='d'):
+	  			NumDiffOperands=0 #(NumOperands-NumOperandsAllocated)/2
+	  			TempTuple=('d',NumDiffOperands)
+	  			TempTuple1=('d',NumDiffOperands)
+				NumOperandsAllocated+=NumDiffOperands
+				
+	  		Min['OperandsCombo'].append(TempTuple)
+	  		Max['OperandsCombo'].append(TempTuple1)
+	  		
+	  	
+	  for Idx,CurrOpCombo in enumerate(OpComboKeys):
+	  		print "\n\t Min: "+str(Min['OperandsCombo'][Idx])+" Max: "+str(Max['OperandsCombo'][Idx])		
+	  	  
 	  for CurrMbyteSize in range(Min['Size'],Max['Size']):
 		print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)
 		MaxSize=2**CurrMbyteSize
@@ -321,7 +461,7 @@ def main():
 		HigherDimSize= MaxSize/ Dim0Size
 
 		StreamConfig=PerStreamConfig(Max,Min,Operations)
-		StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
+		"""StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
 
    		print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)+" Dim0Size "+str(Dim0Size)+" HigherDimSize "+str(HigherDimSize)
 	   	IterationsString=''
@@ -390,8 +530,6 @@ def main():
                  	                	IterationsString+=str(CurrVarIterations)
  	                	                IterationsName+=str(CurrVarIterations)
         			        print "\n\t CurrSetIterations: "+str(CurrSetIterations)+" IterationsString: "+str(IterationsString)
- 
-
 				
 	                        SizeString=''
         	                SizeName=''
@@ -644,7 +782,7 @@ def main():
 												SuperSourceFile.write("\n\t "+str(SRCFileName))				
 						#sys.exit()
 				SourceFilesLog.write("\n\n")
-				SourceFilesLog.close() #
+				SourceFilesLog.close() """
 									
 						#sys.exit()
 						
