@@ -107,7 +107,8 @@ def PerStreamConfig(Max,Min,Operations):
 
 	NumOperandsSet=[]
 	Temp=[]
-	OpComboKeys=[(0,'c'),(1,'d'),(2,'s')]
+	#OpComboKeys=[(0,'c'),(1,'d'),(2,'s')]
+	OpComboKeys=Operations['OpComboKeys']
 	NumOperandsSet.append(Temp)
 	NeedToRepeat=0
 	for CurrVar in range(0,NumVars):
@@ -121,6 +122,7 @@ def PerStreamConfig(Max,Min,Operations):
 		NumOperandsSet=copy.deepcopy(TempNumOperandsSet)
 
 	OperandsCombo={}
+	OpComboSet={}
 	for CurrNumOperandSet in NumOperandsSet:
 		for CurrNumOperand in CurrNumOperandSet: 
 			print "\n\t CurrNumOperands: "+str(CurrNumOperand)
@@ -149,16 +151,29 @@ def PerStreamConfig(Max,Min,Operations):
 				print "\n\t Len(OperandsSet): "+str(len(CurrOpComboSet))
 				PopIdx=[]		
 				for OpComboSetIdx,CurrSet in enumerate(CurrOpComboSet):
-					#print " CurrSet "+str(CurrSet)
+					#print "\t CurrSet "+str(CurrSet)
 					TotalNumOperands=0
 					for Idx,CurrKey in (OpComboKeys):
 						TotalNumOperands+=CurrSet[Idx]
-					if(TotalNumOperands>CurrNumOperand):
-						print "\t *+* CurrSet: "+str(CurrSet)+" CurrNumOperand: "+str(CurrNumOperand)+" TotalNumOperands: "+str(TotalNumOperands)
+					if(TotalNumOperands!=CurrNumOperand):
+						print "\t  CurrSet: "+str(CurrSet)+" CurrNumOperand: "+str(CurrNumOperand)+" TotalNumOperands: "+str(TotalNumOperands)+" OpComboSetIdx "+str(OpComboSetIdx)
 						PopIdx.append(OpComboSetIdx)
-				for CurrIdx in PopIdx:
-					CurrOpComboSet.pop(CurrIdx)
+
+				PopIdx.sort(reverse=True)
+				for LoopIdx in (PopIdx):
+					print "\t LoopIdx: "+str(LoopIdx)
+					
+				for LoopIdx,CurrIdx in enumerate(PopIdx):
+					if(LoopIdx):
+						CurrIdx-=1
+					if(len(CurrOpComboSet)>CurrIdx):
+						CurrOpComboSet.pop(CurrIdx)
+						
 				print "\n\t Len(OperandsSet): "+str(len(CurrOpComboSet))
+				for CurrSet in CurrOpComboSet:
+					print "\t CurrSet: "+str(CurrSet)
+				
+				OpComboSet[CurrNumOperand]=(CurrOpComboSet)
 		
 	ExpectedNumOperandsinSet=1
 	for i in range(NumVars):
@@ -168,31 +183,36 @@ def PerStreamConfig(Max,Min,Operations):
 	print "\n\t len(NumOperandsSet): "+str(len(NumOperandsSet))+" ExpectedNumOperandsinSet: "+str(ExpectedNumOperandsinSet)		
 
 	StreamConfig['NumOperandsSet']=NumOperandsSet
+	StreamConfig['OperandsCombo']=OpComboSet
 
 	MainOperationsSet={}
+	StreamConfig['OpComboSet']={}
 	if(Operations['PermutationsFlag']['MainOperations']):
 		print "\n\t Will start permutating now for the sake of MainOperations "
-		CurrNumOperationsSet=[]
-		Temp=[]
-		CurrNumOperationsSet.append(Temp)
-		TempCurrNumOperationsSet=[]
-		for CurrNumOperations in range(1,MaxNumOperands):
-			for CurrOperationsSet in CurrNumOperationsSet:
-				for CurrOperations in Operations['MainOperations']:
+		for CurrKey in Operations['Range']:
+			CurrNumOperationsSet=[]
+			Temp=[]
+			CurrNumOperationsSet.append(Temp)
+			TempCurrNumOperationsSet=[]
+			for CurrNumOperations in range(1,MaxNumOperands):
+			 for CurrOperationsSet in CurrNumOperationsSet:
+ 				for CurrOperations in Operations['Range'][CurrKey]: #'MainOperations']:
 					Temp=[]
 					Temp=copy.deepcopy(CurrOperationsSet)
 					Temp.append(CurrOperations)
 					TempCurrNumOperationsSet.append(Temp)
 					#print "\n\t Temp: "+str(Temp)+" len(TempCurrNumOperationsSet): "+str(len(TempCurrNumOperationsSet))
 
-			CurrNumOperationsSet=copy.deepcopy(TempCurrNumOperationsSet)
-			TempCurrNumOperationsSet=[]
-			MainOperationsSet[CurrNumOperations]= CurrNumOperationsSet # CAUTION/WARNING: Assuming that the CurrNumOperations!=0 will access this dictionary, since that is an illegal case.
-			print "\n\t CurrNumOperations: "+str(CurrNumOperations)+" len(CurrNumOperationsSet): "+str(len(CurrNumOperationsSet))
-		
+			 CurrNumOperationsSet=copy.deepcopy(TempCurrNumOperationsSet)
+			 TempCurrNumOperationsSet=[]
+			 MainOperationsSet[CurrNumOperations]= CurrNumOperationsSet # CAUTION/WARNING: Assuming that the CurrNumOperations!=0 will access this dictionary, since that is an illegal case.
+			 print "\n\t CurrNumOperations: "+str(CurrNumOperations)+" len(CurrNumOperationsSet): "+str(len(CurrNumOperationsSet))
+			StreamConfig['OpComboSet'][CurrKey]=MainOperationsSet
 	else:
-		print "\n\t Will NOT start permutating for the sake of MainOperations "			
-		MainOperationsSet['Default']=(Operations['MainOperations'])
+		print "\n\t Will NOT start permutating for the sake of MainOperations "	
+		for CurrKey in Operations['Range']:
+			StreamConfig['OpComboSet'][CurrKey]=Operantion['Range'][CurrKey]		
+		#MainOperationsSet['Default']=(Operations) #['MainOperations'])
 
 	StreamConfig['MainOperationsSet']=MainOperationsSet
 
@@ -209,7 +229,10 @@ def PerStreamConfig(Max,Min,Operations):
 def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 
 	StrideConfigPrep={}
+	OpComboKeys=Operations['OpComboKeys']
+	
 	for CurrNumOperands in (StreamConfig['NumOperandsSet']):
+		#print "\n\t AAHA CurrNumOperands: "+str(CurrNumOperands)+" len(StreamConfig['OperandsCombo'][CurrNumOperands]): "+str(len(StreamConfig['OperandsCombo'][CurrNumOperands]))
 		CurrNumOperandsString=''
 		for i in (CurrNumOperands):
 			CurrNumOperandsString+=str(i)
@@ -219,10 +242,65 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 			#+" Should use the key for MainOperationSet: "+str(CurrNumOperands[CurrVar]-1)
 			StrideConfigPrep[CurrNumOperandsString][CurrVar]={}
 			StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']=[]
+			print "\n\t AAHA CurrNumOperands: "+str(CurrNumOperands)+" len(StreamConfig['OperandsCombo'][CurrNumOperands]): "+str(len(StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]]))
 			if(Operations['PermutationsFlag']['MainOperations']):
 				if(CurrNumOperands[CurrVar]>1):
-					MainOpsKey=CurrNumOperands[CurrVar]-1
-					print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" can permutate over a set of operations: "+str((StreamConfig['MainOperationsSet'][MainOpsKey]))
+				
+				#for CurrKey in Operations:
+					
+					for CurrSet in (StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]]):
+						print "\n\t CurrSet: "+str(CurrSet)
+						OperationsCombo=[]
+						OpComboInit=0
+						for KeyIdx,CurrKey in OpComboKeys:
+							if(CurrSet[KeyIdx]>0):
+								print "\n\t 1. Key: "+str(CurrKey)+" NumOperands "+str(CurrSet[KeyIdx])+" len(NumOperands[Key]): "+str(len(StreamConfig['OpComboSet'][CurrKey][CurrSet[KeyIdx]]))	
+								
+								if(OpComboInit==0):
+									#for ComboIdx,CurrCombo in enumerate(StreamConfig['OpComboSet'][CurrKey][CurrSet[KeyIdx]]):
+									OpCombo='('
+									OperationsCombo.append(OpCombo)
+									OpComboInit=1
+								else:
+									continue
+									
+						TempOperationsCombo=[]
+						for KeyIdx,CurrKey in OpComboKeys:
+							TempOperationsCombo=[]
+							#print "\n\t CurrKey: "+str(CurrKey)+" KeyIdx: "+str(KeyIdx)+" OpComboKeys: "+str(OpComboKeys)
+							for CurrCombo in OperationsCombo:
+								#print "\t Len(OperationsCombo): "+str(len(OperationsCombo))
+								if(CurrSet[KeyIdx]>0):
+									if(CurrSet[KeyIdx]>1):
+										for CurrKeyCombo in (StreamConfig['OpComboSet'][CurrKey][CurrSet[KeyIdx]-1]):
+											for OperationIdx,CurrOperation in enumerate(CurrKeyCombo):
+												TempCurrCombo=CurrCombo
+												if(TempCurrCombo!='('):
+													TempCurrCombo+=','
+												TempCurrCombo+=CurrOperation
+											TempOperationsCombo.append(TempCurrCombo)
+											#print "\t 1 "
+									else:
+										for CurrOperation in (Operations['Range'][CurrKey]):
+											TempCurrCombo=CurrCombo
+											if(TempCurrCombo!='('):
+												TempCurrCombo+=','
+											TempCurrCombo+=CurrOperation
+											TempOperationsCombo.append(TempCurrCombo)
+										#print "\t 2"
+										
+									OperationsCombo=copy.deepcopy(TempOperationsCombo)
+
+						#TempOperationsCombo=[]	
+						for CurrCombo in OperationsCombo[:]:
+							CurrCombo+=')'	
+							#print "\n\t CurrCombo "+str(CurrCombo)	
+						print "\n\t There yo go: "+str(len(OperationsCombo))
+						#sys.exit()						
+					
+					"""#MainOpsKey=( StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]][CurrKey] )
+					MainOpsKey= CurrNumOperands[CurrVar]-1
+					#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" can permutate over a set of operations: "+str((StreamConfig['MainOperationsSet'][MainOpsKey]))
 					NumOpsLastIdx=(CurrNumOperands[CurrVar]-1)-1
 					for CurrOperationsSet in (StreamConfig['MainOperationsSet'][MainOpsKey]):
 						OpCombo='('
@@ -232,7 +310,7 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 								OpCombo+=','
 						OpCombo+=')'
 						#print "\n\t OpCombo: "+str(OpCombo)+" CurrSet: "+str(CurrOperationsSet)	
-						StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)
+						StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)"""
 				else:
 					#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
 					StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append('')
@@ -302,7 +380,9 @@ def main():
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
-	OpComboKeys=['c','d','s'] #  'c': constant, 's': same, 'd': different	
+	OpComboKeys=[(0,'c'),(1,'d'),(2,'s')]
+	
+	#OpComboKeys=['c','d','s'] #  'c': constant, 's': same, 'd': different	
 	OperandsCombo=[] #[('c','d','f'),('d','d','i','f')]] # i.e, Tuple[0]: See "OpComboKeys", Tuple[1..]: DS
 
 	Min['OperandsCombo']=[('c',1),('s',1),('d',0)]
@@ -326,10 +406,15 @@ def main():
 	Max['NumOperandsIdx']=4
 
 	Operations={}
-	Operations['MainOperations']=['+']#,'-','*','/']
-
+	#Operations['MainOperations']=['+','-','*','/']
+	Operations['Range']={}
+	Operations['Range']['c']=['+','-','*','/']	
+	Operations['Range']['s']=['+','-','*','/']	
+	Operations['Range']['d']=['+','-','*','/']	
+	Operations['OpComboKeys']=OpComboKeys
+	
 	PermutationsFlag={}
-	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of 
+	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
 	
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
@@ -385,7 +470,7 @@ def main():
 	  CurrNumOperands=Min['NumOperands'][0]
 	  NumOperandsAllocated=0
 
-	  for CurrOpCombo in OpComboKeys:
+	  for OpComboIdx,CurrOpCombo in OpComboKeys:
 	  	
 	  	if(CurrNumOperands > 2):
 	  		if(CurrOpCombo=='c'):
@@ -450,8 +535,8 @@ def main():
 	  		Max['OperandsCombo'].append(TempTuple1)
 	  		
 	  	
-	  for Idx,CurrOpCombo in enumerate(OpComboKeys):
-	  		print "\n\t Min: "+str(Min['OperandsCombo'][Idx])+" Max: "+str(Max['OperandsCombo'][Idx])		
+	  for OpComboIdx,CurrOpCombo in enumerate(OpComboKeys):
+	  		print "\n\t Min: "+str(Min['OperandsCombo'][OpComboIdx])+" Max: "+str(Max['OperandsCombo'][OpComboIdx])		
 	  	  
 	  for CurrMbyteSize in range(Min['Size'],Max['Size']):
 		print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)
@@ -461,9 +546,9 @@ def main():
 		HigherDimSize= MaxSize/ Dim0Size
 
 		StreamConfig=PerStreamConfig(Max,Min,Operations)
-		"""StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
+		StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations)
 
-   		print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)+" Dim0Size "+str(Dim0Size)+" HigherDimSize "+str(HigherDimSize)
+   		"""print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)+" Dim0Size "+str(Dim0Size)+" HigherDimSize "+str(HigherDimSize)
 	   	IterationsString=''
 	   	IterationsName=''
 	   	for i,CurrVarIterations in enumerate(CurrSetIterations):
