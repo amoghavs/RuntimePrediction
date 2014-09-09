@@ -246,6 +246,7 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 			StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']=[]
 			print "\n\t AAHA CurrNumOperands: "+str(CurrNumOperands)+" len(StreamConfig['OperandsCombo'][CurrNumOperands]): "+str(len(StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]]))
 			if(StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]]>1):
+				MasterOperationsCombo=[]
 				for CurrSet in (StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]]):
 					print "\n\t CurrSet: "+str(CurrSet)
 					OperationsCombo=[]
@@ -263,73 +264,64 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations):
 							
 					TempOperationsCombo=[]
 					TotalNumOperands=0
-					for KeyIdx,CurrKey in OpComboKeys:
-						TempOperationsCombo=[]
-						#print "\n\t CurrKey: "+str(CurrKey)+" KeyIdx: "+str(KeyIdx)+" len(OperationsCombo) "+str(len(OperationsCombo))+" TotalNumOperands: "+str(TotalNumOperands)
-						for CurrCombo in OperationsCombo:
-							print "\t Len(OperationsCombo): "+str(len(OperationsCombo))
-							TotalNumOperands+=CurrSet[KeyIdx]
-							if(CurrSet[KeyIdx]>0):
-								if(CurrSet[KeyIdx]==1):
-									CurrOperationsSet=(Operations['Range'][CurrKey])
-								else:
-									if(KeyIdx=='s'):
-										CurrOperationsSet=(StreamConfig['OpComboSet'][CurrKey][CurrSet[KeyIdx]-1])
+					if(Operations['PermutationsFlag']['MainOperations']):
+						for KeyIdx,CurrKey in OpComboKeys:
+							TempOperationsCombo=[]
+							#print "\n\t CurrKey: "+str(CurrKey)+" KeyIdx: "+str(KeyIdx)+" len(OperationsCombo) "+str(len(OperationsCombo))+" TotalNumOperands: "+str(TotalNumOperands)
+							for CurrCombo in OperationsCombo:
+								print "\t Len(OperationsCombo): "+str(len(OperationsCombo))
+								TotalNumOperands+=CurrSet[KeyIdx]
+								if(CurrSet[KeyIdx]>0):
+									if(CurrSet[KeyIdx]==1):
+										CurrOperationsSet=(Operations['Range'][CurrKey])
 									else:
-										CurrOperationsSet=(StreamConfig['OpComboSet'][CurrKey][CurrSet[KeyIdx]])
-								if(TotalNumOperands>1):
-									for CurrKeyCombo in CurrOperationsSet:
-										for OperationIdx,CurrOperation in enumerate(CurrKeyCombo):
-											TempCurrCombo=CurrCombo
-											if(TempCurrCombo!='('):
-												TempCurrCombo+=','
-											TempCurrCombo+=CurrOperation
-										TempOperationsCombo.append(TempCurrCombo)
-									OperationsCombo=copy.deepcopy(TempOperationsCombo)
-								#print "\t 1 "
-						TotalNumOperands+=CurrSet[KeyIdx]
+										if(KeyIdx=='s'):
+											CurrOperationsSet=(StreamConfig['OpComboSet'][CurrKey][CurrSet[KeyIdx]-1])
+										else:
+											CurrOperationsSet=(StreamConfig['OpComboSet'][CurrKey][CurrSet[KeyIdx]])
+									if(TotalNumOperands>1):
+										for CurrKeyCombo in CurrOperationsSet:
+											for OperationIdx,CurrOperation in enumerate(CurrKeyCombo):
+												TempCurrCombo=CurrCombo
+												if(TempCurrCombo!='('):
+													TempCurrCombo+=','
+												TempCurrCombo+=CurrOperation
+											TempOperationsCombo.append(TempCurrCombo)
+										OperationsCombo=copy.deepcopy(TempOperationsCombo)
 
-					#TempOperationsCombo=[]	
-					if(len(OperationsCombo) < 65):
-					 for CurrCombo in OperationsCombo[:]:
-						CurrCombo+=')'	
-						print "\n\t CurrCombo "+str(CurrCombo)	
-					print "\n\t There yo go number of combinations: "+str(len(OperationsCombo))
-					#sys.exit()						
-					
-					"""#MainOpsKey=( StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]][CurrKey] )
-						MainOpsKey= CurrNumOperands[CurrVar]-1
-						#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" can permutate over a set of operations: "+str((StreamConfig['MainOperationsSet'][MainOpsKey]))
-						NumOpsLastIdx=(CurrNumOperands[CurrVar]-1)-1
-						for CurrOperationsSet in (StreamConfig['MainOperationsSet'][MainOpsKey]):
-							OpCombo='('
-							for Idx,CurrOperation in enumerate(CurrOperationsSet):
-								OpCombo+=str(CurrOperation)
-								if(NumOpsLastIdx>Idx):
-									OpCombo+=','
-							OpCombo+=')'
-							#print "\n\t OpCombo: "+str(OpCombo)+" CurrSet: "+str(CurrOperationsSet)	
-							StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)"""
-				else:
-					#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
-					StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append('')
-			else:
-				NumOperations=len(Operations['MainOperations'])
-				OpCombo='('
-				print "\n\t CurrNumOperands: "+str(CurrNumOperands)
-				for i in range(CurrNumOperands[CurrVar]-1):
-					Idx=random.randrange(NumOperations)
-					CurrOperation=Operations['MainOperations'][Idx]
-					if(i):
-						OpCombo+=','+str(CurrOperation)
+						#TempOperationsCombo=[]	
+						
+						for Idx,CurrCombo in enumerate(OperationsCombo[:]):
+							OperationsCombo[Idx]+=')'
+						for CurrCombo in OperationsCombo:
+							MasterOperationsCombo.append(CurrCombo)
+						print "\n\t There yo go number of combinations: "+str(len(OperationsCombo))+" len(MasterOpsCombo): "+str(len(MasterOperationsCombo))+" MasterOperationsCombo[0] "+str(MasterOperationsCombo[0])
 					else:
-						OpCombo+=str(CurrOperation)
-				if(CurrNumOperands[CurrVar]==1):
-					OpCombo=''
-				else:
-					OpCombo+=')'
-
-				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(OpCombo)
+						OpCombo='('
+						for KeyIdx,CurrKey in OpComboKeys:
+							NumOperations=len(Operations['Range'][CurrKey])
+							if(CurrKey=='s'):
+								for i in range(CurrSet[KeyIdx]-1):
+									TempOperation=Operations['Range'][CurrKey][random.randrange(NumOperations)]
+									if(OpCombo!='('):
+										OpCombo+=','
+									OpCombo+=TempOperation
+							
+							else:
+								for i in range(CurrSet[KeyIdx]):
+									TempOperation=Operations['Range'][CurrKey][random.randrange(NumOperations)]
+									if(OpCombo!='('):
+										OpCombo+=','
+									OpCombo+=TempOperation
+								
+						OpCombo+=')'
+						print "\n\t OpCombo: "+str(OpCombo)
+						MasterOperationsCombo.append(OpCombo)
+				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(MasterOperationsCombo)	
+										
+			else:
+				#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
+				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append('')
 					
 	return StrideConfigPrep
 
@@ -413,7 +405,7 @@ def main():
 	Operations['OpComboKeys']=OpComboKeys
 	
 	PermutationsFlag={}
-	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
+	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of 
 	
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
