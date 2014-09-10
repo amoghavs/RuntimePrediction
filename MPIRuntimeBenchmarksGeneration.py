@@ -2101,7 +2101,13 @@ def main(argv):
 	WriteArray(ConfigParams['GlobalVar']['SuccessiveOperandDiffDecl'],WriteFile)
 	WriteArray(ConfigParams['GlobalVar']['LastDimOverflowVarDecl'],WriteFile)
 	WriteArray(PinToFunc,WriteFile)
-	WriteArray(PermuteGenFuncArray,WriteFile)	
+	RandomAccessCheck=0
+	for CurrVarRandomAccess in ConfigParams['RandomAccess']:
+		RandomAccessCheck+=CurrVarRandomAccess
+		print "\t RandomAccessCheck: "+str(CurrVarRandomAccess)+" CurrVarRandomAccess "+str(CurrVarRandomAccess)
+	print "\t RandomAccessCheck: "+str(RandomAccessCheck)	
+	if(RandomAccessCheck>0):
+		WriteArray(PermuteGenFuncArray,WriteFile)	
 	
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)

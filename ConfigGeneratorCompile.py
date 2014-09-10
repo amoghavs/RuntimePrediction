@@ -20,6 +20,12 @@ def RemoveWhiteSpace(Input):
 	
 	return Output
 	
+def RemoveBraces(Input):
+	temp=re.sub('^\s*\(*','',Input)
+	Output=re.sub('\)*\s*$','',temp)
+	#print "\n\t RemoveBraces--Input: "+str(Input)+" tmp: "+str(temp)+" Output "+str(Output)
+	return Output
+	
 def RecursiveStrideGen(CurrStream,NumStreams,StartStream,NumStrides,CurrString,CurrPrefix,CurrPrefixPos,ResultString):
 	#print "\n\t StartStream: "+str(StartStream)+' and NumStrides: '+str(NumStrides)
 	if(CurrStream==(NumStreams)):
@@ -244,6 +250,7 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations,OperandsCombo):
 			#+" Should use the key for MainOperationSet: "+str(CurrNumOperands[CurrVar]-1)
 			StrideConfigPrep[CurrNumOperandsString][CurrVar]={}
 			StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']=[]
+			StrideConfigPrep[CurrNumOperandsString][CurrVar]['OperandsCombo']=[]
 			print "\n\t AAHA CurrNumOperands: "+str(CurrNumOperands)+" len(StreamConfig['OperandsCombo'][CurrNumOperands]): "+str(len(StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]]))
 			if(StreamConfig['OperandsCombo'][CurrNumOperands[CurrVar]]>1):
 				MasterOperandsCombo=[]
@@ -289,8 +296,9 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations,OperandsCombo):
 					print "\n\t Operand combos: "			
 					for Idx,CurrOperandCombo in enumerate(OperandsComboSet[:]):
 						OperandsComboSet[Idx]='('+str(OperandsComboSet[Idx])+')'
-						print "\t "+str(CurrOperandCombo)	
-								
+						print "\t "+str(OperandsComboSet[Idx])
+					
+					StrideConfigPrep[CurrNumOperandsString][CurrVar]['OperandsCombo']=(OperandsComboSet)
 					OperationsCombo=[]			
 					for KeyIdx,CurrKey in OpComboKeys:
 						print "\n\t 1. Key: "+str(CurrKey)+" NumOperands "+str(CurrSet[KeyIdx])
@@ -331,7 +339,6 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations,OperandsCombo):
 											TempOperationsCombo.append(TempCurrCombo)
 										OperationsCombo=copy.deepcopy(TempOperationsCombo)
 
-						#TempOperationsCombo=[]	
 						
 						for Idx,CurrCombo in enumerate(OperationsCombo[:]):
 							OperationsCombo[Idx]+=')'
@@ -355,16 +362,19 @@ def PermuteforStrideConfig(StreamConfig,NumVars,Operations,OperandsCombo):
 									if(OpCombo!='('):
 										OpCombo+=','
 									OpCombo+=TempOperation
-								
-						OpCombo+=')'
+						if(OpCombo=='('):
+							OpCombo=''
+						else:
+							OpCombo+=')'
 						print "\n\t OpCombo: "+str(OpCombo)
 						MasterOperationsCombo.append(OpCombo)
-				#StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append(MasterOperationsCombo)	
+				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']=(MasterOperationsCombo)	
 										
 			else:
 				#print "\n\t CurrNumOperands[CurrVar] "+str(CurrNumOperands[CurrVar])+" does not need any operation"
 				print "\n\t BooYeah! "
 				StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'].append('')
+				print "\n\t BooYeah!! StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'] "+str(StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo'])
 					
 	return StrideConfigPrep
 
@@ -379,7 +389,7 @@ def main():
 	Min['Dims']=1
 	Max['NumStream']=3
 	Min['NumStream']=2
-	Max['Stride']=3 # ie., 2^4
+	Max['Stride']=2 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
 	Alloc=[['d']] #,'d','d','d']]    
 	Init=['index0+4']#,'index0','index0','index0']
@@ -448,10 +458,10 @@ def main():
 	Operations['OpComboKeys']=OpComboKeys
 	
 	PermutationsFlag={}
-	PermutationsFlag['MainOperations']=1 # 0: All operands, in an expression will be same. 1: Permutation of 
+	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of 
 	PermutationsFlag['OperandsComboDS']={}
 	PermutationsFlag['OperandsComboDS']['c']= 'r' # r: Random, l: linear-combination(i.e, all of them one at a time)
-	PermutationsFlag['OperandsComboDS']['d']= 'r'
+	PermutationsFlag['OperandsComboDS']['d']= 'l'
 	PermutationsFlag['OperandsComboDS']['s']= 'l'
 	
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
@@ -591,7 +601,7 @@ def main():
 		
 		StrideConfigPrep=PermuteforStrideConfig(StreamConfig,NumVars,Operations,OperandsCombo)
 
-   		"""print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)+" Dim0Size "+str(Dim0Size)+" HigherDimSize "+str(HigherDimSize)
+   		print "\n\t CurrMbyteSize: "+str(CurrMbyteSize)+" Dim0Size "+str(Dim0Size)+" HigherDimSize "+str(HigherDimSize)
 	   	IterationsString=''
 	   	IterationsName=''
 	   	for i,CurrVarIterations in enumerate(CurrSetIterations):
@@ -779,22 +789,42 @@ def main():
 										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar]=[]
 									
 									OpComboSet=[]
-									for CurrCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']):
-
-										CurrOpCombo=str(CurrCombo)+'; ('
-										for Idx in range((CurrNumOperands[CurrVar])):
-											if(Idx):
-												CurrOpCombo+=','
-											PickIdx=random.randrange(StreamConfig['CurrNumDims'])
-											PickDelta=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickIdx],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickIdx])
-											if(0): #random.randrange(2)==0):
-												OperandIdx=str(Operations['DimLookup'][PickIdx])+'-'+str(PickDelta)
-											else:
-												OperandIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)	
-											CurrOpCombo+=str(OperandIdx)
-										CurrOpCombo+=')'
-										#print "\n\t CurrCombo: "+str(CurrCombo)+" CurrOpCombo "+str(CurrOpCombo)
-										OpComboSet.append(CurrOpCombo)
+									for CurrOperandCombo in (StrideConfigPrep[CurrNumOperandsString][CurrVar]['OperandsCombo']):
+										print "\t CurrOperandCombo: "+str(CurrOperandCombo)
+										BreakdownCurrOperandCombo=re.split('\),',CurrOperandCombo)
+										for Idx,CurrBreakdown in enumerate(BreakdownCurrOperandCombo):
+											BreakdownCurrOperandCombo[Idx]=RemoveBraces(CurrBreakdown)
+											#print "\t CurrBreakdown: "+str(CurrBreakdown)+" BreakdownCurrOperandCombo[Idx] "+str(BreakdownCurrOperandCombo[Idx])+" CurrNumOperands[CurrVar]: "+str(CurrNumOperands[CurrVar])+" "
+										#sys.exit()
+										for OpComboIdx,CurrCombo in enumerate(StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']):
+											CurrOpCombo=str(CurrCombo)+'; ('
+											for Idx in range((CurrNumOperands[CurrVar])):
+												if(Idx):
+													CurrOpCombo+=','
+												#print "\t CurrOperand: "+str(BreakdownCurrOperandCombo[Idx])
+												if(BreakdownCurrOperandCombo[Idx][0]!='c'):
+													PickIdx=random.randrange(StreamConfig['CurrNumDims'])
+													PickDelta=random.randrange(StreamConfig['IntraOperandDelta']['Min'][CurrVar][PickIdx],StreamConfig['IntraOperandDelta']['Max'][CurrVar][PickIdx])
+													if(0): #random.randrange(2)==0):
+														OperandIdx=str(Operations['DimLookup'][PickIdx])+'-'+str(PickDelta)
+													else:
+														OperandIdx=str(Operations['DimLookup'][PickIdx])+'+'+str(PickDelta)	
+													CurrOpCombo+=str(OperandIdx)
+												else:
+													Const=-0.0010
+													if(BreakdownCurrOperandCombo[Idx][2]!=i):
+														Const=random.uniform(Min['Constant'],Max['Constant'])
+														Const=round(Const,4)
+													else:
+														Const=random.randrange(Min['Constant'],Max['Constant'])
+													CurrOpCombo+='='+str(Const)
+													#print "\n\t CurrOpCombo: "+str(CurrOpCombo)
+													#sys.exit()
+											CurrOpCombo+=')'
+											#print "\n\t CurrCombo: "+str(CurrCombo)+" CurrOpCombo "+str(CurrOpCombo)
+											OpComboSet.append(CurrOpCombo)
+											#if(OpComboIdx>1):
+											#	sys.exit()
 ## $$$$$$$$$$$$$$$$$							
 	
 									StrideOperationsPrefix=[]
@@ -805,12 +835,13 @@ def main():
 										#print "\n\t -- StrideOperationsPrefix: "+str(Temp)+' CurrNumStream: '+str(CurrNumStream)
 									
 									#print "\n\t len(OpComboSet): "+str(len(OpComboSet))	
+									
+										
 									for CurrOpCombo in OpComboSet:
 										Temp=[]
-										
-										#print "\n\t CurrOpCombo: "+str(CurrOpCombo)#+' AccumCount: '+str(AccumCount)
+									#print "\n\t CurrOpCombo: "+str(CurrOpCombo)#+' AccumCount: '+str(AccumCount)
 										for CurrNumStream in range(NumStreams):	
-											Temp1=str(StrideOperationsPrefix[CurrNumStream])+' ; '+str(CurrOpCombo)+'>'
+											Temp1=str(StrideOperationsPrefix[CurrNumStream])+';'+str(CurrOperandCombo)+' ; '+str(CurrOpCombo)+'>'
 											Temp.append(Temp1)
 										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar].append(Temp)	
 										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
@@ -907,10 +938,11 @@ def main():
 												print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 												commands.getoutput(CMDCompileFile)
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
-												SuperSourceFile.write("\n\t "+str(SRCFileName))				
+												SuperSourceFile.write("\n\t "+str(SRCFileName))		
+										#sys.exit()		
 						#sys.exit()
 				SourceFilesLog.write("\n\n")
-				SourceFilesLog.close() """
+				SourceFilesLog.close() 
 									
 						#sys.exit()
 						
