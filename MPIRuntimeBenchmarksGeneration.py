@@ -228,6 +228,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     VarDeclString=''
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
     	StreamVarFound=0
+    	DiffVarFound=0
     	for CurrOperand in range(ConfigParams['StrideVar'][VarNum][CurrStream]['NumOperands']):
 			if debug:
 				print "\n\t VarNum: "+str(VarNum)+" CurrStream "+str(CurrStream)+" CurrOperand "+str(CurrOperand)    
@@ -237,8 +238,14 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
 				StreamVarFound=1
 			elif(ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]=='d'):
-				VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
-				VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
+				if(ConfigParams['DifferentOperand'][VarNum]>0):
+					VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
+					VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
+				elif(DiffVarFound==0):
+					VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
+					VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
+					DiffVarFound=1
+					
    		
     			#VarDeclString+='Var'+str(VarNum)+'_Stream'+str(CurrStream)+','
  	#sys.exit()
@@ -867,6 +874,7 @@ def main(argv):
 	ConfigParams['OpDiff']=[]
 	ConfigParams['StrideScaling']=[]
 	ConfigParams['PapiInst']=[]
+	ConfigParams['DifferentOperand']=[]
 		
 	LineCount=0;
 	DimNotFound=1;
@@ -888,6 +896,7 @@ def main(argv):
 	RandomAccessExtracted=0
 	StrideScalingNotFound=1
 	PAPIInstNotFound=1
+	DifferentOperandNotFound=1
 	StrideExtracted=[]
 
 	# Tabs: 1
@@ -1371,7 +1380,27 @@ def main(argv):
 							sys.exit()
 						else:
 							PAPIInstNotFound=0
-
+			if DifferentOperandNotFound:
+				MatchObj=re.match('\s*\#DifferentOperand',CurrLine)
+				if MatchObj:
+					tmp=re.split(' ',CurrLine)
+					DifferentOperand=re.split(',',tmp[1])
+					if DifferentOperand:
+						LineNotProcessed=0
+						VarCount=0
+						for CurrDifferentOperand in DifferentOperand:
+							tmp=RemoveWhiteSpace(CurrDifferentOperand)
+							if IsInt(tmp):
+								ConfigParams['DifferentOperand'].append(int(tmp))
+								VarCount+=1
+							else:
+								print "\n\t ERROR: Papi inst parameter is provided in following form: "+str(tmp)+" which is illegal! "
+								sys.exit()
+						if(VarCount!=ConfigParams['NumVars']):
+							print "\n\t The DifferentOperand expression is not specified for each variable. It is specified only for "+str(VarCount)+" number of variables while number of variables specified is "+str(ConfigParams['NumVars'])+"\n";
+							sys.exit()
+						else:
+							DifferentOperandNotFound=0
 
 		if LineNotProcessed:
 			if debug:
@@ -1405,7 +1434,7 @@ def main(argv):
 	
 	if debug:
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
-	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0) and (OpDiffNotFound==0) and (StrideScalingNotFound==0) and ( PAPIInstNotFound==0)):
+	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0) and (OpDiffNotFound==0) and (StrideScalingNotFound==0) and ( PAPIInstNotFound==0) and (DifferentOperandNotFound==0) ):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
 		LibAlloc=[]
@@ -1624,6 +1653,7 @@ def main(argv):
 		ConfigParams['DSforPrintf']=[]		
 		ConfigParams['VarOperands']={}	
 		ConfigParams['StreamWideOperand']={}
+		ConfigParams['StreamWideDiffOperand']={}
 		ConfigParams['VarDecl']={}
 		ConfigParams['VarDeclCollection']=[]
 
@@ -1719,6 +1749,7 @@ def main(argv):
 				
 					for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
  						SameOperandDeclared=0
+ 						DifferentOperandDeclared=0
 						if( not( CurrStream in (ConfigParams['VarOperands'][index]) ) ):
 							ConfigParams['VarOperands'][index][CurrStream]={}
 						if debug:
@@ -1739,8 +1770,18 @@ def main(argv):
 								print "\n\t CurrOperand: "+str(CurrOperand)+" requested "+str(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand])
 							if(not(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='c')):
 								if(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='d'):
-									var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)	
-									Declare=1
+									if(ConfigParams['DifferentOperand'][index]==0):
+										if(DifferentOperandDeclared==0):
+											var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)
+											Declare=1
+											ConfigParams['StreamWideDiffOperand'][index]=var
+											ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var
+											DifferentOperandDeclared=1
+										else:
+											ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=ConfigParams['StreamWideDiffOperand'][index]
+									else:
+										var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)	
+										Declare=1
 								elif(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='s'):
 									if(SameOperandDeclared==0):
 										var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)
@@ -1937,7 +1978,7 @@ def main(argv):
 		print "\n\t StrideNotFound "+str(StrideNotFound)+" AllocNotFound: "+str(AllocNotFound)+" InitNotFound: "+str(InitNotFound)
 		print "\n\t NumStreamsDimsNotFound=: "+str(NumStreamsDimsNotFound)+" LoopIterationsNotFound: "+str(LoopIterationsNotFound)
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)+" OpDiffNotFound: "+str(OpDiffNotFound)+" StrideScalingNotFound: "+str(StrideScalingNotFound)
-		print "\n\t PAPIInstNotFound: "+str(PAPIInstNotFound)
+		print "\n\t PAPIInstNotFound: "+str(PAPIInstNotFound)+" DifferentOperandNotFound: "+str(DifferentOperandNotFound)
 		print "\n\n"
  		sys.exit(0)
 	
@@ -2104,8 +2145,8 @@ def main(argv):
 	RandomAccessCheck=0
 	for CurrVarRandomAccess in ConfigParams['RandomAccess']:
 		RandomAccessCheck+=CurrVarRandomAccess
-		print "\t RandomAccessCheck: "+str(CurrVarRandomAccess)+" CurrVarRandomAccess "+str(CurrVarRandomAccess)
-	print "\t RandomAccessCheck: "+str(RandomAccessCheck)	
+		#print "\t RandomAccessCheck: "+str(CurrVarRandomAccess)+" CurrVarRandomAccess "+str(CurrVarRandomAccess)
+	#print "\t RandomAccessCheck: "+str(RandomAccessCheck)	
 	if(RandomAccessCheck>0):
 		WriteArray(PermuteGenFuncArray,WriteFile)	
 	

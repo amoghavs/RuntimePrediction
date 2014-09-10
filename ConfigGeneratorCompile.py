@@ -401,6 +401,7 @@ def main():
 	LoopIterationBase=100;
 	#LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
 	LoopIterationsExponent=[[2.5]]# ,[1],[1],[1]];
+	DifferentOperandsFlag=[0]#1,0,0 0: All "different" operand are same, 1: All "different" operand are different
 
 
  	NumVars=(Max['Vars']-Min['Vars']+1)
@@ -638,6 +639,14 @@ def main():
 			else:
 				PAPIInstString=str(CurrPAPIInstFlag)
 			PAPIInstName=str(CurrPAPIInstFlag)
+
+		DifferentOperandsFlagString=''
+		for i,CurrDifferentOperandsFlag	in enumerate(DifferentOperandsFlag):
+			if(i):
+				DifferentOperandsFlagString+=','+str(CurrDifferentOperandsFlag)
+			else:
+				DifferentOperandsFlagString=str(CurrDifferentOperandsFlag)
+			#DifferentOperandsFlagName
 
 
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
@@ -915,6 +924,7 @@ def main():
 										f.write("\n#datastructure "+str(DSString))
 										f.write("\n#stridescaling "+str(StrideScalingString) )	
 										f.write("\n#papiinst "+str(PAPIInstString) )
+										f.write("\n#DifferentOperand "+str(DifferentOperandsFlagString))
 
 										for CurrCombi in CurrCombiAccumulation:
 											#print "\n\t CurrCombi: "+str(CurrCombi)
