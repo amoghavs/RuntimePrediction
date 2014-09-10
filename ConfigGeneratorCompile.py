@@ -806,7 +806,7 @@ def main():
 											#print "\t CurrBreakdown: "+str(CurrBreakdown)+" BreakdownCurrOperandCombo[Idx] "+str(BreakdownCurrOperandCombo[Idx])+" CurrNumOperands[CurrVar]: "+str(CurrNumOperands[CurrVar])+" "
 										#sys.exit()
 										for OpComboIdx,CurrCombo in enumerate(StrideConfigPrep[CurrNumOperandsString][CurrVar]['OpCombo']):
-											CurrOpCombo=str(CurrCombo)+'; ('
+											CurrOpCombo=str(CurrOperandCombo)+';'+str(CurrCombo)+'; ('
 											for Idx in range((CurrNumOperands[CurrVar])):
 												if(Idx):
 													CurrOpCombo+=','
@@ -850,7 +850,7 @@ def main():
 										Temp=[]
 									#print "\n\t CurrOpCombo: "+str(CurrOpCombo)#+' AccumCount: '+str(AccumCount)
 										for CurrNumStream in range(NumStreams):	
-											Temp1=str(StrideOperationsPrefix[CurrNumStream])+';'+str(CurrOperandCombo)+' ; '+str(CurrOpCombo)+'>'
+											Temp1=str(StrideOperationsPrefix[CurrNumStream])+' ; '+str(CurrOpCombo)+'>'
 											Temp.append(Temp1)
 										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar].append(Temp)	
 										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
