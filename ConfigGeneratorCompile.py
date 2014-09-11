@@ -402,7 +402,7 @@ def main():
 	#LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
 	LoopIterationsExponent=[[2.5]]# ,[1],[1],[1]];
 	DifferentOperandsFlag=[0]#1,0,0 0: All "different" operand are same, 1: All "different" operand are different
-
+	IndirectionFlag=[0]#1,0,1 : 1: Indirection, 0: No-indirection.
 
  	NumVars=(Max['Vars']-Min['Vars']+1)
  	if(Max['Vars']==Min['Vars']):	
@@ -648,6 +648,13 @@ def main():
 				DifferentOperandsFlagString=str(CurrDifferentOperandsFlag)
 			#DifferentOperandsFlagName
 
+		IndirectionFlagString=''
+		for i,CurrIndirectionFlag	in enumerate(IndirectionFlag):
+			if(i):
+				IndirectionFlagString+=','+str(CurrIndirectionFlag)
+			else:
+				IndirectionFlagString=str(CurrIndirectionFlag)
+		
 
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
  		for NumDims in range(Min['Dims'],Max['Dims']+1):
@@ -925,6 +932,7 @@ def main():
 										f.write("\n#stridescaling "+str(StrideScalingString) )	
 										f.write("\n#papiinst "+str(PAPIInstString) )
 										f.write("\n#DifferentOperand "+str(DifferentOperandsFlagString))
+										f.write("\n#Indirection "+str(IndirectionFlagString))
 
 										for CurrCombi in CurrCombiAccumulation:
 											#print "\n\t CurrCombi: "+str(CurrCombi)
@@ -949,7 +957,7 @@ def main():
 												commands.getoutput(CMDCompileFile)
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
 												SuperSourceFile.write("\n\t "+str(SRCFileName))		
-										#sys.exit()		
+										sys.exit()		
 						#sys.exit()
 				SourceFilesLog.write("\n\n")
 				SourceFilesLog.close() 

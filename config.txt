@@ -12,10 +12,11 @@
 #stridescaling 1,0,1
 #papiinst 0,0,1
 #DifferentOperand 1,1,1
+#Indirection 0,1,0
 #OpDiff 1,1,1
 
-#strideoperations_var1 (stride;((c:constant/s:same/d:different,DS));Num-of-operands/operations;(operations b/n "Num-of-operands");(number-of-operands,operations,operands)) #strideoperations_var2_0 <1;3;((s,d),(c,d),(d,d));(+,/);(k+1,=2,i-3)>
+#strideoperations_var1 (stride;((c:constant/s:same/d:different,DS));Num-of-operands/operations;(operations b/n "Num-of-operands");(number-of-operands,operations,operands)) #strideoperations_var1_0 <2;3;((s,d),(s,d),(d,f));(+,*);(i+2,i+1,j-1)> #strideoperations_var2_0 <1;3;((s,d),(c,d),(d,d));(+,/);(k+1,=2,i-3)>
 #strideoperations_var0_0 <1;3;((c,d),(d,d),(s,d));(+,-);(=3,j+1,i-1)> 
 #strideoperations_var0_1 <1;3;((s,d),(d,d),(c,d));(+,-);(j-1,j+1,=4)>
-#strideoperations_var1_0 <2;3;((s,d),(s,d),(d,f));(+,*);(i+2,i+1,j-1)>
+#strideoperations_var1_0 <1;1;((d,d));;(i+0)>
 #strideoperations_var2_0 <1;3;((s,d),(d,d),(d,d));(+,/);(k+1,i+3,i-3)>

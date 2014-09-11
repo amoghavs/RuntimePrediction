@@ -83,7 +83,7 @@ def InitIndirArray(A,VarNum,InitExp,ConfigParams,debug):
 	return ThisLoop
 
 
-def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
+def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug,Indirection=0):
 
 	ThisLoop=[]
 	tmp=' This is the variable I am using: '+str(CurrVarName)
@@ -162,8 +162,8 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 				#ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['MaxStream'][VarNum])+' ; '+str(ConfigParams['indices'][j])+'+=1 )'
 				if(ConfigParams['StrideScaling'][VarNum]):
 					ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1 )'					
-                                else:
-                                	ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1 )'					
+				else:
+					ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ; '+str(ConfigParams['indices'][j])+'+=1 )'					
 			
 		else:
 			ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+ str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'	
@@ -192,8 +192,11 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug):
 	    	eqn="\t\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+']'+';'
 	    	FlushEqn="\t\t"+TabSpace+str(FlushVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+']'+';'
 	    	FlushForLoop.append(FlushEqn)
-	else:
-		eqn="\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+str(ConfigParams['init'][VarNum])+';'
+    	else:
+    		if(Indirection==1):
+    			eqn="\t"+TabSpace+str(CurrVarName)+LHSindices+' = ( rand() % '+str(ConfigParams['size'][(ConfigParams['Dims']-1)])+' );'
+    		else:
+    			eqn="\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+str(ConfigParams['init'][VarNum])+';'
     	
     	
 	ThisLoop.append(eqn)
@@ -226,29 +229,37 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 
     VarFuncDeclString=''
     VarDeclString=''
-    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-    	StreamVarFound=0
-    	DiffVarFound=0
-    	for CurrOperand in range(ConfigParams['StrideVar'][VarNum][CurrStream]['NumOperands']):
-			if debug:
-				print "\n\t VarNum: "+str(VarNum)+" CurrStream "+str(CurrStream)+" CurrOperand "+str(CurrOperand)    
-				print "\n\t ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]: "+str(ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0])				
-			if( (ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]=='s') and (StreamVarFound==0) ):
-				VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
-				VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
-				StreamVarFound=1
-			elif(ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]=='d'):
-				if(ConfigParams['DifferentOperand'][VarNum]>0):
+    
+    if(ConfigParams['Indirection'][VarNum]==0):
+		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+			StreamVarFound=0
+			DiffVarFound=0
+			for CurrOperand in range(ConfigParams['StrideVar'][VarNum][CurrStream]['NumOperands']):
+				if debug:
+					print "\n\t VarNum: "+str(VarNum)+" CurrStream "+str(CurrStream)+" CurrOperand "+str(CurrOperand)    
+					print "\n\t ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]: "+str(ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0])				
+				if( (ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]=='s') and (StreamVarFound==0) ):
 					VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
 					VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
-				elif(DiffVarFound==0):
-					VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
-					VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
-					DiffVarFound=1
-					
-   		
-    			#VarDeclString+='Var'+str(VarNum)+'_Stream'+str(CurrStream)+','
- 	#sys.exit()
+					StreamVarFound=1
+				elif(ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]=='d'):
+					if(ConfigParams['DifferentOperand'][VarNum]>0):
+						VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
+						VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
+					elif(DiffVarFound==0):
+						VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
+						VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
+						DiffVarFound=1
+    else:
+		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+			CurrOperand=0
+			VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand][0]+','
+			VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+','
+			VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand][1]+','
+			VarDeclString+=ConfigParams['IndirOperands'][VarNum][CurrStream]['b']+','
+			VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand][2]+','
+			VarDeclString+=ConfigParams['IndirOperands'][VarNum][CurrStream]['c']+','
+ 
     if(ConfigParams['PapiInst'][VarNum]):
     	VarFuncDeclString+=' int* '+str(ConfigParams['PapiEventsArray'])+' , long long int* '+str( ConfigParams['PAPIValueVars'][VarNum])+','
     	VarDeclString+=str(ConfigParams['PapiEventsArray'])+' , '+ConfigParams['PAPIValueVars'][VarNum]+' , '
@@ -379,8 +390,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    RHSExprnPerStream[CurrStream]=[]
 	    IndexChangeForBound=[]
     	    RHSOperandsForStream=[]
-
+	    
 	    for	CurrOperandIdx in range(ConfigParams['StrideVar'][VarNum][CurrStream]['NumOperands']):
+	    	
 	    	CurrOperands=ConfigParams['StrideVar'][VarNum][CurrStream]['Operands']
 	    		        
 	    	#IntraOperations=ConfigParams['StrideVar'][VarNum][CurrStream]['Operations']
@@ -391,12 +403,12 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 
 	    	#NumOperations=len(IntraOperands[CurrOperand]['Operations'])
 	    	#if(IntraOperands[CurrOperand]['NumOperands']==1):
-
-		CurrOperandExprn=str(CurrOperands[CurrOperandIdx])	
-		if debug:
-			print "\n\t CurrOperand: "+str(CurrOperandExprn)  	
+		
+	    	CurrOperandExprn=str(CurrOperands[CurrOperandIdx])	
+	    	#print "\n\t --*-- CurrOperandIdx "+str(CurrOperandIdx)+" CurrOperandExprn "+str(CurrOperandExprn)
+	    	if debug:
+				print "\n\t CurrOperand: "+str(CurrOperandExprn)  	
 ## ***********
-
 	    	if(CurrOperandExprn[0]=='='):
 	    		#if debug:
 	    		#RHSExprn='Const_Var'+str(VarNum)+'_Stream'+str(CurrStream)
@@ -484,33 +496,44 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		    				sys.exit()
 
     					OperandIndices=''
+    					OperandIndicesExceptStrideDim=''
     					if( (ConfigParams['RandomAccess'][VarNum]>0) ):
 		    				for i in range(NumDims-1):
 			    				if(i==StreamDim):
 			    					#PushIndexChange=str(ConfigParams['indices'][i])+str(AppendIndexChange)	
 								PushIndexChange=str(LHSIndicesPerStream[CurrStream][i])+str(AppendIndexChange)
-			    					OperandIndices+='['+str(PushIndexChange)+']'	
+			    					OperandIndices+='['+str(PushIndexChange)+']'
+			    					
 			    				else:
 			    					#OperandIndices+='['+str(ConfigParams['indices'][i])+']'
 								OperandIndices+='['+str(LHSIndicesPerStream[CurrStream][i])+']'
+								OperandIndicesExceptStrideDim=OperandIndices
 			    			if(StreamDim==(NumDims-1)):
 			    				PushIndexChange=str(RandomAccessVarPerStream[CurrStream])+str(AppendIndexChange)
-			    				OperandIndices+='['+str(PushIndexChange)+']'	
+			    				OperandIndices+='['+str(PushIndexChange)+']'
+			    				
 			    			else:
 			    				PushIndexChange=str(RandomAccessVarPerStream[CurrStream])
 							OperandIndices+='['+str(PushIndexChange)+']'
+							OperandIndicesExceptStrideDim=OperandIndices
 							
 	    				else:
 		    				for i in range(NumDims):
 			    				if(i==StreamDim):
 			    					#PushIndexChange=str(ConfigParams['indices'][i])+str(AppendIndexChange)	
 								PushIndexChange=str(LHSIndicesPerStream[CurrStream][i])+str(AppendIndexChange)
-			    					OperandIndices+='['+str(PushIndexChange)+']'	
+			    					OperandIndices+='['+str(PushIndexChange)+']'
+			    						
 			    				else:
 			    					#OperandIndices+='['+str(ConfigParams['indices'][i])+']'
 								OperandIndices+='['+str(LHSIndicesPerStream[CurrStream][i])+']'
+								OperandIndicesExceptStrideDim=OperandIndices
 	    				#ThusOperand=str(StreamVar)+str(OperandIndices)
-	    				ThusOperand=str(ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperandIdx])+str(OperandIndices)
+	    				if(ConfigParams['Indirection'][VarNum]==0):
+	    					ThusOperand=str(ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperandIdx])+str(OperandIndices)
+	    				else:
+	    					ThusOperand=str(ConfigParams['IndirOperands'][VarNum][CurrStream]['b'])+str(OperandIndicesExceptStrideDim)+'['+str(ConfigParams['IndirOperands'][VarNum][CurrStream]['c'])+str(OperandIndices)+']'
+	    					#print "\n\t ThusOperand: "+str(ThusOperand)
 	    				if(AppendIndexChange==''):
 	    					AppendIndexChange=0
 
@@ -755,7 +778,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 ###########
 
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-		StreamVar=ConfigParams['StreamWideOperand'][VarNum] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
+		StreamVar=ConfigParams['StreamWideOperand'][VarNum][CurrStream] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
 		LHSVariableCurrStream=str(StreamVar)
 		if(ConfigParams['RandomAccess'][VarNum]>0):
 			LHSVariableCurrStream=(RandomAccessVarPerStream[CurrStream])
@@ -799,7 +822,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    PrintStmt='printf("\\n\t '
 	    PrintSuffix=''
 	    for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-			StreamVar=ConfigParams['StreamWideOperand'][VarNum] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
+			StreamVar=ConfigParams['StreamWideOperand'][VarNum][CurrStream] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
 			for CurrDim in range(NumDims):
 				StreamVar+='[('+str(LHSIndicesPerStream[CurrStream][CurrDim])+'-1)]'
 			PrintStmt+=' '+str(StreamVar)+' :% '+str(ConfigParams['DSforPrintf'][VarNum])+' '
@@ -875,6 +898,7 @@ def main(argv):
 	ConfigParams['StrideScaling']=[]
 	ConfigParams['PapiInst']=[]
 	ConfigParams['DifferentOperand']=[]
+	ConfigParams['Indirection']=[]
 		
 	LineCount=0;
 	DimNotFound=1;
@@ -897,6 +921,7 @@ def main(argv):
 	StrideScalingNotFound=1
 	PAPIInstNotFound=1
 	DifferentOperandNotFound=1
+	IndirectionNotFound=1
 	StrideExtracted=[]
 
 	# Tabs: 1
@@ -1401,6 +1426,29 @@ def main(argv):
 							sys.exit()
 						else:
 							DifferentOperandNotFound=0
+							
+			if IndirectionNotFound:
+				MatchObj=re.match('\s*\#Indirection',CurrLine)
+				if MatchObj:
+					tmp=re.split(' ',CurrLine)
+					Indirection=re.split(',',tmp[1])
+					if Indirection:
+						LineNotProcessed=0
+						VarCount=0
+						for CurrIndirection in Indirection:
+							tmp=RemoveWhiteSpace(CurrIndirection)
+							if IsInt(tmp):
+								ConfigParams['Indirection'].append(int(tmp))
+								VarCount+=1
+							else:
+								print "\n\t ERROR: Papi inst parameter is provided in following form: "+str(tmp)+" which is illegal! "
+								sys.exit()
+						if(VarCount!=ConfigParams['NumVars']):
+							print "\n\t The Indirection expression is not specified for each variable. It is specified only for "+str(VarCount)+" number of variables while number of variables specified is "+str(ConfigParams['NumVars'])+"\n";
+							sys.exit()
+						else:
+							IndirectionNotFound=0
+							
 
 		if LineNotProcessed:
 			if debug:
@@ -1434,7 +1482,7 @@ def main(argv):
 	
 	if debug:
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)
-	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0) and (OpDiffNotFound==0) and (StrideScalingNotFound==0) and ( PAPIInstNotFound==0) and (DifferentOperandNotFound==0) ):
+	if( (NumVarNotFound==0) and (DimNotFound==0) and (SizeNotFound==0) and (StrideNotFound==0) and (AllocNotFound==0) and (DSNotFound==0) and (InitNotFound==0) and (NumStreamsDimsNotFound==0) and (LoopIterationsNotFound==0) and (RandomAccessNotFound==0) and (OpDiffNotFound==0) and (StrideScalingNotFound==0) and ( PAPIInstNotFound==0) and (DifferentOperandNotFound==0) and (IndirectionNotFound==0) ):
 		print "\n\t The config file has all the required info: #dims, size and allocation and initialization for all the dimensions! "	
 		InitAlloc=[]
 		LibAlloc=[]
@@ -1654,10 +1702,17 @@ def main(argv):
 		ConfigParams['VarOperands']={}	
 		ConfigParams['StreamWideOperand']={}
 		ConfigParams['StreamWideDiffOperand']={}
+		ConfigParams['IndirOperands']={}
 		ConfigParams['VarDecl']={}
 		ConfigParams['VarDeclCollection']=[]
 
 		for index in range(ConfigParams['NumVars']):
+			if( (ConfigParams['Indirection'][index]==1) and (ConfigParams['RandomAccess'][index]==1) ):
+				print "\n\t ERROR: Variable "+str(index)+" has conflicting requests, both indirection and random access is requested. "
+				sys.exit
+			else:	
+				if(not(index in ConfigParams['StreamWideOperand'])):
+					ConfigParams['StreamWideOperand'][index]={}
 				ConfigParams['VarOperands'][index]={}
 				ConfigParams['VarDecl'][index]={}
   				VarDeclStmt=[]
@@ -1712,7 +1767,6 @@ def main(argv):
 						else:
 							FlushTmp=FlushVar+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+' * sizeof('+datatype+suffix+'))'+';'
 							DynAlloc.append(FlushTmp)
-#######
 
 								#if(ConfigParams['Dims']>1):
 							NumForLoops=''
@@ -1741,11 +1795,7 @@ def main(argv):
 									FlushMallocEqn=FlushVar+MallocLHS+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * sizeof('+datatype+suffix+'))'+';'		
 								DynAlloc.append(FlushMallocEqn)
 								for j in range(NumForLoops):
-									DynAlloc.append('}')
-
- 
-
-#########							
+									DynAlloc.append('}')						
 				
 					for CurrStream in range(ConfigParams['NumStreaminVar'][index]):
  						SameOperandDeclared=0
@@ -1768,7 +1818,94 @@ def main(argv):
 							Declare=0
 							if debug:
 								print "\n\t CurrOperand: "+str(CurrOperand)+" requested "+str(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand])
-							if(not(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='c')):
+#####						
+							if(ConfigParams['Indirection'][index]):
+								var='Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)	
+								ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var	
+								ConfigParams['StreamWideOperand'][index][CurrStream]=var
+								if(not(index in ConfigParams['IndirOperands'])): 
+									ConfigParams['IndirOperands'][index]={}
+								ConfigParams['IndirOperands'][index][CurrStream]={}	
+								ConfigParams['IndirOperands'][index][CurrStream]['b']='Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)+'B'	
+								ConfigParams['IndirOperands'][index][CurrStream]['c']='Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)+'C'	
+								#Declare=1
+								CurrOperand=0
+								DeclareVars=[]
+								DeclareVars.append((ConfigParams['VarOperands'][index][CurrStream][CurrOperand],datatype))
+								DeclareVars.append((ConfigParams['IndirOperands'][index][CurrStream]['b'],ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][1]))
+								DeclareVars.append((ConfigParams['IndirOperands'][index][CurrStream]['c'],'int'))
+								
+								VarDeclareReproduce=[]
+								for DeclareVarIdx,CurrDeclareVar in enumerate(DeclareVars):
+									prefix=''
+									suffix=''
+									for CurrDim in range(ConfigParams['Dims']):
+									   prefix+='*'
+									for CurrDim in range(ConfigParams['Dims']-1):
+									   suffix+='*'		
+									#print "\t Idx: "+str(DeclareVarIdx)+" CurrDeclareVar "+str(CurrDeclareVar)
+									#ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var
+									Var=CurrDeclareVar[1] #ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][1]
+									VarDeclPrefix=CurrDeclareVar[1]+' '+prefix
+									VarDecl=VarDeclPrefix+' '+str(CurrDeclareVar[0])
+									VarDeclStmt.append(VarDecl)
+									#if(DeclareVarIdx==0):
+									VarDecl
+									VarDeclareReproduce.append(VarDecl)
+									VarDecl+=';'
+									if debug:
+										print "\n\t Var: "+str(index)+" CurrStream "+str(CurrStream)+" CurrOperand "+str(CurrOperand)
+							
+										print "\n\t var: "+str(var)+" ConfigParams['VarOperands'][index][CurrStream][CurrOperand]: "+str(ConfigParams['VarOperands'][index][CurrStream][CurrOperand])							
+
+									if debug:
+										print "\n\t This is the prefix: "+str(prefix)+" and this is the suffix: "+str(suffix)+" and this'd be the variable declaration: "+str(VarDecl)+ "\n "
+									DynAlloc.append(VarDecl)
+								
+									if(ConfigParams['Dims']==1):
+										if (ConfigParams['StrideScaling'][index]):
+											tmp=CurrDeclareVar[0]+'= ('+VarDeclPrefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+' * sizeof('+CurrDeclareVar[1]+suffix+'))'+';'
+										else:
+											tmp=CurrDeclareVar[0]+'= ('+VarDeclPrefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+'*'+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+CurrDeclareVar[1]+suffix+'))'+';'	
+											#tmp=var+'= ('+datatype+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+'*'+str(ConfigParams['GlobalVar']['MaxStream'][index])+' * sizeof('+datatype+suffix+'))'+';'	
+										DynAlloc.append(tmp);
+									else:
+										tmp=CurrDeclareVar[0]+'= ('+VarDeclPrefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][0]+' * sizeof('+CurrDeclareVar[1]+suffix+'))'+';'
+									
+										DynAlloc.append(tmp);
+										NumForLoops=''
+										for i in range(ConfigParams['Dims']-1):
+											NumForLoops=i+1
+											MallocLHS=''
+											for j in range(NumForLoops):
+												ThisForLoop='for('+str(ConfigParams['indices'][j])+'=0 ; '+str(ConfigParams['indices'][j])+' < '+str(ConfigParams['GlobalVar']['DimsSize'][j])+' ; '+str(ConfigParams['indices'][j])+'+=1)'
+												if debug:
+													print "\n\t ThisForLoop: "+ThisForLoop+" and For-loop index: "+str(j)
+												DynAlloc.append(ThisForLoop);
+												DynAlloc.append('{')
+												MallocLHS+='['+str(ConfigParams['indices'][j])+']'
+											prefix=''
+											suffix=''
+											for CurrDim in range(ConfigParams['Dims']-i-1):
+											   prefix+='*'
+											for CurrDim in range(ConfigParams['Dims']-i-2):
+											   suffix+='*'	
+
+											if(i==(ConfigParams['Dims']-2)): # Since the loop is going from 0 to ConfigParams['Dims']-2
+												if (ConfigParams['StrideScaling'][index]):
+													MallocEqn=CurrDeclareVar[0]+MallocLHS+'= ('+Var+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * sizeof('+CurrDeclareVar[1]+suffix+'))'+';'										
+												else:
+													MallocEqn=CurrDeclareVar[0]+MallocLHS+'= ('+Var+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * '+str(ConfigParams['GlobalVar']['Stream'][index][CurrStream])+' * sizeof('+CurrDeclareVar[1]+suffix+'))'+';'
+											else:
+												MallocEqn=CurrDeclareVar[0]+MallocLHS+'= ('+Var+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * sizeof('+CurrDeclareVar[1]+suffix+'))'+';'		
+										   	if debug:
+													print "\t The malloc equation is: "+str(MallocEqn)+"\n"
+											DynAlloc.append(MallocEqn)
+											for j in range(NumForLoops):
+												DynAlloc.append('}')
+								ConfigParams['VarDecl'][index][CurrStream][CurrOperand]=VarDeclareReproduce
+#####								
+							elif(not(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='c')):
 								if(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='d'):
 									if(ConfigParams['DifferentOperand'][index]==0):
 										if(DifferentOperandDeclared==0):
@@ -1786,11 +1923,11 @@ def main(argv):
 									if(SameOperandDeclared==0):
 										var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)
 										SameOperandDeclared=1
-										ConfigParams['StreamWideOperand'][index]=var
+										ConfigParams['StreamWideOperand'][index][CurrStream]=var
 										ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var
 										Declare=1
 									else:
-										ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=ConfigParams['StreamWideOperand'][index]
+										ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=ConfigParams['StreamWideOperand'][index][CurrStream]
 								
 							else:
 								var='ConstVar'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)
@@ -1978,7 +2115,7 @@ def main(argv):
 		print "\n\t StrideNotFound "+str(StrideNotFound)+" AllocNotFound: "+str(AllocNotFound)+" InitNotFound: "+str(InitNotFound)
 		print "\n\t NumStreamsDimsNotFound=: "+str(NumStreamsDimsNotFound)+" LoopIterationsNotFound: "+str(LoopIterationsNotFound)
 		print "\n\t RandomAccessNotFound: "+str(RandomAccessNotFound)+" OpDiffNotFound: "+str(OpDiffNotFound)+" StrideScalingNotFound: "+str(StrideScalingNotFound)
-		print "\n\t PAPIInstNotFound: "+str(PAPIInstNotFound)+" DifferentOperandNotFound: "+str(DifferentOperandNotFound)
+		print "\n\t PAPIInstNotFound: "+str(PAPIInstNotFound)+" DifferentOperandNotFound: "+str(DifferentOperandNotFound)+" IndirectionNotFound "+str(IndirectionNotFound)
 		print "\n\n"
  		sys.exit(0)
 	
@@ -2025,9 +2162,24 @@ def main(argv):
 	for VarNum in range(ConfigParams['NumVars']):
 		ThisVarInit=[]
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-			CurrVarName=ConfigParams['StreamWideOperand'][VarNum]#'Var'+str(VarNum)+'_Stream'+str(CurrStream)
-			Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
-			ThisVarInit.append(Temp)
+			CurrVarName=ConfigParams['StreamWideOperand'][VarNum][CurrStream] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
+			if(ConfigParams['Indirection'][VarNum]==0):
+				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
+				ThisVarInit.append(Temp)
+			else:
+				ThisStreamInit=[]
+				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
+				ThisStreamInit.append(Temp)
+				CurrVarName=ConfigParams['IndirOperands'][VarNum][CurrStream]['b']
+				
+				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
+				ThisStreamInit.append(Temp)
+				CurrVarName=ConfigParams['IndirOperands'][VarNum][CurrStream]['c']
+				
+				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug,1)
+				ThisStreamInit.append(Temp)
+				ThisVarInit.append(ThisStreamInit)
+			#print "\n\t len(ThisVarInit) "+str(len(ThisVarInit))
 		InitLoop.append(ThisVarInit)
 
 	ConfigParams['PapiEventsArray']=''
@@ -2171,8 +2323,13 @@ def main(argv):
 	WriteArray(WorkigVarsDecl,WriteFile)
 	WriteArray(PAPIInitCode,WriteFile)
 	for VarNum in range(ConfigParams['NumVars']):
-		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):	
-			WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	
+		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
+			if(ConfigParams['Indirection'][VarNum]==0):	
+				WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	
+			else:
+				WriteArray(InitLoop[VarNum][CurrStream][0],WriteFile)
+				WriteArray(InitLoop[VarNum][CurrStream][1],WriteFile)	
+				WriteArray(InitLoop[VarNum][CurrStream][2],WriteFile)	
 
  
 	WriteArray(Comments,WriteFile)	
