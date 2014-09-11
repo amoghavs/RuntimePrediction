@@ -2301,7 +2301,7 @@ def main(argv):
 	#print "\t RandomAccessCheck: "+str(RandomAccessCheck)	
 	if(RandomAccessCheck>0):
 		WriteArray(PermuteGenFuncArray,WriteFile)	
-	
+
 	for VarNum in range(ConfigParams['NumVars']):
 		WriteArray(ThisLoop[VarNum],WriteFile)
 	
