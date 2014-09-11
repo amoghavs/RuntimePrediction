@@ -117,8 +117,8 @@ def PerStreamConfig(Max,Min,Operations):
 	StreamConfig['IntraOperandDelta']['Max']=Max['IntraOperandDelta']
 	StreamConfig['IntraOperandDelta']['Min']=Min['IntraOperandDelta']
 		
-	StreamConfig['CurrNumDims']=Max['Dims'] 
-	print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
+	#StreamConfig['CurrNumDims']=Max['Dims'] 
+	#print "\n\t StreamConfig['CurrNumDims']: "+str(StreamConfig['CurrNumDims'])+" is set to be Max['Dims'] "	
 	print "\n "
 	return	StreamConfig	
 
@@ -210,20 +210,21 @@ def main():
 
 	# Max['NumOperands'] array has maximum number of operands for each variable ; Ensure Max is less than or equal to Min. 
    
-	Min['MbyteSize']=11
-	Max['MbyteSize']=12
-        MbyteSize=13 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
-        MaxSize=2**MbyteSize
-        HigherDimSizeIndex=8
-        Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
-        HigherDimSize= MaxSize/ Dim0Size
-        NumSizeIter=4
-        SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
+
+	Min['MbyteSize']=18
+	Max['MbyteSize']=22
+	MbyteSize=13 # 2^28=256M = 2^20[1M] * 2^8 [256] ; # Int= 256M * 4B = 1GB. # Double= 256M * 8B= 2GB 
+	MaxSize=2**MbyteSize
+	HigherDimSizeIndex=8
+	Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
+	HigherDimSize= MaxSize/ Dim0Size
+	NumSizeIter=4
+	SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
 	Operations={}
-	Operations['MainOperations']=['+'] #,'-','*','/']
+	Operations['MainOperations']=['|'] #,'+','-','*','/']
 
 	PermutationsFlag={}
 	PermutationsFlag['MainOperations']=0 # 0: All operands, in an expression will be same. 1: Permutation of 
@@ -240,13 +241,13 @@ def main():
  	#Operations['Operand']	
 	Operations['PermutationsFlag']=PermutationsFlag 
  
-        LoopIterations=[]
-        for CurrVar in range(NumVars):
-        	Temp=[]
-        	for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
-        		CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
-        		Temp.append(CurrNumLoops)
-        		#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
+	LoopIterations=[]
+	for CurrVar in range(NumVars):
+		Temp=[]
+		for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
+			CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
+			Temp.append(CurrNumLoops)
+			#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
  		LoopIterations.append(Temp)
  
   	CurrVar=0
@@ -256,7 +257,9 @@ def main():
  		Prefix.append(0)
  	OutputSet=IterationsCombination(LoopIterations,NumVars)
 	
- 	for CurrIter in range(NumSizeIter):
+ 	for CurrIterIdx in range(NumSizeIter):
+ 	 CurrIter=2**CurrIterIdx
+ 	 print "\n\t CurrIter: "+str(CurrIter)
 	 for CurrMbyteSize in range(Min['MbyteSize'],Max['MbyteSize']):	
 		MbyteSize=CurrMbyteSize#+1
 		MaxSize=2**(MbyteSize)
@@ -264,8 +267,8 @@ def main():
 		Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
 		HigherDimSize= MaxSize/ Dim0Size	
 		print "\n\t CurrIter: "+str(CurrIter)+" MbyteSize: "+str(MbyteSize)+" MaxSize: "+str(MaxSize)
-		Min['NumOperands'][0]=CurrIter+1
-		Max['NumOperands'][0]=CurrIter+1
+		Min['NumOperands'][0]=CurrIter#+1
+		Max['NumOperands'][0]=CurrIter#+1
 		
 		for CurrRandomAccess in RandomAccess:
 			for Idx,CurrVar in enumerate(CurrRandomAccess):
@@ -343,40 +346,45 @@ def main():
 			
 
 					for NumStreams in range(Min['NumStream'],Max['NumStream']+1):
+
 						CurrString=''
-						RestrictLength=3
-						print "\n --- NumStreams: "+str(NumStreams)
-						if(NumStreams>=RestrictLength):
-							for i in range(NumStreams-RestrictLength):
-								CurrString+=str(1)+','
-							CurrString+=str(1)
-						print "\n\t PrevString: "+str(CurrString)
-						ResultString=[]
-						PrefixString=CurrString
-						StrideSet=[]
-						PrefixString=CurrString
-						for HigherIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
-							print "\n\t CurrString: "+str(CurrString)
+						PrefixString=''
+						StreamCollection=['']
+				
+						for CurrLength in range(1,NumStreams+1):
+							print "\n\t CurrLength: "+str(CurrLength)
+							TempStreamCollection=[]
 					
-							if(NumStreams<RestrictLength-1):
-								CurrString=str(2**(HigherIndex))
-								StrideSet.append(CurrString)
-								print "\n\t RESult: "+str(CurrString)
+							for CurrStreamCombi in StreamCollection:
+								#print "\n\t CurrStreamCombi: "+str(CurrStreamCombi)
+								BreakCurrStreamCombi=re.split(',',str(CurrStreamCombi))
+								if(CurrLength>1):
+									if(len(BreakCurrStreamCombi)==(CurrLength-1)):
+										MinString=int(RemoveWhiteSpace(BreakCurrStreamCombi[len(BreakCurrStreamCombi)-1]))
+										MinStringIdx=int(math.log(float(MinString),2))
+										#print "\n\t MinString: "+str(MinString)+" MinStringIdx "+str(MinStringIdx)
+										#for CurrStride in range(Min['Stride'],Max['Stride']+1):
+										for CurrStride in range(MinStringIdx,Max['Stride']+1):
+											ActualStride=(2**CurrStride) 
+											NewStreamCombi=str(CurrStreamCombi)+','+str(ActualStride)
+											TempStreamCollection.append(NewStreamCombi)
+											#print "\n\t ActualStride: "+str(ActualStride)+"\t Newcombi: "+str(NewStreamCombi)
+									else:
+										print "\n\t len(BreakCurrStreamCombi): "+str(len(BreakCurrStreamCombi))+" BreakCurrStreamCombi "+str(BreakCurrStreamCombi)+" CurrLength: "+str(CurrLength)
+										
+								else:
+												
+										for CurrStride in range(Min['Stride'],Max['Stride']+1):
+											ActualStride=(2**CurrStride) 
+											TempStreamCollection.append(ActualStride)
+											print "\n\t ActualStride: "+str(ActualStride)
+						
 					
-							else:
-							   	if(PrefixString!=''):
-							   		CurrString=PrefixString+','+str(2**(HigherIndex))
-							   	else:
-							   		CurrString=PrefixString+str(2**(HigherIndex))
-							   	print "\n\t End: CurrString "+str(CurrString)						
-								for LowerIndex in range(Min['Stride'],Max['Stride']+1): #range(Min['NumStream'],Max['NumStream']+1):
-							   	        if(CurrString!=''):
-								   		temp=CurrString+','+str(2**(LowerIndex))
-								   	else:
-								   		temp=str(2**(LowerIndex))
-							   		StrideSet.append(temp)
-							   		print "\n\t\t Result: "+str(temp)
+					StreamCollection=[]
+					StreamCollection=copy.deepcopy(TempStreamCollection)
+				StrideSet=StreamCollection
 		 		
+						
 						NumStreamString='#StreamDims '+str(NumStreams) # CAUTION: Should change this when NumVars > 1
 						StrideString=''
 						StrideName=''
@@ -389,6 +397,7 @@ def main():
 							else:
 								NumStreamString=str(NumStreams)
 								StreamName=str(NumStreams)
+								
 						StrideString=''
 						StrideName=''
 						print "\n\t This is the length of StrideSet: "+str(len(StrideSet))
@@ -398,7 +407,7 @@ def main():
 				
 						for CurrStrideSet in StrideSet:
 					
-							ExtractStrideforStream=re.split(',',CurrStrideSet)
+							ExtractStrideforStream=re.split(',',str(CurrStrideSet))
 							if ExtractStrideforStream:
 								CurrStrideString=''
 								CurrStrideCombi=''
