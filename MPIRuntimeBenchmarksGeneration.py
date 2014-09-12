@@ -96,8 +96,8 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug,Indirect
 	
 	FlushForLoop=[]	
 	if(ConfigParams['RandomAccess'][VarNum]>0):
-		TabSpace=''
-		FlushVarName= 'FlushVar'+str(VarNum)+'_Stream'+str(StreamNum)	
+	    	TabSpace=''
+	    	FlushVarName= 'FlushVar'+str(VarNum)+'_Stream'+str(StreamNum)	
 	    	BoundVar=WorkingVars['BoundVar'] #'bound'     		#BoundVarDecl=TabSpace+'long int '+BoundVar+' =0; '     		#ThisLoop.append(BoundVarDecl);
     		InnerLoopVar=WorkingVars['InnerLoopVar']
     		#InnerLoopVarDecl=TabSpace+'long int '+InnerLoopVar+' =0;' 
@@ -113,10 +113,10 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug,Indirect
     		ThisLoop.append(PermuteSizeVarDecl)
     		LastDim=NumForLoops-1
     		PermuteSizeCalc=TabSpace+str(PermuteSizeVar)+' = (int) ( ( '+str(ConfigParams['GlobalVar']['DimsSize'][LastDim])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][StreamNum])+' ) / ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][StreamNum])+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') );'
-		ThisLoop.append(PermuteSizeCalc)
+	    	ThisLoop.append(PermuteSizeCalc)
     		CallPermuteFunc=TabSpace+str(PermuteArrayVar)+' = RandomPermutationGeneration( '+str(PermuteSizeVar)+' );'
     		ThisLoop.append(CallPermuteFunc)
-		FlushForLoop.append(CallPermuteFunc)
+	    	FlushForLoop.append(CallPermuteFunc)
     		PermuteIndexVar='PermuteIndex'
     		PermuteIndexVarInit=' PermuteIndex=0 ;'
     		CountVar=WorkingVars['CountVar']
@@ -1705,6 +1705,7 @@ def main(argv):
 		ConfigParams['IndirOperands']={}
 		ConfigParams['VarDecl']={}
 		ConfigParams['VarDeclCollection']=[]
+		ConfigParams['InitVar']={}
 
 		for index in range(ConfigParams['NumVars']):
 			if( (ConfigParams['Indirection'][index]==1) and (ConfigParams['RandomAccess'][index]==1) ):
@@ -1935,6 +1936,9 @@ def main(argv):
 							
 							if(Declare):
 								ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var
+								if(not(index in ConfigParams['InitVar'])):
+									ConfigParams['InitVar'][index]=[]
+								ConfigParams['InitVar'][index].append(ConfigParams['VarOperands'][index][CurrStream][CurrOperand])
 								Var=ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][1]
 								VarDeclPrefix=ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][1]+' '+prefix
 								VarDecl=VarDeclPrefix+' '+str(ConfigParams['VarOperands'][index][CurrStream][CurrOperand])
@@ -2164,8 +2168,11 @@ def main(argv):
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 			CurrVarName=ConfigParams['StreamWideOperand'][VarNum][CurrStream] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
 			if(ConfigParams['Indirection'][VarNum]==0):
-				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
-				ThisVarInit.append(Temp)
+				ThisStreamInit=[]
+				for CurrVarName in (ConfigParams['InitVar'][VarNum]):
+					Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
+					ThisStreamInit.append(Temp)
+				ThisVarInit.append(ThisStreamInit)
 			else:
 				ThisStreamInit=[]
 				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
@@ -2324,12 +2331,14 @@ def main(argv):
 	WriteArray(PAPIInitCode,WriteFile)
 	for VarNum in range(ConfigParams['NumVars']):
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
-			if(ConfigParams['Indirection'][VarNum]==0):	
+			for CurrArray in (InitLoop[VarNum][CurrStream]):
+				WriteArray(CurrArray,WriteFile)
+			"""if(ConfigParams['Indirection'][VarNum]==0):	
 				WriteArray(InitLoop[VarNum][CurrStream],WriteFile)	
 			else:
 				WriteArray(InitLoop[VarNum][CurrStream][0],WriteFile)
 				WriteArray(InitLoop[VarNum][CurrStream][1],WriteFile)	
-				WriteArray(InitLoop[VarNum][CurrStream][2],WriteFile)	
+				WriteArray(InitLoop[VarNum][CurrStream][2],WriteFile)	"""
 
  
 	WriteArray(Comments,WriteFile)	
