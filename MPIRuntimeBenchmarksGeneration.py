@@ -12,6 +12,23 @@ def usage():
 	print "\n\t Usage: StrideBenchmarks.py -c/--config -d \n\t\t -c: file with all the configuration.\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. \n "
 	sys.exit()
 
+def ObtainDS(CurrDS):
+	datatype=''
+	CurrDS=RemoveWhiteSpace(CurrDS)
+	if(CurrDS=='i'):
+		datatype='int'
+	elif(CurrDS=='f'):
+		datatype='float'
+	elif(CurrDS=='d'):
+		datatype='double'
+	elif(CurrDS=='l'):
+		datatype='long int'
+	else:
+		print "\n\t ERROR: Supported datatype is int/float/double/long int, but requested datatype is: "+str(CurrDS)
+		sys.exit()
+	return datatype
+
+
 def RemoveWhiteSpace(Input):
 	temp=re.sub('^\s*','',Input)
 	Output=re.sub('\s*$','',temp)
@@ -378,13 +395,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    indices=''
  
  	    LastDim=ConfigParams['Dims']-1
- 	    PermuteSizeVar='PermuteSizeVar'+str(VarNum)+'_'+str(CurrStream)
- 	    #PermuteSizeVarforStream[CurrStream]=PermuteSizeVar
- 	    #NumOperandsVar='NumOperandsVar'+str(VarNum)+'_Stream'+str(CurrStream)
-	    #PermuteSizeCalc=' (int) ( ( '+str(ConfigParams['GlobalVar']['DimsSize'][LastDim])+' * '+str(ConfigParams['GlobalVar']['Stream'][VarNum][CurrStream])+' ) / ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][CurrStream])+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') );' #SuccessiveOperandDiff
-	    #PermuteSizeVarDecl='int '+str(PermuteSizeVar)+' = '+str(PermuteSizeCalc)+';'
-	    #ShouldDeclareVars.append(PermuteSizeVarDecl)
-	    
+ 	    PermuteSizeVar='PermuteSizeVar'+str(VarNum)+'_'+str(CurrStream)	    
  	    StreamVar='Var'+str(VarNum)+'_Stream'+str(CurrStream)
 	
 	    RHSExprnPerStream[CurrStream]=[]
@@ -407,7 +418,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    	CurrOperandExprn=str(CurrOperands[CurrOperandIdx])	
 	    	#print "\n\t --*-- CurrOperandIdx "+str(CurrOperandIdx)+" CurrOperandExprn "+str(CurrOperandExprn)
 	    	if debug:
-				print "\n\t CurrOperand: "+str(CurrOperandExprn)  	
+	    		print "\n\t CurrOperand: "+str(CurrOperandExprn)  	
 ## ***********
 	    	if(CurrOperandExprn[0]=='='):
 	    		#if debug:
@@ -417,16 +428,20 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	    		if debug:
 	    			print "\n\t CurrOperandExprn: "+str(CurrOperandExprn)
 	    		if ExtractNumber:
-	    			NumberCheck=re.match('\s*(\d+)*\.(\d+)*',ExtractNumber.group(1))
+	    			print "\n\t Datatype: "+str(ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperandIdx][1])
+	    			datatype=ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperandIdx][1]
+	    			DeclareVar=str(datatype)+' '+str(RHSExprn)+str(CurrOperandExprn)+';'
+	    			"""NumberCheck=re.match('\s*(\d+)*\.(\d+)*',ExtractNumber.group(1))
 	    			if NumberCheck:
 	    				DeclareVar='double '+str(RHSExprn)+str(CurrOperandExprn)+';'
 	    			else:
 	    				IntCheck=re.match('\s*(\d+)*',ExtractNumber.group(1))
 	    				if IntCheck:
-	    					DeclareVar='long int '+str(RHSExprn)+str(CurrOperandExprn)+';'
+	    					#DeclareVar='long int '+str(RHSExprn)+str(CurrOperandExprn)+';'
+	    					DeclareVar=str(ConfigParams['datatype'])+' '+str(RHSExprn)+str(CurrOperandExprn)+';'
 	    				else:
 	    					print "\n\t ERROR: Const-var does not have number! Use debug to locate the error! \n"
-	    					sys.exit()
+	    					sys.exit()"""
 	    		else:
 	    			print "\n\t ERROR: Const var does not have equal symbol! Use debug to locate the error! \n "
 	    			sys.exit()
@@ -885,6 +900,7 @@ def main(argv):
 	ConfigParams['maxstride']=[]
 	ConfigParams['alloc']=[]
 	ConfigParams['datastructure']=[]	
+	ConfigParams['datatype']=[]
 	ConfigParams['Dims']=0
 	ConfigParams['NumVars']=0
 	ConfigParams['NumStreams']=0
@@ -1295,14 +1311,18 @@ def main(argv):
 						LineNotProcessed=0
 						CurrDim=0;
 						for CurrDS in DS:
-							CheckSpace=re.match(r'^\s*$',CurrDS)
-						        if(CheckSpace):
+							#CheckSpace=re.match(r'^\s*$',CurrDS)
+							CurrDS=RemoveWhiteSpace(CurrDS)
+						        if(CurrDS==''):
 						       		if debug:
 						       			print "\n\t For datastructure parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)						
 							else:
-								CurrDS=re.sub(r'\s*$','',CurrDS)
-								ConfigParams['datastructure'].append( CurrDS);
+								ConfigParams['datastructure'].append(CurrDS);
+								datatype=''
+								datatype=ObtainDS(CurrDS)
+								ConfigParams['datatype'].append(datatype)
+								
 								CurrDim+=1				
 								if debug:
 						       			print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrDS)+"\n" 					
