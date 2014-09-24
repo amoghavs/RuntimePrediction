@@ -188,6 +188,7 @@ def main(argv):
 
 	SimulationNeeded=not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) )
 	InfoExtractionNeeded=( not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) and (VectorExtract==0) ) )
+	JustVectorExtractionNeeded= ( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) )
 	print "\n\t SimulationNeeded: "+str(SimulationNeeded)+" InfoExtractionNeeded: "+str(InfoExtractionNeeded)
 	#sys.exit()
 	MasterStatsFile=open(OutputFileName,'w')
@@ -360,8 +361,14 @@ def main(argv):
 								Temp.append(BreakGrepOutput[Idx])
 							
 							PredictionVectorParamsCollection[FileName]=Temp
-							#+' 24,idu: '+str(BreakGrepOutput[26])														
-						
+							#+' 24,idu: '+str(BreakGrepOutput[26])	
+						if(JustVectorExtractionNeeded):
+                                                         DirName='Dir'+str(FileName)
+                                                         commands.getoutput('mkdir '+str(DirName))
+                                                         CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
+                                                         commands.getoutput(CMDMvFiles)
+                                                         CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
+                                                         commands.getoutput(CMDMvFiles)						
 	
 				        if( not (EnergySim==0)):
 					 if(LoopIntercept==0):
