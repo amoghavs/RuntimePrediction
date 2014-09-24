@@ -2,7 +2,7 @@
 import sys,getopt,subprocess,re,math,commands,time,copy,random
 
 def usage():
-	print "\n\t Usage: BenchmarksResultsLogging.py -l/--source file with all the source file that needs to be executed and logged -p <num-of-procs> -c CacheSimulationFlag <0/1> -r ReuseDistance -s SpatialDistanceFlag  -e EnergyMeasureFlag <0/1> -n Number of Counters -a Number of runs for averaging runtime. -p Number of Processors -d \n\t\t -s: .\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. -o <Output-file-name> \n "
+	print "\n\t Usage: BenchmarksResultsLogging.py -l/--source file with all the source file that needs to be executed and logged -p <num-of-procs> -c CacheSimulationFlag <0/1> -r ReuseDistance -s SpatialDistanceFlag  -e EnergyMeasureFlag <0/1> -n Number of Counters -a Number of runs for averaging runtime. -p Number of Processors -d \n\t\t -s: .\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. -o <Output-file-name> -v/--vector <Vector-extract-from-PSAPP> \n "
 	sys.exit()
 
 def RemoveWhiteSpace(Input):
@@ -36,58 +36,61 @@ def main(argv):
 	EnergySim=''
 	NumCounters=''
 	OutputFileName=''
+	VectorExtract=''
 	try:
-	   opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:p:c:e:n:o:h:v",["list","deubg","reuse","spatial","average","procs","cachesim","energysim","numcounters","output","help","verbose"])
+		opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:p:c:e:n:o:h:v:",["list","deubg","reuse","spatial","average","procs","cachesim","energysim","numcounters","output","help","vector="])	
 	except getopt.GetoptError:
 		#print str(err) # will print something like "option -a not recognized"
-	   usage()
-	   sys.exit(2)
-	verbose=False   
+		usage()
 	for opt, arg in opts:
-	   print "\n\t Opt: "+str(opt)+" argument "+str(arg)	
-	   if opt == '-h':
-	      print 'test.py -i <inputfile> -o <outputfile>'
-	      sys.exit()
-	   elif opt in ("-l", "--list"):
-	      SrcFileName=arg
-	      print "\n\t Source file is "+str(SrcFileName)+"\n";
-	   elif opt in ("-d", "--debug"):
-	      debug=int(arg)
-	      print "\n\t Debug option is "+str(debug)+"\n";	
-	   elif opt in ("-r"):
-		reuse=RemoveWhiteSpace(arg)
-		print "\n\t Reuse info: "+str(reuse)+"\n"
-	   elif opt in ("-s"):
-		spatial=RemoveWhiteSpace(arg)
-		print "\n\t Spatial info: "+str(spatial)+" arg "+str(arg)+"\n"
-	   elif opt in ("-a"):
-		AverageRun=int(RemoveWhiteSpace(arg))
-		print "\n\t AverageRun: "+str(AverageRun)+"\n"
-	   elif opt in ("-c"):
-		CacheSimulation=int(RemoveWhiteSpace(arg))
-		print "\n\t CacheSimulation: "+str(CacheSimulation)+"\n"
-	   elif opt in ("-p"):
-		NumofProcs=int(RemoveWhiteSpace(arg))
-		print "\n\t Number of processors: "+str(NumofProcs)+"\n"
-	   elif opt in ("-e"):
-		EnergySim=int(RemoveWhiteSpace(arg))
-		print "\n\t Energy sim option: "+str(EnergySim)+"\n"
-	   elif opt in ("-n"):
-		NumCounters=int(RemoveWhiteSpace(arg))
-		print "\n\t Number of counters: "+str(NumCounters)+"\n"
-	   elif opt in ("-o"):
-		OutputFileName=RemoveWhiteSpace(arg)
-		print "\n\t Output file name is: "+str(OutputFileName)
+		print "\n\t Opt: "+str(opt)+" argument "+str(arg)	
+		if opt == '-h':
+			print 'test.py -i <inputfile> -o <outputfile>'
+			sys.exit()
+		elif opt in ("-l", "--list"):
+			SrcFileName=arg
+			print "\n\t Source file is "+str(SrcFileName)+"\n";
+		elif opt in ("-d", "--debug"):
+			debug=int(arg)
+			print "\n\t Debug option is "+str(debug)+"\n";	
+		elif opt in ("-r"):
+			reuse=RemoveWhiteSpace(arg)
+			print "\n\t Reuse info: "+str(reuse)+"\n"
+		elif opt in ("-s"):
+			spatial=RemoveWhiteSpace(arg)
+			print "\n\t Spatial info: "+str(spatial)+" arg "+str(arg)+"\n"
+		elif opt in ("-a"):
+			AverageRun=int(RemoveWhiteSpace(arg))
+			print "\n\t AverageRun: "+str(AverageRun)+"\n"
+		elif opt in ("-c"):
+			CacheSimulation=int(RemoveWhiteSpace(arg))
+			print "\n\t CacheSimulation: "+str(CacheSimulation)+"\n"
+		elif opt in ("-p"):
+			NumofProcs=int(RemoveWhiteSpace(arg))
+			print "\n\t Number of processors: "+str(NumofProcs)+"\n"
+		elif opt in ("-e"):
+			EnergySim=int(RemoveWhiteSpace(arg))
+			print "\n\t Energy sim option: "+str(EnergySim)+"\n"
+		elif opt in ("-n"):
+			NumCounters=int(RemoveWhiteSpace(arg))
+			print "\n\t Number of counters: "+str(NumCounters)+"\n"
+		elif opt in ("-o"):
+			OutputFileName=RemoveWhiteSpace(arg)
+			print "\n\t Output file name is: "+str(OutputFileName)
+		elif opt in ("-v","--vector"):
+			VectorExtract=int(RemoveWhiteSpace(arg))
+			print "\n\t Vector extract option is: "+str(VectorExtract)
+           	else:
+			
+   			usage()
 
-           else:
-   		usage()
-
-	# If execution has come until this point, the script should have already identified the config file.
+	# If execution has come until this point, the script should have already identified the file with sourcefiles.
 	if(SrcFileName==''):
+		print "\n\t Nodpa!! "
 		usage()
 	if( (CacheSimulation==0) and (spatial=='') and (reuse=='')):
-		spatial="16,32"
-		reuse='16'
+		spatial=0 #"16,32"
+		reuse=0 #'16'
 		print "\n\t INFO: Using default spatial value: "+str(spatial)+" reuse value "+str(16)
 	if(AverageRun==0):
 		AverageRun=5
@@ -102,11 +105,14 @@ def main(argv):
 	if(OutputFileName==''):
 		OutputFileName='MasterStatsFile.log'
 		print "\n\t INFO:  Using default output file name: "+str(OutputFileName)
+	if(VectorExtract==''):
+		VectorExtract=0
+		print "\n\t INFO: Using default Vector extract option: "+str(VectorExtract)
 
 	LoopIntercept=0
 	print "\n\t INFO: By default not using LoopIntercept method for energy calculation "
 	SpatialWindow=[]
-	if(spatial!=''):
+	if((spatial!='') and (spatial!=0) ):
 		ThisSet=re.split(',',spatial)
 		for CurrSW in ThisSet:
 			SpatialWindow.append(CurrSW)
@@ -117,6 +123,9 @@ def main(argv):
 	if(reuse!=''):
 		print "\n\t Reuse window:"+str(reuse)+"--"
 		ReuseWindow=int(reuse)
+	#else:
+	#	print "\n\t Reuse window:"+str(reuse)+"--"
+	#	ReuseWindow=int(reuse)		
 	if(EnergySim==''):
 		EnergySim=0
 		print "\n\t Using default EnergySim value: "+str(EnergySim)
@@ -162,6 +171,10 @@ def main(argv):
 				print "\n\t Environemnt var: "+str(Temp)
 				EnviVars.append(Temp)
 
+	SimulationNeeded=not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) )
+	InfoExtractionNeeded=( not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) and (VectorExtract==0) ) )
+	print "\n\t SimulationNeeded: "+str(SimulationNeeded)+" InfoExtractionNeeded: "+str(InfoExtractionNeeded)
+	sys.exit()
 	MasterStatsFile=open(OutputFileName,'w')
 	MasterFileNameCollection=[]
 	for idx,CurrSrcFile in enumerate(SrcFile):
@@ -228,7 +241,7 @@ def main(argv):
 									        for CurrPower in (PowerValueCollection[CurrFile]):
 									                 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
 									else:
-										CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extr    acting power!!")
+										CurrStatsFile.write("\n\t "+str(CurrFile)+"\t  error extracting power!!")
 
 
 
@@ -275,7 +288,7 @@ def main(argv):
 				MasterFileNameCollection.append(FileName)
 				#sys.exit()
 			
-				if( not( (ReuseWindow==0) and (spatial=='0') and (CacheSimulation==0) and (EnergySim==0)) ):	
+				if(InfoExtractionNeeded):	
 					#CMDPebil='pebil --typ jbb --app '+str(FileName)
 					#commands.getoutput(CMDPebil)
 					#CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
@@ -397,7 +410,8 @@ def main(argv):
 							CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
 							commands.getoutput(CMDMvFiles)
 						
-				        if( not (CacheSimulation==0) ):
+				        #if( not (CacheSimulation==0) ):
+					if(SimulationNeeded):
 
 ######
 						if( (EnergySim==0) and (LoopIntercept>0) ):
@@ -445,7 +459,7 @@ def main(argv):
 						if(ReuseWindow!=0):
 							FilesToExtract.append('.dist')
 						if(spatial!=''):
-							if(spatial!='0'):
+							if(spatial!=0):
 								FilesToExtract.append('.spatial')
 	
 						for CurrSW in SpatialWindow:
@@ -457,7 +471,8 @@ def main(argv):
 							MetasimReuseWindow='export METASIM_REUSE_WINDOW='+str(ReuseWindow)
 							SimRunScript.write("\n\t "+str(MetasimReuseWindow))
 							SimRunScript.write('\n\t export METASIM_SPATIAL_WINDOW='+str(CurrSW))
-							SimRunScript.write('\n\t export METASIM_CACHE_SIMULATION=1 ')			
+							MetasSimCacheSim='export METASIM_CACHE_SIMULATION='+str(CacheSimulation)
+							SimRunScript.write('\n\t '+str(MetasSimCacheSim))			
 							SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=1 ')	
 							SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
 							SimRunScript.write('\n\t ./'+str(SimInstFile))	
@@ -537,7 +552,7 @@ def main(argv):
                                         	for CurrPower in (PowerValueCollection[CurrFile]):
                                                 	 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
 					else:
-						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t error extracting power!!")
 
 			CurrStatsFile.write("\n\n\n")
 		CurrStatsFile.close()#"""
@@ -570,7 +585,7 @@ def main(argv):
         	                                 for CurrPower in (PowerValueCollection[CurrFile]):
                 	                                  MasterStatsFile.write("\t "+str(round(float(CurrPower),4)))	
 					else:	
-						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t  error extracting power!!")
   
                 MasterStatsFile.write("\n\n")
 		MasterStatsFile.close()
