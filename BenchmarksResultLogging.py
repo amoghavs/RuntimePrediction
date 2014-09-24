@@ -2,7 +2,7 @@
 import sys,getopt,subprocess,re,math,commands,time,copy,random
 
 def usage():
-	print "\n\t Usage: BenchmarksResultsLogging.py -l/--source file with all the source file that needs to be executed and logged -p <num-of-procs> -c CacheSimulationFlag <0/1> -r ReuseDistance -s SpatialDistanceFlag  -e EnergyMeasureFlag <0/1> -n Number of Counters -a Number of runs for averaging runtime. -p Number of Processors -d \n\t\t -s: .\n\t\t -d: Debug option, 1 for printing debug messages and 0 to forego printing debug statements. -o <Output-file-name> -v/--vector <Vector-extract-from-PSAPP> \n "
+	print "\n\t Usage: BenchmarksResultsLogging.py -l/--source file with all the source file that needs to be executed and logged -p <num-of-procs> -c CacheSimulationFlag <0/1> -r ReuseDistance -s SpatialDistanceFlag  -e EnergyMeasureFlag <0/1> -n Number of Counters -a Number of runs for averaging runtime. -p Number of Processors -d \n\t\t -s: spatial distances -v/--vector <Vector-extract-from-PSAPP> -t/--vectorparamstart <vectorparamstart> -u/--numvectorparams <numvectorparams> .\n\t\t -o <Output-file-name> \n "
 	sys.exit()
 
 def RemoveWhiteSpace(Input):
@@ -27,7 +27,6 @@ def RemoveBraces(Input):
 
 def main(argv):
 	SrcFileName=''
-	debug=0
 	spatial=''
 	reuse=''
 	AverageRun=0
@@ -37,8 +36,10 @@ def main(argv):
 	NumCounters=''
 	OutputFileName=''
 	VectorExtract=''
+	VectorParamStart=''
+	NumVectorParams=''	
 	try:
-		opts, args = getopt.getopt(sys.argv[1:],"l:d:r:s:a:p:c:e:n:o:h:v:",["list","deubg","reuse","spatial","average","procs","cachesim","energysim","numcounters","output","help","vector="])	
+		opts, args = getopt.getopt(sys.argv[1:],"l:r:s:a:p:c:e:n:o:h:v:t:u:",["list","reuse","spatial","average","procs","cachesim","energysim","numcounters","output","help","vector=","vectorparamstart=","numvectorparams="])	
 	except getopt.GetoptError:
 		#print str(err) # will print something like "option -a not recognized"
 		usage()
@@ -80,8 +81,14 @@ def main(argv):
 		elif opt in ("-v","--vector"):
 			VectorExtract=int(RemoveWhiteSpace(arg))
 			print "\n\t Vector extract option is: "+str(VectorExtract)
-           	else:
+		elif opt in ("-t", "--vectorparamstart"):
+			VectorParamStart=int(RemoveWhiteSpace(arg))
+			print "\n\t VectorParamStart option is "+str(VectorParamStart)+"\n";	
+		elif opt in ("-u", "--numvectorparams"):
+			NumVectorParams=int(RemoveWhiteSpace(arg))
+			print "\n\t NumVectorParams option is "+str(NumVectorParams)+"\n";	
 			
+           	else:
    			usage()
 
 	# If execution has come until this point, the script should have already identified the file with sourcefiles.
@@ -108,6 +115,13 @@ def main(argv):
 	if(VectorExtract==''):
 		VectorExtract=0
 		print "\n\t INFO: Using default Vector extract option: "+str(VectorExtract)
+	else:
+		if( (VectorParamStart=='') or (NumVectorParams=='') ):
+			VectorParamStart=23
+			NumVectorParams=5
+			print "\n\t INFO: Either or both of NumVectorParams or VectorParamsStart are not defined. Using default params-- VectorParamStart: "+str(VectorParamStart)+" NumVectorParams: "+str(NumVectorParams)
+			
+			
 
 	LoopIntercept=0
 	print "\n\t INFO: By default not using LoopIntercept method for energy calculation "
@@ -152,6 +166,7 @@ def main(argv):
 	#AverageRun=5
 	AverageRuntimeCollection={}
 	PowerValueCollection={}
+	PredictionVectorParamsCollection={}
 	FileNameCollection=[]
 
 	EnviVars=[]
@@ -174,7 +189,7 @@ def main(argv):
 	SimulationNeeded=not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) )
 	InfoExtractionNeeded=( not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) and (VectorExtract==0) ) )
 	print "\n\t SimulationNeeded: "+str(SimulationNeeded)+" InfoExtractionNeeded: "+str(InfoExtractionNeeded)
-	sys.exit()
+	#sys.exit()
 	MasterStatsFile=open(OutputFileName,'w')
 	MasterFileNameCollection=[]
 	for idx,CurrSrcFile in enumerate(SrcFile):
@@ -242,6 +257,15 @@ def main(argv):
 									                 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
 									else:
 										CurrStatsFile.write("\n\t "+str(CurrFile)+"\t  error extracting power!!")
+				                if(not(VectorExtract==0)):
+				                	CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t ParamStart: "+str(VectorParamStart)+" Num-params: "+str(NumVectorParams))
+				                	for CurrFile in FileNameCollection:
+				                		CurrStatsFile.write("\n\t "+str(CurrFile))
+				                		if(CurrFile in PredictionVectorParamsCollection):
+				                			for CurrParam  in (PredictionVectorParamsCollection[CurrFile]):
+				                				CurrStatsFile.write("\t "+str(CurrParam))
+				                		else:
+				                			print "\n\t Error with extracting param info! "
 
 
 
@@ -289,10 +313,56 @@ def main(argv):
 				#sys.exit()
 			
 				if(InfoExtractionNeeded):	
-					#CMDPebil='pebil --typ jbb --app '+str(FileName)
-					#commands.getoutput(CMDPebil)
-					#CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
-					#commands.getoutput(CMDJbb)
+					if(not(VectorExtract==0)):
+                        	                CMDPebil='pebil --typ jbb --app '+str(FileName)
+                	                        commands.getoutput(CMDPebil)
+        	                                CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
+	                                        commands.getoutput(CMDJbb)	
+						jRunProcess='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --process > Duh.log '
+						print "\n\t -- "+str(jRunProcess)
+						commands.getoutput(jRunProcess)
+						jRunReport='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --sysid 111 --functions default --loops default --report blockvector > Duh1.log '
+						commands.getoutput(jRunReport)
+	                                        JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
+        	                                JbbFileHandle=open(JbbFileName)
+        	                                JbbFile=JbbFileHandle.readlines()
+        	                                JbbFileHandle.close()
+        	                                #BBFileName='BB_'+str(FileName)+'.txt'
+        	                                #BBFile=open(BBFileName,'w')
+   						BBIdx=1
+						FuncIdx=5
+						LineNumIdx=4
+						DefIduIdx=23
+						NumDefIduParams=5 # Idu, Fdu2, Idu2, Fdu2, Mdu2
+						BBstoSearch=[]
+       		                                for CurrLine in JbbFile:
+        	                                        CheckBlk=re.match('\s*LPP',CurrLine)
+                	                                if CheckBlk:
+                        	                                BreakFields=re.split('\t',CurrLine)
+                	                                        #print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
+                                	                        #CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
+                                        	                CheckFuncVar=re.match('100',BreakFields[3])
+                                                	        if CheckFuncVar:
+                                                	                print "\n\t BBID: "+str(BreakFields[BBIdx])+" Function: "+str(BreakFields[FuncIdx])+" LineNm: "+str(BreakFields[LineNumIdx])                                        
+                                                	                BBstoSearch.append(BreakFields[BBIdx])	
+                                                	                #BBFile.write('\n\t '+str(BreakFields[BBIdx]))
+
+						for CurrBB in BBstoSearch:
+							print "\t Now searching: "+str(CurrBB)
+							GrepCmd='grep '+str(CurrBB)+' loopVectors.rALL'	
+							GrepOutput=commands.getoutput(GrepCmd)
+							BreakGrepOutput=re.split('\t',GrepOutput)
+							print "\t GrepOutput: "+str(GrepOutput)
+							print"\t len(Breakdown): "+str(len(BreakGrepOutput))
+							Temp=[]
+							for Idx in range(VectorParamStart,VectorParamStart+NumVectorParams):
+								print "\t Idx: "+str(Idx)+" Param: "+str(BreakGrepOutput[Idx])
+								Temp.append(BreakGrepOutput[Idx])
+							
+							PredictionVectorParamsCollection[FileName]=Temp
+							#+' 24,idu: '+str(BreakGrepOutput[26])														
+						
+	
 				        if( not (EnergySim==0)):
 					 if(LoopIntercept==0):
 
@@ -412,7 +482,6 @@ def main(argv):
 						
 				        #if( not (CacheSimulation==0) ):
 					if(SimulationNeeded):
-
 ######
 						if( (EnergySim==0) and (LoopIntercept>0) ):
 							
@@ -443,9 +512,7 @@ def main(argv):
 
                                      	  	BBFile.write("\n\n")
                                      	  	BBFile.close()
-
 #####
-
 						CMDPebilSim='pebil --typ sim --inp '+str(BBFileName)+' --app '+str(FileName)
 						print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
 						commands.getoutput(CMDPebilSim)
@@ -553,6 +620,16 @@ def main(argv):
                                                 	 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
 					else:
 						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t error extracting power!!")
+                if(not(VectorExtract==0)):
+                	CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t ParamStart: "+str(VectorParamStart)+" Num-params: "+str(NumVectorParams))
+                	for CurrFile in MasterFileNameCollection:
+                		CurrStatsFile.write("\n\t "+str(CurrFile))
+                		if(CurrFile in PredictionVectorParamsCollection):
+                			for CurrParam  in (PredictionVectorParamsCollection[CurrFile]):
+                				CurrStatsFile.write("\t "+str(CurrParam))
+                		else:
+                			print "\n\t Error with extracting param info! "
+						
 
 			CurrStatsFile.write("\n\n\n")
 		CurrStatsFile.close()#"""
@@ -586,6 +663,17 @@ def main(argv):
                 	                                  MasterStatsFile.write("\t "+str(round(float(CurrPower),4)))	
 					else:	
 						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t  error extracting power!!")
+                if(not(VectorExtract==0)):
+                	MasterStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t ParamStart: "+str(VectorParamStart)+" Num-params: "+str(NumVectorParams))
+                	for CurrFile in MasterFileNameCollection:
+                		MasterStatsFile.write("\n\t "+str(CurrFile))
+                		if(CurrFile in PredictionVectorParamsCollection):
+                			for CurrParam  in (PredictionVectorParamsCollection[CurrFile]):
+                				MasterStatsFile.write("\t "+str(CurrParam))
+                		else:
+                			print "\n\t Error with extracting param info! "
+
+						
   
                 MasterStatsFile.write("\n\n")
 		MasterStatsFile.close()
