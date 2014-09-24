@@ -368,7 +368,8 @@ def main(argv):
                                                          CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
                                                          commands.getoutput(CMDMvFiles)
                                                          CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
-                                                         commands.getoutput(CMDMvFiles)						
+                                                         commands.getoutput(CMDMvFiles)	
+                                                         CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)					
 	
 				        if( not (EnergySim==0)):
 					 if(LoopIntercept==0):
@@ -407,6 +408,7 @@ def main(argv):
                                                          commands.getoutput(CMDMvFiles)
                                                          CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
                                                          commands.getoutput(CMDMvFiles)
+                                                         CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
  
 
 					 elif(LoopIntercept>0):
@@ -486,6 +488,7 @@ def main(argv):
 							commands.getoutput(CMDMvFiles)
 							CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
 							commands.getoutput(CMDMvFiles)
+							CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
 						
 				        #if( not (CacheSimulation==0) ):
 					if(SimulationNeeded):
@@ -589,6 +592,7 @@ def main(argv):
 						commands.getoutput(CMDMvFiles)
 						CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
 						commands.getoutput(CMDMvFiles)
+						CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
 							
 				
 	if(CurrStatsFile):
