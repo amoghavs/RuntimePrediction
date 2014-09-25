@@ -1521,7 +1521,7 @@ def main(argv):
 			if debug:
 				print "\n\t Var: "+str(VarNum)+" PAPIInstNeeded "+str(PAPIInstNeeded)+" CurrVarPapiInst: "+str(CurrVarPapiInst)
 		
-		if(PAPIInstNeeded):
+		if(PAPIInstNeeded>0):
 			tmp='#include <papi.h> '
 			LibAlloc.append(tmp)
 			tmp='#define NUM_HWC '+str(NumPAPIHardwareCounters)
@@ -2210,7 +2210,7 @@ def main(argv):
 		InitLoop.append(ThisVarInit)
 
 	ConfigParams['PapiEventsArray']=''
-	if(PAPIInstNeeded):
+	if(PAPIInstNeeded>0):
 		PAPIInitCode=[]
 		PAPICounters=[]
 		ConfigParams['PAPIValueVars']=[]
@@ -2348,7 +2348,8 @@ def main(argv):
 
 
 	WriteArray(WorkigVarsDecl,WriteFile)
-	WriteArray(PAPIInitCode,WriteFile)
+	if(PAPIInstNeeded>0):
+		WriteArray(PAPIInitCode,WriteFile)
 	for VarNum in range(ConfigParams['NumVars']):
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 			for CurrArray in (InitLoop[VarNum][CurrStream]):
