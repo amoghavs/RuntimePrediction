@@ -223,6 +223,7 @@ def main(argv):
 	AverageRuntimeCollection={}
 	PowerValueCollection={}
 	PredictionVectorParamsCollection={}
+	ItersCollection={}
 	FileNameCollection=[]
 
 	EnviVars=[]
@@ -569,6 +570,7 @@ def main(argv):
 						Iters=int( MaxIters/(NumOperands*int(CurrSrcFileParams[idx]['Stream'])*0.5))
 						print "\t MaxIters: "+str(MaxIters)+" Iters: "+str(Iters)
 						ReplaceNumLoops(FileName,10)#ReplaceNumLoops(FileName,Iters)
+						ItersCollection[FileName]=Iters
 						print "\n\t **************************** WARNING: ReplaceNumLoops has a dummy iteration count!!!! ********************************* "
 						Compile(FileName,LibPapiPath)
 						RunOutput=commands.getoutput('./'+str(FileName))
@@ -595,32 +597,103 @@ def main(argv):
 							print "\t WattsFreq: "+str(CurrFreq)
 						for CurrFreq in WattsFreq:
 							WattsNotYetFound=True
-							while(WattsNotYetFound):
-								for CurrFile in WattsFreq[CurrFreq]:
-									IpFile=open(CurrFile)
-									CurrFileContents=IpFile.readlines()
-									IpFile.close()
-									#print "\t File: "+str(CurrFile)+" #lines "+str(len(CurrFileContents))
-									AllFloats=True
-									TotalPowerSamples=0.0
-									for TempCurrLine in CurrFileContents:
+							for CurrFile in WattsFreq[CurrFreq]:
+								IpFile=open(CurrFile)
+								CurrFileContents=IpFile.readlines()
+								IpFile.close()
+								#print "\t File: "+str(CurrFile)+" #lines "+str(len(CurrFileContents))
+								AllFloats=True
+								TotalPowerSamples=0.0
+								for TempCurrLine in CurrFileContents:
+									CurrLine=RemoveWhiteSpace(TempCurrLine)
+									#print "\t CurrLine: "+str(CurrLine)
+									if(not(float(CurrLine))):
+										AllFloats=False
+										print "\t Not a float :-o "+str(CurrLine)
+										break
+									else:
+										TotalPowerSamples+=float(CurrLine)
+								if(AllFloats):
+									AvgPower=float(TotalPowerSamples/len(CurrFileContents))
+									print "\t File: "+str(CurrFile)+" Power: "+str(AvgPower)
+									if(not(FileName in PowerValueCollection)):
+										PowerValueCollection[FileName]={}
+									PowerValueCollection[FileName][CurrFreq]=AvgPower
+									WattsNotYetFound=False
+									break
+							if(WattsNotYetFound):
+								print "\t ERROR: Not able to extract watts for frequency "+str(CurrFreq)
+								PowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "
+								#sys.exit()
+						
+						RaplWattsFilePattern='raw_rapl.'+str(FileName)+'*'
+						RaplWattsLsOutput=commands.getoutput('ls '+str(RaplWattsFilePattern))
+						RaplWattsFreq=ExtractFilesAndFreqs(RaplWattsLsOutput)
+						
+						PowerParams={}
+						
+						PowerParams['FreqParam0']=3;PowerParams['TotalPowerParam0']=4;PowerParams['IAPowerParam0']=7;PowerParams['GTPowerParam0']=10;PowerParams['DRAMPowerParam0']=13 #0-indexed
+						PowerParams['FreqParam1']=16;PowerParams['TotalPowerParam1']=17;PowerParams['IAPowerParam1']=20;PowerParams['GTPowerParam1']=23;PowerParams['DRAMPowerParam1']=26 #0-indexed
+						
+						NumPowerParams=30
+						for CurrFreq in RaplWattsFreq:
+							print "\t RaplFreq: "+str(CurrFreq)
+							RaplWattsNotYetFound=True
+ 							for CurrFile in RaplWattsFreq[CurrFreq]:
+								IpFile=open(CurrFile)
+								CurrFileContents=IpFile.readlines()
+								IpFile.close()
+								print "\t File: "+str(CurrFile)+" #lines "+str(len(CurrFileContents))
+								ProperFormat=True
+								AllNums=True
+								SumOfPowerValues={}
+								for CurrParam in PowerParams:
+									SumOfPowerValues[CurrParam]=0.0
+								
+								for idx,TempCurrLine in enumerate(CurrFileContents):
+									if(idx):
 										CurrLine=RemoveWhiteSpace(TempCurrLine)
 										#print "\t CurrLine: "+str(CurrLine)
-										if(not(float(CurrLine))):
-											AllFloats=False
-											print "\t Not a float :-o "+str(CurrLine)
-											break
-										else:
-											TotalPowerSamples+=float(CurrLine)
-									if(AllFloats):
-										AvgPower=float(TotalPowerSamples/len(CurrFileContents))
-										print "\t File: "+str(CurrFile)+" Power: "+str(AvgPower)
+										BreakdownParams=re.split(',',CurrLine)
+										#if(not(float(CurrLine))):
+										if(len(BreakdownParams)!=NumPowerParams):
+											ProperFormat=False
+											print "\t Not the right proper format --len "+str(len(BreakdownParams))+" LastTerm "+str(BreakdownParams[(len(BreakdownParams)-1)])+'--'#+str(CurrLine)+""
+										for CurrParam in PowerParams:
+											ValueForParam=BreakdownParams[(PowerParams[CurrParam])]
+											if(IsNumber(ValueForParam)):
+												SumOfPowerValues[CurrParam]+=float(ValueForParam)
+											else:
+												AllNums=False
+												print "\t Not a float :-o "+str(CurrLine)
+												break
+										
+										
+											
+								if(AllNums and ProperFormat):
+									#AvgPower=float(TotalPowerSamples/len(CurrFileContents))
+									NumSamples=len(CurrFileContents)-1
+									if(NumSamples>0):
+										StrAvgPower=''
+										for CurrParam in PowerParams:
+											SumOfPowerValues[CurrParam]/=NumSamples
+											StrAvgPower+='\t'+str(SumOfPowerValues[CurrParam])
+										print "\t File: "+str(CurrFile)+" Power: "+str(StrAvgPower)
 										if(not(FileName in PowerValueCollection)):
 											PowerValueCollection[FileName]={}
-										PowerValueCollection[FileName][CurrFreq]=AvgPower
-										WattsNotYetFound=False
-										break
+										PowerValueCollection[FileName][CurrFreq]=SumOfPowerValues
+										RaplWattsNotYetFound=False
+											
+									else:
+										print "WARNING: Rapl File "+str(CurrFile)+" has zero samples!! "
+										
+									break
+							if(RaplWattsNotYetFound):
+								print "\t ERROR: Not able to extract RaplWatts for frequency "+str(CurrFreq)
+								PowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "
+								#sys.exit()
 								
+									
 						sys.exit()
 
 					if(SimulationNeeded):
