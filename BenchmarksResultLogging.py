@@ -68,7 +68,71 @@ def ReplaceNumLoops(Input,ReplaceIter):
 		print "\t WARNING: ReplaceIterOutput "+str(ReplaceIterOutput)
 		print "\t WARNING is currently handeled as ERROR "
 		sys.exit()
-	#sys.exit()
+	
+def WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,
+	       PredictionVectorParamsCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder):
+	if(CurrStatsFile):
+		CurrStatsFile.write("\n\t Average run times: ") ; 
+		CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
+		for CurrFile in FileNameCollection:
+			if(CurrFile in AverageRuntimeCollection):
+				CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
+		if(not(EnergySim==0)):
+			CurrStatsFile.write("\n\n\t Energy probes value: ")
+			CurrStatsFile.write("\n\t Counters : ")
+			for CurrCounter in EnviVars:
+				CurrStatsFile.write("\t "+str(CurrCounter))
+			if(EnergyMeasure==0):	
+				CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Power from each counter ")			   				
+				for CurrFile in FileNameCollection:
+					if(CurrFile in PowerValueCollection):
+						CurrStatsFile.write("\n\t "+str(CurrFile))
+					        for CurrPower in (PowerValueCollection[CurrFile]):
+					                 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
+					else:
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t  error extracting power!!")
+			elif(EnergyMeasure==1):
+				CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t Power from each counter ")
+				for CurrFile in FileNameCollection:
+				 #CurrStatsFile.write("\n")
+				 if(CurrFile in PowerValueCollection):
+					 for CurrBB in (PowerValueCollection[CurrFile]):
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
+						for CurrPower in (PowerValueCollection[CurrFile][CurrBB]):
+							CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
+				 else:
+					CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")			
+			elif(EnergyMeasure==2):
+				CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Freq \t\t Power from each counter ")	
+				for CurrFile in FileNameCollection:
+				 if(CurrFile in PowerValueCollection):
+				 	for CurrFreq in (PowerValueCollection[CurrFile]):
+				 		if(CurrFreq in PowerValueCollection[CurrFile]):
+					 		CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrFreq)+"\t "+str(PowerValueCollection[CurrFile][CurrFreq]))
+				PowerParamsStr=''
+				for CurrParam in PowerParamsInOrder:
+					PowerParamsStr+='\t'+str(CurrParam)
+				CurrStatsFile.write("\n\n\n\t\t Exe: \t\t\t\t Freq \t\t "+str(PowerParamsStr))	
+				for CurrFile in FileNameCollection:
+				 if(CurrFile in RaplPowerValueCollection):
+				 	for CurrFreq in (RaplPowerValueCollection[CurrFile]):
+				 		if(CurrFreq in RaplPowerValueCollection[CurrFile]):
+					 		CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrFreq)+"\t "+str(RaplPowerValueCollection[CurrFile][CurrFreq]))				
+										
+		if(not(VectorExtract==0)):
+			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t ParamStart: "+str(VectorParamStart)+" Num-params: "+str(NumVectorParams))
+			for CurrFile in FileNameCollection:
+				CurrStatsFile.write("\n\t "+str(CurrFile))
+				if(CurrFile in PredictionVectorParamsCollection):
+					for CurrParam  in (PredictionVectorParamsCollection[CurrFile]):
+						CurrStatsFile.write("\t "+str(CurrParam))
+				else:
+					print "\n\t Error with extracting param info! "
+		#CurrStatsFile.write("\n\n")
+		#CurrStatsFile.close()
+	
+
+	
 	
 def main(argv):
 	SrcFileName=''
@@ -213,6 +277,25 @@ def main(argv):
 	print "\n\t There are "+str(NumSourceFiles)+" source files to be handled. After removing empty lines we have: "+str(len(SrcFile))+" files to work with. "
 	NumSourceFiles=len(SrcFile)
 	
+						
+	PowerParams={}
+	PowerParams['FreqParam0']=3;PowerParams['TotalPowerParam0']=4;PowerParams['IAPowerParam0']=7;PowerParams['GTPowerParam0']=10;PowerParams['DRAMPowerParam0']=13 #0-indexed
+	PowerParams['FreqParam1']=16;PowerParams['TotalPowerParam1']=17;PowerParams['IAPowerParam1']=20;PowerParams['GTPowerParam1']=23;PowerParams['DRAMPowerParam1']=26 #0-indexed
+	
+	PowerParamsInOrder=[]
+	PowerParamsInOrder.append('FreqParam0') 
+	PowerParamsInOrder.append('TotalPowerParam0')
+	PowerParamsInOrder.append('IAPowerParam0')
+	PowerParamsInOrder.append('GTPowerParam0')
+	PowerParamsInOrder.append('DRAMPowerParam0')
+	PowerParamsInOrder.append('FreqParam1')
+	PowerParamsInOrder.append('TotalPowerParam1')
+	PowerParamsInOrder.append('IAPowerParam1')
+	PowerParamsInOrder.append('GTPowerParam1')
+	PowerParamsInOrder.append('DRAMPowerParam1')
+	
+	#for CurrParam in PowerParams:#PowerParamsInOrder.append(CurrParam)
+	
 	CurrSrcFileParams={}
 	CurrStatsFileName=''
 	CurrStatsFile=''
@@ -222,6 +305,7 @@ def main(argv):
 	#AverageRun=5
 	AverageRuntimeCollection={}
 	PowerValueCollection={}
+	RaplPowerValueCollection={}
 	PredictionVectorParamsCollection={}
 	ItersCollection={}
 	FileNameCollection=[]
@@ -291,49 +375,8 @@ def main(argv):
 				#print "\n\t TempStatsFileName: "+str(TempStatsFileName)
 				CurrSrcFileParams[idx]['FileName']=FileName
 				if(CurrStatsFileName!=TempStatsFileName):
+					WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder)
 					if(CurrStatsFile):
-						CurrStatsFile.write("\n\t Average run times: ") ; 
-						CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
-						for CurrFile in FileNameCollection:
-							CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
-				                if(not(EnergySim==0)):
-				                        CurrStatsFile.write("\n\n\t Energy probes value: ")
-							CurrStatsFile.write("\n\t Counters : ")
-							for CurrCounter in EnviVars:
-								CurrStatsFile.write("\t "+str(CurrCounter))
-				                        CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t Power from each counter ")
-							if(EnergyMeasure==1):
-				   				#CurrStatsFile.write("\n")
-								#print "\n\t CurrFile: "+str(CurrFile)
-								for CurrFile in FileNameCollection:
-								 #CurrStatsFile.write("\n")
-								 if(CurrFile in PowerValueCollection):
-									 for CurrBB in (PowerValueCollection[CurrFile]):
-										CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
-										for CurrPower in (PowerValueCollection[CurrFile][CurrBB]):
-											CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
-								 else:
-									CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
-							elif(EnergyMeasure==0):
-								for CurrFile in FileNameCollection:
-									if(CurrFile in PowerValueCollection):
-										CurrStatsFile.write("\n\t "+str(CurrFile))
-									        for CurrPower in (PowerValueCollection[CurrFile]):
-									                 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
-									else:
-										CurrStatsFile.write("\n\t "+str(CurrFile)+"\t  error extracting power!!")
-				                if(not(VectorExtract==0)):
-				                	CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t ParamStart: "+str(VectorParamStart)+" Num-params: "+str(NumVectorParams))
-				                	for CurrFile in FileNameCollection:
-				                		CurrStatsFile.write("\n\t "+str(CurrFile))
-				                		if(CurrFile in PredictionVectorParamsCollection):
-				                			for CurrParam  in (PredictionVectorParamsCollection[CurrFile]):
-				                				CurrStatsFile.write("\t "+str(CurrParam))
-				                		else:
-				                			print "\n\t Error with extracting param info! "
-
-
-
 						CurrStatsFile.write("\n\n")
 						CurrStatsFile.close()
 					
@@ -630,11 +673,6 @@ def main(argv):
 						RaplWattsLsOutput=commands.getoutput('ls '+str(RaplWattsFilePattern))
 						RaplWattsFreq=ExtractFilesAndFreqs(RaplWattsLsOutput)
 						
-						PowerParams={}
-						
-						PowerParams['FreqParam0']=3;PowerParams['TotalPowerParam0']=4;PowerParams['IAPowerParam0']=7;PowerParams['GTPowerParam0']=10;PowerParams['DRAMPowerParam0']=13 #0-indexed
-						PowerParams['FreqParam1']=16;PowerParams['TotalPowerParam1']=17;PowerParams['IAPowerParam1']=20;PowerParams['GTPowerParam1']=23;PowerParams['DRAMPowerParam1']=26 #0-indexed
-						
 						NumPowerParams=30
 						for CurrFreq in RaplWattsFreq:
 							print "\t RaplFreq: "+str(CurrFreq)
@@ -659,7 +697,7 @@ def main(argv):
 										if(len(BreakdownParams)!=NumPowerParams):
 											ProperFormat=False
 											print "\t Not the right proper format --len "+str(len(BreakdownParams))+" LastTerm "+str(BreakdownParams[(len(BreakdownParams)-1)])+'--'#+str(CurrLine)+""
-										for CurrParam in PowerParams:
+										for CurrParam in PowerParamsInOrder:
 											ValueForParam=BreakdownParams[(PowerParams[CurrParam])]
 											if(IsNumber(ValueForParam)):
 												SumOfPowerValues[CurrParam]+=float(ValueForParam)
@@ -675,13 +713,14 @@ def main(argv):
 									NumSamples=len(CurrFileContents)-1
 									if(NumSamples>0):
 										StrAvgPower=''
-										for CurrParam in PowerParams:
+										for CurrParam in PowerParamsInOrder:
 											SumOfPowerValues[CurrParam]/=NumSamples
-											StrAvgPower+='\t'+str(SumOfPowerValues[CurrParam])
+											StrAvgPower+='\t'+str(round(SumOfPowerValues[CurrParam],5))
+											#print "\t PowerParam-- "+str(CurrParam)+'  Value '+str(SumOfPowerValues[CurrParam])
 										print "\t File: "+str(CurrFile)+" Power: "+str(StrAvgPower)
-										if(not(FileName in PowerValueCollection)):
-											PowerValueCollection[FileName]={}
-										PowerValueCollection[FileName][CurrFreq]=SumOfPowerValues
+										if(not(FileName in RaplPowerValueCollection)):
+											RaplPowerValueCollection[FileName]={}
+										RaplPowerValueCollection[FileName][CurrFreq]=StrAvgPower #SumOfPowerValues
 										RaplWattsNotYetFound=False
 											
 									else:
@@ -690,11 +729,11 @@ def main(argv):
 									break
 							if(RaplWattsNotYetFound):
 								print "\t ERROR: Not able to extract RaplWatts for frequency "+str(CurrFreq)
-								PowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "
+								RaplPowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "
 								#sys.exit()
 								
 									
-						sys.exit()
+						#sys.exit()
 
 					if(SimulationNeeded):
 ######
@@ -801,96 +840,12 @@ def main(argv):
 							
 				
 	if(CurrStatsFile):
-		CurrStatsFile.write("\n\t Average run times: ")
-		CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
-		for CurrFile in FileNameCollection:
-			CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
-		CurrStatsFile.write("\n\n")
-
-                if(not(EnergySim==0)):
-	                CurrStatsFile.write("\n\t Energy probes value: ")                   
-			CurrStatsFile.write("\n\t Counters : ")
-                        for CurrCounter in EnviVars:
-                     		CurrStatsFile.write("\t "+str(CurrCounter))
-                        CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t Power from each counter ")
-                        
-                        if(EnergyMeasure==1):
-   				#CurrStatsFile.write("\n")
-				#print "\n\t CurrFile: "+str(CurrFile)
-				for CurrFile in FileNameCollection:
-				 #CurrStatsFile.write("\n")
-				 if(CurrFile in PowerValueCollection):
-					 for CurrBB in (PowerValueCollection[CurrFile]):
-        			        	CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
-     	        	                	for CurrPower in (PowerValueCollection[CurrFile][CurrBB]):
-							CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
-				 else:
-					 CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
-
-			elif(EnergyMeasure==0):
-				
-				for CurrFile in FileNameCollection:
-					if(CurrFile in PowerValueCollection):
-						CurrStatsFile.write("\n\t "+str(CurrFile))
-                                        	for CurrPower in (PowerValueCollection[CurrFile]):
-                                                	 CurrStatsFile.write("\t "+str(round(float(CurrPower),4)))
-					else:
-						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t error extracting power!!")
-                if(not(VectorExtract==0)):
-                	CurrStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t ParamStart: "+str(VectorParamStart)+" Num-params: "+str(NumVectorParams))
-                	for CurrFile in MasterFileNameCollection:
-                		CurrStatsFile.write("\n\t "+str(CurrFile))
-                		if(CurrFile in PredictionVectorParamsCollection):
-                			for CurrParam  in (PredictionVectorParamsCollection[CurrFile]):
-                				CurrStatsFile.write("\t "+str(CurrParam))
-                		else:
-                			print "\n\t Error with extracting param info! "
-						
-
-			CurrStatsFile.write("\n\n\n")
+		WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder)
+		CurrStatsFile.write("\n\n\n")
 		CurrStatsFile.close()#"""
 
-		MasterStatsFile.write("\n\t Average run times: ") ; 
-		MasterStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
-		for CurrFile in MasterFileNameCollection:
-			MasterStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
-
-                if(not(EnergySim==0)):
-                         MasterStatsFile.write("\n\n\t Energy probes value: ")
-                         MasterStatsFile.write("\n\t Counters : ")
-                         for CurrCounter in EnviVars:
-                                  MasterStatsFile.write("\t "+str(CurrCounter))
-                         MasterStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t Power from each counter ")
-                         if(EnergyMeasure==1):
-                                 #print "\n\t CurrFile: "+str(CurrFile)
-                                 for CurrFile in MasterFileNameCollection:
-					if(CurrFile in PowerValueCollection):		
-                                	   for CurrBB in (PowerValueCollection[CurrFile]):
-                                        	 MasterStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB))
-	                                         for CurrPower in (PowerValueCollection[CurrFile][CurrBB]):
-        	                                         MasterStatsFile.write("\t "+str(round(float(CurrPower),4)))
-					else:
-						MasterStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrBB)+"\t error extracting power!!")
-                         elif(EnergyMeasure==0):
-                                 for CurrFile in MasterFileNameCollection:
-					if(CurrFile in PowerValueCollection):
-	                                         MasterStatsFile.write("\n\t "+str(CurrFile))
-        	                                 for CurrPower in (PowerValueCollection[CurrFile]):
-                	                                  MasterStatsFile.write("\t "+str(round(float(CurrPower),4)))	
-					else:	
-						 MasterStatsFile.write("\n\t "+str(CurrFile)+"\t  error extracting power!!")
-                if(not(VectorExtract==0)):
-                	MasterStatsFile.write("\n\t\t Exe: \t\t\t\t BBID: \t\t ParamStart: "+str(VectorParamStart)+" Num-params: "+str(NumVectorParams))
-                	for CurrFile in MasterFileNameCollection:
-                		MasterStatsFile.write("\n\t "+str(CurrFile))
-                		if(CurrFile in PredictionVectorParamsCollection):
-                			for CurrParam  in (PredictionVectorParamsCollection[CurrFile]):
-                				MasterStatsFile.write("\t "+str(CurrParam))
-                		else:
-                			print "\n\t Error with extracting param info! "
-
-						
-  
+		WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder)
+ 
                 MasterStatsFile.write("\n\n")
 		MasterStatsFile.close()
 
