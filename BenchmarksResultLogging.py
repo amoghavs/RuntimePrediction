@@ -71,13 +71,22 @@ def ReplaceNumLoops(Input,ReplaceIter):
 	
 def WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,
 	       PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,
-	       VectorParamStart,NumVectorParams):
+	       VectorParamStart,NumVectorParams,AverageCalc=0):
 	if(CurrStatsFile):
 		CurrStatsFile.write("\n\t Average run times: ") ; 
-		CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
-		for CurrFile in FileNameCollection:
-			if(CurrFile in AverageRuntimeCollection):
-				CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
+		if(AverageCalc==0):
+			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
+			for CurrFile in FileNameCollection:
+				if(CurrFile in AverageRuntimeCollection):
+					CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
+		else:
+			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Freq\t\t Iters\t\t  Average runtime ")
+			for CurrFile in FileNameCollection:
+				if((CurrFile in AverageRuntimeCollection) and (CurrFile in ItersCollection) ):
+					CurrStatsFile.write("\n")
+					for CurrFreq in (AverageRuntimeCollection[CurrFile]):
+						CurrStatsFile.write("\t "+str(CurrFile)+"\t "+str(CurrFreq)+"\t "+str(ItersCollection[CurrFile])+"\t "+str(AverageRuntimeCollection[CurrFile][CurrFreq]) )
+				
 		if(not(EnergySim==0)):
 			CurrStatsFile.write("\n\n\t Energy probes value: ")
 			CurrStatsFile.write("\n\t Counters : ")
@@ -143,7 +152,29 @@ def EmailMsg(EmailID,Msg,Subject='Update!!'):
 	EmailOutput=commands.getoutput(EmailCmd)
 	print "\t Cmd: "+str(EmailCmd)
 	print "\t Output: "+str(EmailOutput)
-	
+
+def ExtractRuntime(RunOutputFile):
+	RunOutput=open(RunOutputFile)
+	for CurrLine in RunOutput:
+	        #print "\n\t CurrLine: "+str(CurrLine)
+	        CheckTime=re.match('^\s*.*app.*time\:',CurrLine)
+	        #CheckTime=re.match('\s*Run\-time',CurrLine)
+	        if CheckTime:
+	                #print "\n\t CurrLine: "+str(CurrLine)
+	                CheckRuntime=re.match('\s*.*app.*time\:\s*(\d+)*\.(\d+)*',CurrLine) # 
+	                #CheckRuntime=re.match('\s*.*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) 
+	                if CheckRuntime:
+	                        #CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
+	                        Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
+	                        IterRuntime=float(Temp)
+	                        print "\n\t--Runtime--: "+str(IterRuntime)
+				return IterRuntime
+				RunOutput.close()
+	                else:
+	                        print "\n\t ERROR: Cannot extract runtime! \n" 
+	                        IterRuntime=float(0.0)
+				return IterRuntime				
+				#sys.exit()    
 	
 def main(argv):
 	SrcFileName=''
@@ -313,6 +344,7 @@ def main(argv):
 	FilesToRename=['.siminst','.dist','.spatial']
 	#FilesToExtract=['.dist','.spatial']
 	#AverageRun=5
+	AverageCalc=1
 	AverageRuntimeCollection={}
 	PowerValueCollection={}
 	RaplPowerValueCollection={}
@@ -341,7 +373,7 @@ def main(argv):
 		MaxIters=int(200000)
 		print "\t INFO: Using default MaxIters option: "+str(MaxIters)
 	SimulationNeeded=not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) )
-	InfoExtractionNeeded=( not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) and (VectorExtract==0) ) )
+	InfoExtractionNeeded=( not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) and (VectorExtract==0) and (AverageCalc==0) ) )
 	JustVectorExtractionNeeded= ( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) )
 	print "\n\t SimulationNeeded: "+str(SimulationNeeded)+" InfoExtractionNeeded: "+str(InfoExtractionNeeded)+" JustVectorExtractionNeeded "+str(JustVectorExtractionNeeded)
 	
@@ -361,7 +393,7 @@ def main(argv):
 		print "\t LsOutput: "+str(CurrSrcFile)
 		CurrSrcFileParams[idx]={}
 		ExtractFileName=re.match('\s*(.*)\.c',CurrSrcFile)
-		if(idx%25==0):
+		if(idx%10==0):
 			if(idx>1):
 				EmailMsg(EmailID,'Finished running '+str(idx)+' files! ',' Just another update ')
 
@@ -397,7 +429,7 @@ def main(argv):
 				#print "\n\t TempStatsFileName: "+str(TempStatsFileName)
 				CurrSrcFileParams[idx]['FileName']=FileName
 				if(CurrStatsFileName!=TempStatsFileName):
-					WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams)
+					WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc)
 					if(CurrStatsFile):
 						CurrStatsFile.write("\n\n")
 						CurrStatsFile.close()
@@ -418,28 +450,12 @@ def main(argv):
 				RunOutputFile='RunOutput'+str(FileName)+'.log'
 				RuntimeCollection=[]
 				AverageRunTime=0.00000000010000001
-				for i in range(AverageRun):
+				if(AverageCalc==0):
+				 for i in range(AverageRun):
 					RunCmd='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+' > '+str(RunOutputFile)
 					commands.getoutput(RunCmd)
-					RunOutput=open(RunOutputFile)
-					for CurrLine in RunOutput:
-						#print "\n\t CurrLine: "+str(CurrLine)
-						CheckTime=re.match('^\s*.*app.*time\:',CurrLine)
-						#CheckTime=re.match('\s*Run\-time',CurrLine)
-						if CheckTime:
-							#print "\n\t CurrLine: "+str(CurrLine)
-							CheckRuntime=re.match('\s*.*app.*time\:\s*(\d+)*\.(\d+)*',CurrLine) # 
-							#CheckRuntime=re.match('\s*.*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) 
-							if CheckRuntime:
-								#CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
-								Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
-								Temp=float(Temp)
-								AverageRunTime+=Temp
-								print "\n\t--Runtime--: "+str(Temp)
-							else:
-								print "\n\t ERROR: Cannot extract runtime! \n" 
-								sys.exit()							
-						
+					IterRuntime=ExtractRuntime(RunOutputFile)
+											
 				if(AverageRun>0):
 					AverageRunTime/=AverageRun
 				AverageRuntimeCollection[FileName]=AverageRunTime
@@ -449,7 +465,7 @@ def main(argv):
 			
 				if(InfoExtractionNeeded):	
 					
-				        if( not (EnergySim==0)):
+				        if( not (EnergySim==0) or (AverageCalc==1) ):
 				         print "\n\t ------------------------------------------- EnergyMeasure: "+str(EnergyMeasure)				      
 					 if(EnergyMeasure==0):
 
@@ -567,7 +583,7 @@ def main(argv):
 							CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
 							commands.getoutput(CMDMvFiles)
 							CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
-					 elif(EnergyMeasure==2):	
+					 elif((EnergyMeasure==2) or (AverageCalc==1)):	
 
 						print "\t Streams: "+str(CurrSrcFileParams[idx]['Stream'])+" NumOperands "+str(CurrSrcFileParams[idx]['Ops'])
 						NumOperands=((len(CurrSrcFileParams[idx]['Ops'])/int(CurrSrcFileParams[idx]['Stream']))+1)
@@ -576,13 +592,16 @@ def main(argv):
 						print "\t MaxIters: "+str(MaxIters)+" Iters: "+str(Iters)
 						ReplaceNumLoops(FileName,Iters)#ReplaceNumLoops(FileName,Iters)
 						ItersCollection[FileName]=Iters
-						print "\n\t **************************** WARNING: ReplaceNumLoops has a dummy iteration count!!!! ********************************* "
 						Compile(FileName,LibPapiPath)
-						RunOutput=commands.getoutput('./'+str(FileName))
-						print "\t RunOutput: "+str(RunOutput)
-						
-						TempCmd='run_one_case.sh '+str(FileName)+' 2600000 '
-						TakeIt=commands.getoutput(TempCmd)
+						#print "\n\t **************************** WARNING: ReplaceNumLoops has a dummy iteration count!!!! ********************************* "
+						#RunOutput=commands.getoutput('./'+str(FileName))
+						#print "\t RunOutput: "+str(RunOutput)
+							
+						if(EnergyMeasure==2):
+							CallScriptCmd='run_one_case.sh '+str(FileName)+' 2600000 '
+						else:
+							CallScriptCmd='only_run.sh '+str(FileName)+' 2600000 '
+						TakeIt=commands.getoutput(CallScriptCmd)
 						print "\n\t TakeIt: "+str(TakeIt)						
 						AllFreqs={}
 						FilePattern='app.out.'+str(FileName)+'*'
@@ -594,6 +613,19 @@ def main(argv):
 						AllFreqs=ExtractFilesAndFreqs(LsOutput)
 						for CurrFreq in AllFreqs:
 							print "\t LsFreq: "+str(CurrFreq)
+						if(AverageCalc==1):
+							AverageRuntimeCollection[FileName]={}
+							for CurrFreq in AllFreqs:
+								AvgRuntime=0.0
+								NumFiles=len(AllFreqs[CurrFreq])
+								for CurrFile in (AllFreqs[CurrFreq]):
+									TempRuntime=ExtractRuntime(CurrFile)
+									print "\t File: "+str(CurrFile)+" Runtime "+str(TempRuntime)+" AvgRuntime) "+str(AvgRuntime)
+									AvgRuntime+=TempRuntime
+								if(NumFiles>0):
+									AvgRuntime/=NumFiles
+								print "\t Freq- "+str(CurrFreq)+" AvgRuntime "+str(AvgRuntime)
+								AverageRuntimeCollection[FileName][CurrFreq]=AvgRuntime
 
 						WattsFilePattern='raw_watts.'+str(FileName)+'*'
 						WattsLsOutput=commands.getoutput('ls '+str(WattsFilePattern))
@@ -707,9 +739,7 @@ def main(argv):
 
 					if(SimulationNeeded):
 ######
-						ReplaceNumLoops(FileName,50)
-						Compile(FileName,LibPapiPath)
-						if( (EnergySim==0) ): #and (EnergyMeasure==1) ):
+						if( (EnergySim==0) and (EnergyMeasure==1) ):
 							
 		                                       CMDPebil='pebil --typ jbb --app '+str(FileName)
                                 		       commands.getoutput(CMDPebil)
@@ -722,16 +752,16 @@ def main(argv):
         	                                JbbFileHandle.close()
         	                                BBFileName='BB_'+str(FileName)+'.txt'
         	                                BBFile=open(BBFileName,'w')
-   						BBIdx=1
-						FuncIdx=5
-						LineNumIdx=4
+   						BBIDx=2
+						FuncIdx=6
+						LinUmIdx=5 
        		                                for CurrLine in JbbFile:
         	                                        CheckBlk=re.match('\s*LPP',CurrLine)
                 	                                if CheckBlk:
                         	                                BreakFields=re.split('\t',CurrLine)
                 	                                        #print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
                                 	                        #CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
-                                        	                CheckFuncVar=re.match('50',BreakFields[3])
+                                        	                CheckFuncVar=re.match('.*\.c\:198',BreakFields[5])
                                                 	        if CheckFuncVar:
                                                 	                print "\n\t BBID: "+str(BreakFields[BBIdx])+" Function: "+str(BreakFields[FuncIdx])+" LineNm: "+str(BreakFields[LineNumIdx])                                        
                                                 	                BBFile.write('\n\t '+str(BreakFields[BBIdx]))
@@ -773,7 +803,7 @@ def main(argv):
 							SimRunScript.close()
 							commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
 					
-							"""CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
+							CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
 							for CurrExt in FilesToExtract:
 								CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
 								DistFileHandle=open(CurrExtFile)
@@ -802,7 +832,7 @@ def main(argv):
 								CurrName=FileName+'.r00000000.t00000001'+str(CurrExtension)
 								MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
 							#print "\n\t MVCommand: "+str(MVCommand)
-								commands.getoutput(MVCommand) """
+								commands.getoutput(MVCommand)
 
 					if(not(VectorExtract==0)):
 						ReplaceNumLoops(FileName,50)
@@ -812,8 +842,11 @@ def main(argv):
         	                                CMDJbb='mpirun -np 1 '+' ./'+str(FileName)+'.jbbinst'
 	                                        commands.getoutput(CMDJbb)	
 						jRunProcess='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --process > Duh.log '
+						print "\n\t -- "+str(jRunProcess)
 						commands.getoutput(jRunProcess)
+						print "\n\t ??? "
 						jRunReport='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --sysid 111 --functions default --loops default --report blockvector > Duh1.log '
+						print "\n\t --- "
 						commands.getoutput(jRunReport)
 						print "\n\t jRunReport: "+str(jRunReport)
 	                                        JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
@@ -862,22 +895,24 @@ def main(argv):
                                                          CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
                                                          commands.getoutput(CMDMvFiles)	
                                                          CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)					
+	
 					
-						CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
-						commands.getoutput(CMDMvFiles)
-						CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
-						commands.getoutput(CMDMvFiles)
-						CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
+												
+					CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
+					commands.getoutput(CMDMvFiles)
+					CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
+					commands.getoutput(CMDMvFiles)
+					CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
 							
 	 else:
 		print "\t Could not find the SrcFile: "+str(CurrSrcFile)
 		print "\t LsOutput: "+str(LsOutput)
 	if(CurrStatsFile):
-		WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams)
+		WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc)
 		CurrStatsFile.write("\n\n\n")
 		CurrStatsFile.close()#"""
 
-		WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams)
+		WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc)
  
                 MasterStatsFile.write("\n\n")
 		MasterStatsFile.close()

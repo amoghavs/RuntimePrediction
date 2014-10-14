@@ -206,7 +206,8 @@ def InitVar(CurrVarName,VarNum,StreamNum,ConfigParams,WorkingVars,debug,Indirect
 		
     	if(ConfigParams['RandomAccess'][VarNum]):
 	    	#eqn="\t\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+str(TempVar)+';' #+str(ConfigParams['init'][VarNum])+';'
-	    	eqn="\t\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+']'+';'
+	    	#eqn="\t\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+']'+';'
+	    	eqn="\t\t"+TabSpace+str(CurrVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+'] * ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][StreamNum])+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+');'
 	    	FlushEqn="\t\t"+TabSpace+str(FlushVarName)+LHSindices+' = '+PermuteArrayVar+'['+str(PermuteIndexVar)+']'+';'
 	    	FlushForLoop.append(FlushEqn)
     	else:
@@ -674,18 +675,19 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				CurrAccumVar=str('Accum')+str(i)
 		 		AccumVar.append(CurrAccumVar)
 			 	CurrAccumVarDecl+='long int '+str(CurrAccumVar)+'='+str(i+1)+';'
-				
+			 	
 				if(LargestIndexNotFound and (ConfigParams['StrideinStream'][VarNum][i]==ConfigParams['maxstride'][VarNum]) ):
 					LargestIndexNotFound=0
+
 					if(ConfigParams['RandomAccess'][VarNum]>0):
 						#bounds= '(' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' - ('  + str(ConfigParams['GlobalVar']['Stream'][VarNum][i])+' + '+str(FinalStreamIndexChange[StrideDim]['Final'])+') )'  
-						if( FinalStreamIndexChange[StrideDim]['Final'] != ( ( ConfigParams['StrideVar'][VarNum][i]['NumOperands'] -1) * ( ConfigParams['OpDiff'][VarNum] ) ) ):
+						if( (FinalStreamIndexChange[StrideDim]['Final']) != ( ( ConfigParams['StrideVar'][VarNum][i]['NumOperands'] -1) * ( ConfigParams['OpDiff'][VarNum] ) ) ):
 							print "\n\t WARNING: FinalStreamIndexChange[StrideDim]['Final'] "+str(FinalStreamIndexChange[StrideDim]['Final'])+" is not equal to ( ConfigParams['StrideVar'][VarNum][i]['NumOperands'] * ( ConfigParams['OpDiff'][VarNum]-1 ) "+str(ConfigParams['StrideVar'][VarNum][i]['NumOperands'])+' * '+str( ConfigParams['OpDiff'][VarNum]-1)+" --"
-							if(ConfigParams['StrideScaling'][VarNum]):
-								bounds= '( ' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' - ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][i] )+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') )'
-							else:
-								bounds= '( ( ' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' * '+str(ConfigParams['GlobalVar']['NumItersLastDimVar'][VarNum])+' ) '+' - ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][i] )+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') )' 		
-							BoundForDim.append(str(bounds))
+						if(ConfigParams['StrideScaling'][VarNum]):
+							bounds= '( ' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' - ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][i] )+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') )'
+						else:
+							bounds= '( ( ' + str(ConfigParams['GlobalVar']['DimsSize'][StrideDim])+' * '+str(ConfigParams['GlobalVar']['NumItersLastDimVar'][VarNum])+' ) '+' - ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][i] )+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') )' 		
+						BoundForDim.append(str(bounds))
 
 					else:
 						if(ConfigParams['StrideScaling'][VarNum]):
@@ -804,9 +806,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
  		if(ConfigParams['RandomAccess'][VarNum]):
 			
 			#Method3:
-			StreamExprn=LHSVariableCurrStream+' = ( '+ str(LHSVariableCurrStream)+'* ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][CurrStream])+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') ) ;'
+			#StreamExprn=LHSVariableCurrStream+' = ( '+ str(LHSVariableCurrStream)+'* ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][CurrStream])+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') ) ;'
+			StreamExprn=''
 			StreamExprn+='\n\t '+LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) ; '
-
+			
 		else:
 			StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
 		if debug:
@@ -1171,6 +1174,7 @@ def main(argv):
 								ConfigParams['StrideVar'][CurrVar][CurrStream]['OperandsInfo']=[]
 								TmpExprnOperands=re.split('\),',ExprnBreakdown[OperandsIdx])
 								ExprnOperands=[]
+								print "\t TmpExprnOperands: "+str(TmpExprnOperands)+' ExprnBreakdown[OperandsIdx] '+str(ExprnBreakdown[OperandsIdx])
 								for CurrOperand in TmpExprnOperands:
 									Tmp=RemoveBraces(CurrOperand)
 									Tmp1=re.split(',',Tmp)
@@ -2189,9 +2193,9 @@ def main(argv):
 			CurrVarName=ConfigParams['StreamWideOperand'][VarNum][CurrStream] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
 			if(ConfigParams['Indirection'][VarNum]==0):
 				ThisStreamInit=[]
-				for CurrVarName in (ConfigParams['InitVar'][VarNum]):
-					Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
-					ThisStreamInit.append(Temp)
+				#for CurrVarName in (ConfigParams['InitVar'][VarNum]):
+				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
+				ThisStreamInit.append(Temp)
 				ThisVarInit.append(ThisStreamInit)
 			else:
 				ThisStreamInit=[]
