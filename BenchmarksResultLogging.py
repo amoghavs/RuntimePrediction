@@ -1,5 +1,6 @@
 
 import sys,getopt,subprocess,re,math,commands,time,copy,random
+from operator import itemgetter, attrgetter
 
 def usage():
 	print "\n\t Usage: BenchmarksResultsLogging.py -l/--source file with all the source file that needs to be executed and logged -p <num-of-procs> -c CacheSimulationFlag <0/1> -r ReuseDistance -s SpatialDistanceFlag  -e EnergyMeasureFlag <0/1> -n Number of Counters -a Number of runs for averaging runtime. -p Number of Processors -d \n\t\t -s: spatial distances -v/--vector <Vector-extract-from-PSAPP> -t/--vectorparamstart <vectorparamstart> -u/--numvectorparams <numvectorparams> .\n\t\t -o <Output-file-name> \n "
@@ -60,6 +61,48 @@ def ExtractFilesAndFreqs(LsOutput):
 	
 	return AllFreqs
 	
+def SortBBs(SrcFileName,OutputFileName,PercentThreshold):
+	InFile=open(SrcFileName)
+	BBFile=InFile.readlines()
+	InFile.close()
+	
+	print "\n\t Num of lines: "+str(len(BBFile))
+	BBIdx=0
+	PercentIdx=1
+	CollectTopLoopInfo=[]
+	for LineNum,ExtractLine in enumerate(BBFile):
+		#print "\n\t CurrLine: "+str(CurrLine)
+		CurrLine=ExtractLine
+		CurrLine=RemoveWhiteSpace(CurrLine)
+		TopLoopCheck=ExtractLine.split('\t')
+		Fields=CurrLine.split('\t')
+		if(len(Fields)>4):
+			#print "\n\t --LineNum: "+str(LineNum)+" #Fields "+str(len(Fields))
+			print "\n\t CurrLine: "+str(CurrLine)
+		else:
+			if(len(TopLoopCheck)==5):
+				TmpBB=Fields[BBIdx].split(':')
+				BB=''
+				Percent=RemoveWhiteSpace(Fields[PercentIdx])
+				if(len(TmpBB)==2):
+					BB=TmpBB[1]
+				#print "\n\t Percent: "+str(float(Percent))
+				CollectTopLoopInfo.append( (BB,float(Percent)) )
+
+	CollectTopLoopInfo=sorted(CollectTopLoopInfo, key=itemgetter(PercentIdx),reverse=True)
+	#for Idx,CurrBBTuple in enumerate(CollectTopLoopInfo):	
+	#	print "\n\t BB: "+str(CurrBBTuple[BBIdx])+" Percent: "+str(CurrBBTuple[PercentIdx])
+
+	OutputFile=open(OutputFileName,'w')
+	SortedBBsCollection=[]
+	for Idx,CurrBBTuple in enumerate(CollectTopLoopInfo):
+		if(CurrBBTuple[PercentIdx] > PercentThreshold):
+			OutputFile.write(str(CurrBBTuple[BBIdx])+"\n")
+			print("\n\t "+str(CurrBBTuple[PercentIdx]))
+			SortedBBsCollection.append(CurrBBTuple[BBIdx])
+
+	return SortedBBsCollection
+	
 def ReplaceNumLoops(Input,ReplaceIter):
 	ReplaceIter="perl -i -pe 's/NumLoops_Var0\ \=/NumLoops_Var0\ \= "+str(ReplaceIter)+"\;\/\//g' "+str(Input)+'.c'
 	print "\t ReplaceIter: "+str(ReplaceIter)
@@ -68,6 +111,34 @@ def ReplaceNumLoops(Input,ReplaceIter):
 		print "\t WARNING: ReplaceIterOutput "+str(ReplaceIterOutput)
 		print "\t WARNING is currently handeled as ERROR "
 		sys.exit()
+
+def ObtainTopLoops(FileName,NumofProcs,PercentThreshold=1.0):
+	CMDPebil='pebil --typ jbb --app '+str(FileName)
+        commands.getoutput(CMDPebil)
+	CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
+	commands.getoutput(CMDJbb)	
+
+	jRunProcess='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --process > Duh.log '
+	print "\n\t -- "+str(jRunProcess)
+	commands.getoutput(jRunProcess)
+	jRunReport='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --report loopview > Duh1.log '
+	commands.getoutput(jRunReport)
+	LoopViewStr=str(NumofProcs)
+	LoopViewStrNotReady=1
+	while LoopViewStrNotReady:
+		StrLen=len(LoopViewStr)
+		#print "\n\t Str-len: "+str(StrLen)
+		if(StrLen<4):
+			LoopViewStr='0'+str(LoopViewStr)
+		elif(StrLen==4):
+			LoopViewStrNotReady=0
+		else:
+			print "ERROR: Some logical must have happened! "
+			sys.exit()
+	LoopViewStr=str(FileName)+'_standard_'+str(LoopViewStr)+'.LoopView'
+	SortedBBsList='BBsSorted_'+str(FileName)+'.log'
+	SortedBBsCollection=SortBBs('processed/'+str(LoopViewStr),SortedBBsList,PercentThreshold)
+	return (SortedBBsCollection,SortedBBsList)	
 	
 def WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,
 	       PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,
@@ -83,9 +154,8 @@ def WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollectio
 			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Freq\t\t Iters\t\t  Average runtime ")
 			for CurrFile in FileNameCollection:
 				if((CurrFile in AverageRuntimeCollection) and (CurrFile in ItersCollection) ):
-					CurrStatsFile.write("\n")
 					for CurrFreq in (AverageRuntimeCollection[CurrFile]):
-						CurrStatsFile.write("\t "+str(CurrFile)+"\t "+str(CurrFreq)+"\t "+str(ItersCollection[CurrFile])+"\t "+str(AverageRuntimeCollection[CurrFile][CurrFreq]) )
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrFreq)+"\t "+str(ItersCollection[CurrFile])+"\t "+str(AverageRuntimeCollection[CurrFile][CurrFreq]) )
 				
 		if(not(EnergySim==0)):
 			CurrStatsFile.write("\n\n\t Energy probes value: ")
@@ -344,7 +414,7 @@ def main(argv):
 	FilesToRename=['.siminst','.dist','.spatial']
 	#FilesToExtract=['.dist','.spatial']
 	#AverageRun=5
-	AverageCalc=1
+	AverageCalc=0
 	AverageRuntimeCollection={}
 	PowerValueCollection={}
 	RaplPowerValueCollection={}
@@ -379,7 +449,7 @@ def main(argv):
 	
 	MasterStatsFile=open(OutputFileName,'w')
 	MasterFileNameCollection=[]
-	LibPapiPath='/usr/lib64/libpapi.so'
+	LibPapiPath='/usr/local/lib/libpapi.so'
 	EmailID=[]
 	EmailID.append('avspadiwal@gmail.com')
 	for idx,CurrSrcFile in enumerate(SrcFile):
@@ -447,23 +517,32 @@ def main(argv):
 				#Compile(FileName,LibPapiPath)
 				#sys.exit()
 				
-				RunOutputFile='RunOutput'+str(FileName)+'.log'
-				RuntimeCollection=[]
-				AverageRunTime=0.00000000010000001
-				if(AverageCalc==0):
-				 for i in range(AverageRun):
+
+				#sys.exit()
+			else:
+				Compile(FileName,LibPapiPath)
+				
+			RunOutputFile='RunOutput'+str(FileName)+'.log'
+			RuntimeCollection=[]
+			AverageRuntime=0.00000000010000001
+			if(AverageCalc==0):
+				for i in range(AverageRun):
 					RunCmd='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+' > '+str(RunOutputFile)
 					commands.getoutput(RunCmd)
 					IterRuntime=ExtractRuntime(RunOutputFile)
-											
+					AverageRuntime+=IterRuntime									
 				if(AverageRun>0):
-					AverageRunTime/=AverageRun
-				AverageRuntimeCollection[FileName]=AverageRunTime
+					AverageRuntime/=AverageRun
+				AverageRuntimeCollection[FileName]=AverageRuntime
 				FileNameCollection.append(FileName)
-				MasterFileNameCollection.append(FileName)
-				#sys.exit()
-			
-				if(InfoExtractionNeeded):	
+				MasterFileNameCollection.append(FileName)							
+			if(InfoExtractionNeeded):
+					SortedBBsList=''
+					SortedBBsCollection=[]
+					if(AverageCalc!=0):
+						FileNameCollection.append(FileName)
+						MasterFileNameCollection.append(FileName)							
+							
 					
 				        if( not (EnergySim==0) or (AverageCalc==1) ):
 				         print "\n\t ------------------------------------------- EnergyMeasure: "+str(EnergyMeasure)				      
@@ -490,7 +569,7 @@ def main(argv):
 											print "\t "+str(CurrPowerValues)
 										PowerValueCollection[FileName]=Temp
                                        		                        #Temp=float(Temp)
-                                       		                        #AverageRunTime+=Temp
+                                       		                        #AverageRuntime+=Temp
                                        		                        #print "\n\t--Runtime: "+str(Temp)+"~~"+str(CheckCounters.group(0))
                                        		                else:
                                        		                        print "\n\t ERROR: Cannot extract runtime! \n" 
@@ -506,33 +585,7 @@ def main(argv):
                                                          CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
  
 					 elif(EnergyMeasure==1):
-					  	if(not(VectorExtract==0)):
-                        	                 CMDPebil='pebil --typ jbb --app '+str(FileName)
-                	                         commands.getoutput(CMDPebil)
-        	                                 CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
-	                                         commands.getoutput(CMDJbb)	
-						jRunProcess='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --process > Duh.log '
-						print "\n\t -- "+str(jRunProcess)
-						commands.getoutput(jRunProcess)
-						jRunReport='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --report loopview > Duh1.log '
-						commands.getoutput(jRunReport)
-						LoopViewStr=str(NumofProcs)
-						LoopViewStrNotReady=1
-						while LoopViewStrNotReady:
-							StrLen=len(LoopViewStr)
-							#print "\n\t Str-len: "+str(StrLen)
-							if(StrLen<4):
-								LoopViewStr='0'+str(LoopViewStr)
-							elif(StrLen==4):
-								LoopViewStrNotReady=0
-							else:
-								print "ERROR: Some logical must have happened! "
-								sys.exit()
-						LoopViewStr=str(FileName)+'_standard_'+str(LoopViewStr)+'.LoopView'
-						SortedBBsList='BBsSorted_'+str(FileName)+'.log'
-						sortBBs='python SortBBs.py -i processed/'+str(LoopViewStr)+' -o '+str(SortedBBsList)+' >Duh2.log'
-						print "\n\t Cmd for SortBBs "+str(sortBBs)
-						commands.getoutput(sortBBs)
+					  	(SortedBBsCollection,SortedBBsList)=ObtainTopLoops(FileName,NumofProcs)
 						InsertEnergyProbes=' pebil --tool LoopIntercept --inp '+str(SortedBBsList)+' --app '+str(FileName)+' --lnc libpapi.so,libpapiinst.so '
 						print "\n\t CMD InsertEnergyProbes: "+str(InsertEnergyProbes)
 						commands.getoutput(InsertEnergyProbes)
@@ -739,37 +792,10 @@ def main(argv):
 
 					if(SimulationNeeded):
 ######
-						if( (EnergySim==0) and (EnergyMeasure==1) ):
-							
-		                                       CMDPebil='pebil --typ jbb --app '+str(FileName)
-                                		       commands.getoutput(CMDPebil)
-                		                       CMDJbb='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.jbbinst'
-		                                       commands.getoutput(CMDJbb)
+						if(SortedBBsList==''):
+							(SortedBBsCollection,SortedBBsList)=ObtainTopLoops(FileName,NumofProcs)
 
-	                                        JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
-        	                                JbbFileHandle=open(JbbFileName)
-        	                                JbbFile=JbbFileHandle.readlines()
-        	                                JbbFileHandle.close()
-        	                                BBFileName='BB_'+str(FileName)+'.txt'
-        	                                BBFile=open(BBFileName,'w')
-   						BBIDx=2
-						FuncIdx=6
-						LinUmIdx=5 
-       		                                for CurrLine in JbbFile:
-        	                                        CheckBlk=re.match('\s*LPP',CurrLine)
-                	                                if CheckBlk:
-                        	                                BreakFields=re.split('\t',CurrLine)
-                	                                        #print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
-                                	                        #CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
-                                        	                CheckFuncVar=re.match('.*\.c\:198',BreakFields[5])
-                                                	        if CheckFuncVar:
-                                                	                print "\n\t BBID: "+str(BreakFields[BBIdx])+" Function: "+str(BreakFields[FuncIdx])+" LineNm: "+str(BreakFields[LineNumIdx])                                        
-                                                	                BBFile.write('\n\t '+str(BreakFields[BBIdx]))
-
-                                     	  	BBFile.write("\n\n")
-                                     	  	BBFile.close()
-#####
-						CMDPebilSim='pebil --typ sim --inp '+str(BBFileName)+' --app '+str(FileName)
+						CMDPebilSim='pebil --typ sim --inp '+str(SortedBBsList)+' --app '+str(FileName)
 						print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
 						commands.getoutput(CMDPebilSim)
 						SimInstFile=str(FileName)+'.siminst'
@@ -777,14 +803,16 @@ def main(argv):
 						CMDMkdir='mkdir '+str(DirName)
 						commands.getoutput(CMDMkdir)
 				
-				#CurrStatsFile.write("\n\t AverageRunTime: "+str(AverageRunTime))
+				#CurrStatsFile.write("\n\t AverageRuntime: "+str(AverageRuntime))
 						FilesToExtract=[]
 						if(ReuseWindow!=0):
 							FilesToExtract.append('.dist')
+
 						if(spatial!=''):
-							if(spatial!=0):
+							#if(spatial!=0):
+							if((len(SpatialWindow)==1) and (SpatialWindow[0]==0)):
 								FilesToExtract.append('.spatial')
-	
+
 						for CurrSW in SpatialWindow:
 						
 							SimRunScript=open('SimRun.sh','w')
@@ -798,12 +826,13 @@ def main(argv):
 							SimRunScript.write('\n\t '+str(MetasSimCacheSim))			
 							SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=1 ')	
 							SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
-							SimRunScript.write('\n\t ./'+str(SimInstFile))	
+							SimRunScript.write('\n\t mpirun -np '+str(NumofProcs)+'./'+str(SimInstFile))	
 							SimRunScript.write('\n\n')							
 							SimRunScript.close()
 							commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
 					
-							CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
+							if(CurrStatsFile!=''):
+								CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
 							for CurrExt in FilesToExtract:
 								CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
 								DistFileHandle=open(CurrExtFile)
@@ -835,44 +864,9 @@ def main(argv):
 								commands.getoutput(MVCommand)
 
 					if(not(VectorExtract==0)):
-						ReplaceNumLoops(FileName,50)
-						Compile(FileName,LibPapiPath)
-                        	                CMDPebil='pebil --typ jbb --app '+str(FileName)
-                	                        commands.getoutput(CMDPebil)
-        	                                CMDJbb='mpirun -np 1 '+' ./'+str(FileName)+'.jbbinst'
-	                                        commands.getoutput(CMDJbb)	
-						jRunProcess='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --process > Duh.log '
-						print "\n\t -- "+str(jRunProcess)
-						commands.getoutput(jRunProcess)
-						print "\n\t ??? "
-						jRunReport='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --sysid 111 --functions default --loops default --report blockvector > Duh1.log '
-						print "\n\t --- "
-						commands.getoutput(jRunReport)
-						print "\n\t jRunReport: "+str(jRunReport)
-	                                        JbbFileName=str(FileName)+'.r00000000.t00000001.jbbinst'
-        	                                JbbFileHandle=open(JbbFileName)
-        	                                JbbFile=JbbFileHandle.readlines()
-        	                                JbbFileHandle.close()
-        	                                #BBFileName='BB_'+str(FileName)+'.txt'
-        	                                #BBFile=open(BBFileName,'w')
-   						BBIdx=1
-						FuncIdx=5
-						LineNumIdx=4
-						DefIduIdx=23
-						NumDefIduParams=5 # Idu, Fdu2, Idu2, Fdu2, Mdu2
-						BBstoSearch=[]
-       		                                for CurrLine in JbbFile:
-        	                                        CheckBlk=re.match('\s*LPP',CurrLine)
-                	                                if CheckBlk:
-                        	                                BreakFields=re.split('\t',CurrLine)
-                	                                        #print "\n\t CurrLine: "+str(CurrLine)+' #Fields: '+str(len(BreakFields))
-                                	                        #CheckFuncVar=re.match('\s*FuncVar.*',BreakFields[6])
-                                        	                CheckFuncVar=re.match('50',BreakFields[3])
-                                                	        if CheckFuncVar:
-                                                	                print "\n\t BBID: "+str(BreakFields[BBIdx])+" Function: "+str(BreakFields[FuncIdx])+" LineNm: "+str(BreakFields[LineNumIdx])                                        
-                                                	                BBstoSearch.append(BreakFields[BBIdx])	
-                                                	                #BBFile.write('\n\t '+str(BreakFields[BBIdx]))
-						for CurrBB in BBstoSearch:
+						if(SortedBBsList==''):
+							(SortedBBsCollection,SortedBBsList)=ObtainTopLoops(FileName,NumofProcs)						
+						for CurrBB in SortedBBsCollection:
 							print "\t Now searching: "+str(CurrBB)
 							GrepCmd='grep '+str(CurrBB)+' loopVectors.rALL'	
 							GrepOutput=commands.getoutput(GrepCmd)
@@ -912,10 +906,10 @@ def main(argv):
 		CurrStatsFile.write("\n\n\n")
 		CurrStatsFile.close()#"""
 
-		WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc)
+	WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc)
  
-                MasterStatsFile.write("\n\n")
-		MasterStatsFile.close()
+	MasterStatsFile.write("\n\n")
+	MasterStatsFile.close()
 
 
 	RemoveWorkingFiles='rm -f RunOutput.log SimRun.sh *Instr* Duh*.log'
@@ -924,5 +918,5 @@ def main(argv):
 if __name__ == "__main__":
    main(sys.argv[1:])
    EmailID=['avspadiwal@gmail.com']	
-   EmailMsg(EmailID,' Yaay done with running all the files',' End of run update!! ')
+   #EmailMsg(EmailID,' Yaay done with running all the files',' End of run update!! ')
 

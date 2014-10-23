@@ -60,6 +60,7 @@ def PerStreamConfig(Max,Min,Operations):
 	MaxNumOperands=0
 	for CurrVar in range(NumVars):
 		Temp=[]
+		print "\t Min['NumOperands'][CurrVar]: "+str(Min['NumOperands'][CurrVar])+"\t Max['NumOperands'][CurrVar] "+str(Max['NumOperands'][CurrVar])
 		for CurrVarNumOperands in range(Min['NumOperands'][CurrVar],Max['NumOperands'][CurrVar]+1):
 			Temp.append(CurrVarNumOperands)
 			if(CurrVarNumOperands > MaxNumOperands):
@@ -351,27 +352,26 @@ def main():
 
         Max={} #; Ensure Max is less than or equal to Min. 
         Min={}
-        Max['Vars']=1
-        Min['Vars']=1
+        Max['Vars']=4
+        Min['Vars']=4
         Max['Dims']=1
         Min['Dims']=1
-        Max['NumStream']=3
+        Max['NumStream']=1
         Min['NumStream']=1
         Max['Stride']=0 # ie., 2^4
         Min['Stride']=0 # ie., 2^0=1
-        Alloc=[['d']] #,'d','d','d']]    
-        Init=['index0']#,'index0','index0','index0']
-        DS=[['i']]#,'d','d','d']]    
-        StrideScaling=[1]# 0 0 0 
-	RandomAccess=[[1]] # 1,1,1]]
-	PAPIInst=[0] # 0,1,0
-        #SpatWindow=[8,16,32];
+        Alloc=[['d','d','d','d']]    
+        Init=['index0','index0','index0','index0']
+        DS=[['l','l','l','l']]#,'d','d','d']]    
+        StrideScaling=[1,1,1,1]# 0 0 0 
+	RandomAccess=[[1,1,1,1]] # 1,1,1]]
+	PAPIInst=[0,0,0,0]
         LoopIterationBase=1;
         #LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
-        LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
+        LoopIterationsExponent=[[1],[1],[1],[1]] # ,[1],[1],[1]];
 	#LoopIterationsExponent=[[2.5]]# ,[1],[1],[1]];
-	DifferentOperandsFlag=[0]#1,0,0 0: All "different" operand are same, 1: All "different" operand are different
-	IndirectionFlag=[0]#1,0,1 : 1: Indirection, 0: No-indirection.
+	DifferentOperandsFlag=[0,0,0,0]#1,0,0 0: All "different" operand are same, 1: All "different" operand are different
+	IndirectionFlag=[0,0,0,0]#1,0,1 : 1: Indirection, 0: No-indirection.
 
  	NumVars=(Max['Vars']-Min['Vars']+1)
  	if(Max['Vars']==Min['Vars']):	
@@ -395,7 +395,7 @@ def main():
         Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
         HigherDimSize= MaxSize/ Dim0Size
         NumSizeIter=6
-        SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
+        SuccessiveOperandDiff=[8,8,8,8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
 	Max['NumOperands']=[3] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
@@ -436,8 +436,8 @@ def main():
 	Operations['DimLookup']={0:'i',1:'j',2:'k'} # Should have as many dims
 	
 	# Max/Min['IntraOperandDelta'] = [ (Delta-Per-Dim) * <#Vars>] ; Ensure Max is less than or equal to Min. # Min should be positive when specified and Min and Max cannot be equal to zero, but can play around while chosing the actual indices.
-	Max['IntraOperandDelta']=[(+1,+1,1)]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
-	Min['IntraOperandDelta']=[(0,0,0) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
+	Max['IntraOperandDelta']=[(+1,+1,1),(+1,+1,1),(+1,+1,1),(+1,+1,1)]#, ( +3,+3,+4) , ( +3,+3,+4) , ( +3,+3,+4) ]
+	Min['IntraOperandDelta']=[(0,0,0),(0,0,0),(0,0,0),(0,0,0) ] #, ( +2,+1,+2) , ( +2,+1,+2) , ( +2,+1,+2) ]
 	
 	Max['Constant']=10
 	Min['Constant']=2
@@ -471,9 +471,16 @@ def main():
 		Dim0Size=2**(MbyteSize-HigherDimSizeIndex)
 		HigherDimSize= MaxSize/ Dim0Size	
 		print "\n\t CurrIter: "+str(CurrIter)+" MbyteSize: "+str(MbyteSize)+" MaxSize: "+str(MaxSize)
-		Min['NumOperands'][0]=CurrIter#+1
-		Max['NumOperands'][0]=CurrIter#+1
 		
+		Min['NumOperands']=[]
+		Max['NumOperands']=[]
+		Temp=[]
+		for CurrVar in range(NumVars):
+			Temp.append(CurrIter)
+		Min['NumOperands']=Temp
+		Max['NumOperands']=Temp
+			
+		print "\t Min['NumOperands']: "+str(Min['NumOperands'])+"\t Max['NumOperands']: "+str(Max['NumOperands'])
 		Min['OperandsCombo']=[('c',0),('d',0)]
 		Max['OperandsCombo']=[('c',0),('d',0)]
 		Min['OperandsCombo'].append(('s',CurrIter))
@@ -797,6 +804,7 @@ def main():
 												AllocString+=','+str(CurrAlloc)
 											else:
 												AllocString+=str(CurrAlloc)
+											print "\t AllocString: "+str(AllocString)	
 										DSString=''
 										for CurrDSSet in DS:
 											for i,CurrDS in enumerate(CurrDSSet):
@@ -854,6 +862,7 @@ def main():
 														CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' -o '+str(FileName.group(1))
 														print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 														commands.getoutput(CMDCompileFile)
+												sys.exit()
 
 
 if __name__=="__main__":
