@@ -262,7 +262,7 @@ def main(argv):
 	EnergyMeasure=''
 	MaxIters=''
 	try:
-		opts, args = getopt.getopt(sys.argv[1:],"l:r:s:a:p:c:e:b:d:n:o:h:v:t:u:",["list","reuse","spatial","average","procs","cachesim","energysim","energymeasure=","maxiters=","numcounters","output","help","vector=","vectorparamstart=","numvectorparams="])	
+		opts, args = getopt.getopt(sys.argv[1:],"l:r:s:a:p:c:e:b:d:n:o:h:v:t:u:",["list","reuse","spatial","average","procs","cachesim","energysim=","energymeasure=","maxiters=","numcounters","output","help","vector=","vectorparamstart=","numvectorparams="])	
 	except getopt.GetoptError:
 		#print str(err) # will print something like "option -a not recognized"
 		usage()
@@ -292,7 +292,7 @@ def main(argv):
 		elif opt in ("-p"):
 			NumofProcs=int(RemoveWhiteSpace(arg))
 			print "\n\t Number of processors: "+str(NumofProcs)+"\n"
-		elif opt in ("-e"):
+		elif opt in ("-e","--energysim"):
 			EnergySim=int(RemoveWhiteSpace(arg))
 			print "\n\t Energy sim option: "+str(EnergySim)+"\n"
 		elif opt in ("-n"):
@@ -479,6 +479,7 @@ def main(argv):
 				#if debug:
 				#print "\n\t Found all of the params! "
 				CurrSrcFileParams[idx]['Iters']=CheckParams.group(1)
+				ItersFileName=int(CheckParams.group(1))
 				CurrSrcFileParams[idx]['Vars']=CheckParams.group(2)
 				CurrSrcFileParams[idx]['DS']=CheckParams.group(3)
 				CurrSrcFileParams[idx]['Alloc']=CheckParams.group(4)
@@ -537,6 +538,16 @@ def main(argv):
 				FileNameCollection.append(FileName)
 				MasterFileNameCollection.append(FileName)							
 			if(InfoExtractionNeeded):
+                                	NumProcsStrExtension=''
+                                        if(NumofProcs<10):
+                                        	NumProcsStrExtension='0'+str(NumofProcs)
+                                        elif(NumofProcs<100):
+                                                NumProcsStrExtension=str(NumofProcs)
+                                        else:
+                                                print "\t ERROR: NumOfProcs is not supposed to be handled "
+                                                sys.exit()
+					ExtensionJbb='.r00000000.t000000'+str(NumProcsStrExtension)+'.jbbinst'
+			
 					SortedBBsList=''
 					SortedBBsCollection=[]
 					if(AverageCalc!=0):
@@ -714,7 +725,9 @@ def main(argv):
 									WattsNotYetFound=False
 									break
 							if(WattsNotYetFound):
-								print "\t ERROR: Not able to extract watts for frequency "+str(CurrFreq)
+								print "\t ERROR/WARNING: Not able to extract watts for frequency "+str(CurrFreq)
+								if(not(FileName in PowerValueCollection)):
+									PowerValueCollection[FileName]={}
 								PowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "
 								#sys.exit()
 						
