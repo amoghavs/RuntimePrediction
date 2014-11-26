@@ -445,13 +445,13 @@ def main():
  	#Operations['Operand']	
 	Operations['PermutationsFlag']=PermutationsFlag 
  
-        LoopIterations=[]
-        for CurrVar in range(NumVars):
-        	Temp=[]
-        	for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
-        		CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
-        		Temp.append(CurrNumLoops)
-        		#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
+	LoopIterations=[]
+	for CurrVar in range(NumVars):
+		Temp=[]
+		for CurrLoopIterExponent in (LoopIterationsExponent[CurrVar]):
+			CurrNumLoops= int( (LoopIterationBase) ** (CurrLoopIterExponent) )
+			Temp.append(CurrNumLoops)
+			#print "\n\t Base: "+str(LoopIterationBase)+" CurrLoopIterExponent: "+str(CurrLoopIterExponent)+" CurrNumLoops: "+str(CurrNumLoops)
  		LoopIterations.append(Temp)
  
   	CurrVar=0
