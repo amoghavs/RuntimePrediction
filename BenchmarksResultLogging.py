@@ -549,7 +549,8 @@ def main(argv):
 				#sys.exit()
 			else:
 				Compile(FileName,LibPapiPath)
-				
+				FileNameCollection.append(FileName)
+				MasterFileNameCollection.append(FileName)	
 			RunOutputFile='RunOutput'+str(FileName)+'.log'
 			RuntimeCollection=[]
 			AverageRuntime=0.00000000010000001
@@ -1013,9 +1014,7 @@ def main(argv):
 		WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim)
 		CurrStatsFile.write("\n\n\n")
 		CurrStatsFile.close()#"""
-
 	WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim)
- 
 	MasterStatsFile.write("\n\n")
 	MasterStatsFile.close()
 
