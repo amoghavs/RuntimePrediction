@@ -27,7 +27,7 @@ def RemoveBraces(Input):
 	return Output
 	
 def Compile(Input,Options=''):
-	CompileCmd='mpicc -g -O2 '+str(Input)+'.c '+str(Options)+' -o '+str(Input)
+	CompileCmd='mpicc -g -O3 '+str(Input)+'.c '+str(Options)+' -o '+str(Input)
 	print "\t CompileCmd: "+str(CompileCmd)
 	CompileOutput=commands.getoutput(CompileCmd)
 	if(CompileOutput!=''):
@@ -73,20 +73,21 @@ def SortBBs(SrcFileName,OutputFileName,PercentThreshold):
 	for LineNum,ExtractLine in enumerate(BBFile):
 		#print "\n\t CurrLine: "+str(CurrLine)
 		CurrLine=ExtractLine
-		CurrLine=RemoveWhiteSpace(CurrLine)
+		CurrLine=RemoveWhiteSpace(ExtractLine)
 		TopLoopCheck=ExtractLine.split('\t')
 		Fields=CurrLine.split('\t')
-		if(len(Fields)>4):
-			#print "\n\t --LineNum: "+str(LineNum)+" #Fields "+str(len(Fields))
+		if(len(Fields)>5):
+			#print "\n\t --LineNum: "+str(LineNum)+" #Fields "+str(len(Fields))+" #TopLoopCheck "+str(len(TopLoopCheck))
 			print "\n\t CurrLine: "+str(CurrLine)
 		else:
-			if(len(TopLoopCheck)==5):
+			print " #Fields "+str(len(Fields))+" #TopLoopCheck "+str(len(TopLoopCheck)) 
+			if(len(TopLoopCheck)==6):
 				TmpBB=Fields[BBIdx].split(':')
 				BB=''
 				Percent=RemoveWhiteSpace(Fields[PercentIdx])
 				if(len(TmpBB)==2):
 					BB=TmpBB[1]
-				#print "\n\t Percent: "+str(float(Percent))
+				print "\n\t Percent: "+str(float(Percent))
 				CollectTopLoopInfo.append( (BB,float(Percent)) )
 
 	CollectTopLoopInfo=sorted(CollectTopLoopInfo, key=itemgetter(PercentIdx),reverse=True)
@@ -138,6 +139,8 @@ def ObtainTopLoops(FileName,NumofProcs,PercentThreshold=1.0):
 	LoopViewStr=str(FileName)+'_standard_'+str(LoopViewStr)+'.LoopView'
 	SortedBBsList='BBsSorted_'+str(FileName)+'.log'
 	SortedBBsCollection=SortBBs('processed/'+str(LoopViewStr),SortedBBsList,PercentThreshold)
+	jRunReport='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --sysid 130 --functions default --loops default --report blockvector  > Duh2.log '
+	commands.getoutput(jRunReport)
 	return (SortedBBsCollection,SortedBBsList)	
 	
 def WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,
@@ -569,7 +572,7 @@ def main(argv):
 				NumCounterSets=2
 				CurrCounterValues={}
 				for CurrCounterSets in range(NumCounterSets):
-					ReplaceSet="perl -i -pe 's/int\*\ Events\ \=/int\*\ Events\ \=\ Events"+str(CurrCounterSets)+"\;\/\//g' "+str(FileName)+'.c'	
+					ReplaceSet="perl -i -pe 's/int\*\ Events\=/int\*\ Events\=\ Events"+str(CurrCounterSets)+"\;\/\//g' "+str(FileName)+'.c'	
 					CurrCounterValues[CurrCounterSets]={}
 					print "\t CMD ReplaceSet: "+str(ReplaceSet)
 					commands.getoutput(ReplaceSet)
@@ -934,12 +937,12 @@ def main(argv):
 							SimRunScript.write('\n\t '+str(MetasSimCacheSim))			
 							SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=1 ')	
 							SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
-							SimRunScript.write('\n\t mpirun -np '+str(NumofProcs)+'./'+str(SimInstFile))	
+							SimRunScript.write('\n\t mpirun -np '+str(NumofProcs)+' ./'+str(SimInstFile))	
 							SimRunScript.write('\n\n')							
 							SimRunScript.close()
 							commands.getoutput('sh SimRun.sh > SimInstOutput.log ')
 					
-							if(CurrStatsFile!=''):
+							"""if(CurrStatsFile!=''):
 								CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
 							for CurrExt in FilesToExtract:
 								CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
@@ -969,7 +972,7 @@ def main(argv):
 								CurrName=FileName+'.r00000000.t00000001'+str(CurrExtension)
 								MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
 							#print "\n\t MVCommand: "+str(MVCommand)
-								commands.getoutput(MVCommand)
+								commands.getoutput(MVCommand) """
 
 					if(not(VectorExtract==0)):
 						if(SortedBBsList==''):
@@ -1002,7 +1005,7 @@ def main(argv):
 												
 					CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
 					commands.getoutput(CMDMvFiles)
-					print "\t CMDMvFiles: "+str(CMDmvFiles)
+					print "\t CMDMvFiles: "+str(CMDMvFiles)
 					CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
 					commands.getoutput(CMDMvFiles)
 					CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
