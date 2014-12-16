@@ -387,8 +387,8 @@ def main():
 	Min['Vars']=1
 	Max['Dims']=1
 	Min['Dims']=1
-	Max['NumStream']=3
-	Min['NumStream']=2
+	Max['NumStream']=4
+	Min['NumStream']=1
 	Max['Stride']=2 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
 	Alloc=[['d']] #,'d','d','d']]    
@@ -519,6 +519,72 @@ def main():
 	  CurrNumOperands=Min['NumOperands'][0]
 	  NumOperandsAllocated=0
 
+	  Num={};Size={}
+	  Min['StreamsInHierarchy']=1
+	  Max['StreamsInHierarchy']=4
+	  Num['StreamsInHierarchy']={}
+	  Size['StreamsInHierarchy']={}
+	  Num['StreamsInHierarchy'][1]=[1,0,0,0,0] # (RequestedLevel,L1,L2,L3,Mem)
+	  Num['StreamsInHierarchy'][2]=[1,1,0,0,0] # (RequestedLevel,L1,L2,L3,Mem)
+	  Num['StreamsInHierarchy'][3]=[2,0,1,0,0] # (RequestedLevel,L1,L2,L3,Mem)
+	  Num['StreamsInHierarchy'][4]=[2,0,0,1,1] # (RequestedLevel,L1,L2,L3,Mem)
+	  
+	  Min['GlobalNestedLoops']=1
+	  Max['GlobalNestedLoops']=3
+	  
+	  StreamwiseNestedLoopDistribution={}
+	  StreamwiseNestedLoopDistribution[1]=[[1],[],[],[],[]] # [Choice-of-nested-loop-for-(RequestedLevel,L1,L2,L3,Mem)] # eg: For a given size [1,2,0,1] ==> 1 stream in NestedLoop-0(NL-0), 2 streams in NL-1, 0 streams in NL-2, 1 stream in NL-3.
+	  StreamwiseNestedLoopDistribution[2]=[[1],[0,1],[],[],[]]
+	  StreamwiseNestedLoopDistribution[3]=[[1,0,1],[],[1],[],[]]
+	  StreamwiseNestedLoopDistribution[4]=[[1,0,1],[],[],[0,1],[0,0,1]]
+	  
+	  if( (Min['GlobalNestedLoops']<1) and (Max['GlobalNestedLoops']<1) ):
+	  	print "\t ERROR: Min['NestedLoop'] "+str(Min['GlobalNestedLoop'])+" is less than one! "
+	  	sys.exit()
+	  
+	  for CurrNumStreams in range(Min['StreamsInHierarchy'],Max['StreamsInHierarchy']+1):
+	  	if(not(CurrNumStreams in Num['StreamsInHierarchy'])):
+	  		print "\t ERROR: Num['StreamsInHierarchy'] not presented for "+str(CurrNumStreams)+" number of streams!! "
+	  		sys.exit()
+	  PerStreamNestedLoopConfig={}
+	  for CurrNumStreams in range(Min['StreamsInHierarchy'],Max['StreamsInHierarchy']+1):
+	  	PerStreamNestedLoopConfig[CurrNumStreams]=[]
+	  	for CurrNestedLoopNum in range(Min['GlobalNestedLoops'],Max['GlobalNestedLoops']+1):
+		  	Tmp=[]
+		  	for CurrMemLevel in range(len(Num['StreamsInHierarchy'][CurrNumStreams])):
+	  			Tmp.append(0)
+	  		PerStreamNestedLoopConfig[CurrNumStreams].append(Tmp)
+	  		
+		if(CurrNumStreams in StreamwiseNestedLoopDistribution):
+			for MemLevelofStreamwiseNestedLoopDistribution,CurrMemLevelLoopDistribution in  enumerate(StreamwiseNestedLoopDistribution[CurrNumStreams]):
+		  		if( (len(CurrMemLevelLoopDistribution)<=Max['GlobalNestedLoops'] ) and (len(CurrMemLevelLoopDistribution) >= 0 ) ) :
+		  			NumStreamsRequested=0
+		  			for NestedLoopNum,CurrMemLevelReqStreams in enumerate(CurrMemLevelLoopDistribution):
+		  				PerStreamNestedLoopConfig[CurrNumStreams][NestedLoopNum][MemLevelofStreamwiseNestedLoopDistribution]+=CurrMemLevelReqStreams
+		  				NumStreamsRequested+=CurrMemLevelReqStreams
+		  				print "\t CurrNumStreams: "+str(CurrNumStreams)+"\t NestedLoopNum "+str(NestedLoopNum)+"\t MemLevelofStreamwiseNestedLoopDistribution "+str(MemLevelofStreamwiseNestedLoopDistribution)+"\t NumStreamsReq: "+str(CurrMemLevelReqStreams)
+		  			if( not( (NumStreamsRequested==Num['StreamsInHierarchy'][CurrNumStreams][MemLevelofStreamwiseNestedLoopDistribution]) and ( (Num['StreamsInHierarchy'][CurrNumStreams][MemLevelofStreamwiseNestedLoopDistribution] >=0) and (Num['StreamsInHierarchy'][CurrNumStreams][MemLevelofStreamwiseNestedLoopDistribution]<=Max['NumStream']) ) ) ):
+			  			print "\t ERROR: CurrNumStreams: "+str(CurrNumStreams)+"\tNumStreamsRequested "+str(NumStreamsRequested)+" but according to specs, it should be "+str(Num['StreamsInHierarchy'][CurrNumStreams][MemLevelofStreamwiseNestedLoopDistribution])
+			  			
+			  			sys.exit()
+		  		else:
+		  			print "\t ERROR: len(CurrMemLevelLoopDistribution)): "+str(len(CurrMemLevelLoopDistribution))+" is not legal. "
+		  			print "\t Legal range-- Min >=0 , Max: "+str(Max['GlobalNestedLoops'])+" as mentioned in Max['GlobalNestedLoops'] "
+		  			sys.exit()
+		else:
+		  	print "\t ERROR: StreamwiseNestedLoopDistribution is not available for "+str(CurrNumStreams)+" number of streams!! "
+		TotalStreamsRequested=0
+		for NLNumber,CurrNestedLoopConfig in enumerate(PerStreamNestedLoopConfig[CurrNumStreams]):
+			for CurrMemLevelInNestedLoop in CurrNestedLoopConfig:
+				TotalStreamsRequested+=CurrMemLevelInNestedLoop
+		if(TotalStreamsRequested!=CurrNumStreams):
+			print "\t ERROR: After calculating total num-streams at different memory levels across nested loops, the total requested is: "+str(TotalStreamsRequested)+" where as CurrNumStreams is "+str(CurrNumStreams)
+			print "\t Please check the specifications of NestedLoop "
+			sys.exit()
+				
+		for NLNumber,CurrNestedLoopConfig in enumerate(PerStreamNestedLoopConfig[CurrNumStreams]):
+			print "\t $$$$#### CurrNumStreams: "+str(CurrNumStreams)+"\t NestedLoop number: "+str(NLNumber)+"\t "+str(CurrNestedLoopConfig)+"\t TotalStreamsRequested: "+str(TotalStreamsRequested)	  	
+			
 	  for OpComboIdx,CurrOpCombo in OpComboKeys:
 	  	
 	  	if(CurrNumOperands > 2):
@@ -659,8 +725,7 @@ def main():
  		#MasterSWStats.write("\n\n\t ################################ \n\n");
  		for NumDims in range(Min['Dims'],Max['Dims']+1):
 			StreamConfig['CurrNumDims']=NumDims
-
-			for NumStreams in range(Min['NumStream'],Max['NumStream']+1):
+			for NumStreams in range(Min['NumStream'],Max['NumStream']+1):	
 				LogNumStreams=int(math.ceil(math.log(NumStreams,2)))
 
 				LocalMbyteSize=CurrMbyteSize-LogNumStreams
@@ -671,7 +736,22 @@ def main():
 		                HigherDimSize= MaxSize/ Dim0Size
 		
 				print "\n\t LogNumStreams: "+str(LogNumStreams)+" LocalMbyteSize "+str(LocalMbyteSize)+" CurrMbyteSize "+str(CurrMbyteSize)+" MaxSize "+str(MaxSize)
-
+				Size['StreamsInHierarchy'][NumStreams]=[ Idx*0 for Idx in range(len(Num['StreamsInHierarchy'][NumStreams])) ] 
+				for Idx in range(len(Num['StreamsInHierarchy'][NumStreams])):
+					if(Idx==0):
+						if(NumDims==1):
+							Size['StreamsInHierarchy'][NumStreams][Idx]=MaxSize-1
+						else:
+							Size['StreamsInHierarchy'][NumStreams][Idx]=Dim0Size-1
+					elif(Idx==1):
+						Size['StreamsInHierarchy'][NumStreams][Idx]=2047
+					elif(Idx==2):
+						Size['StreamsInHierarchy'][NumStreams][Idx]=16383
+					elif(Idx==3):
+						Size['StreamsInHierarchy'][NumStreams][Idx]=65535
+					elif(Idx==4):
+						Size['StreamsInHierarchy'][NumStreams][Idx]=2097151
+					
 				IterationsString=''
                  		IterationsName=''
 				LogNumStreams=0
@@ -844,15 +924,21 @@ def main():
 ## $$$$$$$$$$$$$$$$$							
 	
 									StrideOperationsPrefix=[]
+									OverflowString=[]
+									for NLNumber,CurrNestedLoopConfig in enumerate(PerStreamNestedLoopConfig[CurrNumStreams]):
+										for CurrMemLevel,Idx in enumerate(CurrNestedLoopConfig):
+											if(Idx>0):
+												TempOverflowString=str(NLNumber)+';'+str(Size['StreamsInHierarchy'][NumStreams][CurrMemLevel])
+												print "\t NLNumber "+str(NLNumber)+"\t MemLevel: "+str(CurrMemLevel)+"\t OverflowTemplate: "+str(TempOverflowString)
+												OverflowString.append(TempOverflowString)
+												
 									for CurrNumStream in range(NumStreams):
 										Temp='#strideoperations_var'+str(CurrVar)+'_'+str(CurrNumStream)
-										Temp+=' <'+str(ExtractStrideforStream[CurrNumStream])+';'+str(CurrNumOperands[CurrVar])
+										Temp+=' <'+str(ExtractStrideforStream[CurrNumStream])+';'+str(CurrNumOperands[CurrVar])+';'+str(OverflowString[CurrNumStream])
 										StrideOperationsPrefix.append(Temp)
-										#print "\n\t -- StrideOperationsPrefix: "+str(Temp)+' CurrNumStream: '+str(CurrNumStream)
-									
-									#print "\n\t len(OpComboSet): "+str(len(OpComboSet))	
-									
-										
+										print "\t OverflowString[CurrNumStream] "+str(OverflowString[CurrNumStream])+"\t NumStreams "+str(NumStreams)
+											#print "\n\t -- StrideOperationsPrefix: "+str(Temp)+' CurrNumStream: '+str(CurrNumStream)
+
 									for CurrOpCombo in OpComboSet:
 										Temp=[]
 									#print "\n\t CurrOpCombo: "+str(CurrOpCombo)#+' AccumCount: '+str(AccumCount)
@@ -860,7 +946,7 @@ def main():
 											Temp1=str(StrideOperationsPrefix[CurrNumStream])+' ; '+str(CurrOpCombo)+'>'
 											Temp.append(Temp1)
 										StreamConfigCollection[CurrStrideString][CurrNumOperandsString][CurrVar].append(Temp)	
-										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)
+										#print "\n\t -- StrideOperationsPrefix: "+str(StrideOperationsPrefix)+' CurrNumStream: '+str(CurrNumStream)"""
 								
 								else:
 									print "\n\t ERROR: NumStreams "+str(NumStreams)+" is not equal to len(ExtractStrideforStream): "+str(len(ExtractStrideforStream))
@@ -957,10 +1043,10 @@ def main():
 												commands.getoutput(CMDCompileFile)
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
 												SuperSourceFile.write("\n\t "+str(SRCFileName))		
-										sys.exit()		
-						#sys.exit()
+										#sys.exit()		
+				#sys.exit()
 				SourceFilesLog.write("\n\n")
-				SourceFilesLog.close() 
+				SourceFilesLog.close() #"""
 									
 						#sys.exit()
 						

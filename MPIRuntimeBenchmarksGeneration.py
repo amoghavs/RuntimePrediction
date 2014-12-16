@@ -717,9 +717,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				if(not StreamNestedLoopNum in NestedLoop['Incr']):
 					NestedLoop['Incr'][StreamNestedLoopNum]=''
 					NestedLoop['Init'][StreamNestedLoopNum]=''
-					
-				#VarIndexIncr[StreamNestedLoopNum]=str(CurrIndexIncr)+str(VarIndexIncr[StreamNestedLoopNum])
-				NestedLoop['Incr'][StreamNestedLoopNum]=str(CurrIndexIncr)+str(NestedLoop['Incr'][StreamNestedLoopNum])
+					NestedLoop['Incr'][StreamNestedLoopNum]=str(CurrIndexIncr)+str(NestedLoop['Incr'][StreamNestedLoopNum])
+				else:
+					NestedLoop['Incr'][StreamNestedLoopNum]=str(CurrIndexIncr)+','+str(NestedLoop['Incr'][StreamNestedLoopNum])
 				if debug:
 					print "\n\t The boss is here!! Bound: "+str(bounds)+' IndexIncr: '+str(CurrIndexIncr)
 				StrideIndex.append(str(ConfigParams['indices'][StrideDim]))
@@ -816,9 +816,6 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     for k in range(NumDims):
 		TabSpace+='\t'
 
-    
-###########
-
     for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 	StreamVar=ConfigParams['StreamWideOperand'][VarNum][CurrStream] #'Var'+str(VarNum)+'_Stream'+str(CurrStream)
 	LHSVariableCurrStream=str(StreamVar)
@@ -832,9 +829,10 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		#Method3:
 		#StreamExprn=LHSVariableCurrStream+' = ( '+ str(LHSVariableCurrStream)+'* ( '+str(ConfigParams['GlobalVar']['NumOperandsVar'][VarNum][CurrStream])+' * '+str(ConfigParams['GlobalVar']['SuccessiveOperandDiff'][VarNum])+') ) ;'
 		StreamExprn=''
-		StreamExprn+='\n\t '+LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) ; '			
+		StreamExprn+='\n'+str(TabSpace)+'\t'+LHSVariableCurrStream+'= ('+'(int) ('+str(RHSExprnPerStream[CurrStream])+') ) ; '	
+		print "\t TabSpace: "+str(TabSpace)+"--"		
 	else:
-		StreamExprn=LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
+		StreamExprn=str(TabSpace)+'\t'+LHSVariableCurrStream+'='+'('+str(RHSExprnPerStream[CurrStream])+') ;'
 	
 	if debug:
 		print "\n\t StreamExprn: "+str(StreamExprn)
@@ -2162,10 +2160,26 @@ def main(argv):
 			alloc_str+=str(CurrAlloc)
 			
 		StreamString=''
+		VarStreamName=[]
+		for i in range(ConfigParams['NumVars']):
+			NestedLoopCount=[ 0*Idx for Idx in range(ConfigParams['NumStreaminVar'][i])]
+			print "\t len(NesLoopCount) "+str(len(NestedLoopCount))+" ConfigParams['NumStreaminVar'][i] "+str(ConfigParams['NumStreaminVar'][i])
+			for CurrStreamNum in range(ConfigParams['NumStreaminVar'][i]):
+				print "\t Nes-Loop: "+str(ConfigParams['StrideVar'][i][CurrStreamNum]['NestedLoop'])
+				NestedLoopCount[ConfigParams['StrideVar'][i][CurrStreamNum]['NestedLoop']]+=1
+			TmpVarStreamName=''
+			for NumStreamInNestedLoop in (NestedLoopCount):
+				#print "\t--$$"+str(NumStreamInNestedLoop)+"\ti "+str(i)
+				if(NumStreamInNestedLoop!=0):
+					TmpVarStreamName+=str(NumStreamInNestedLoop)	
+			print "\t Var: "+str(i)+" stream name "+str(VarStreamName)		
+			VarStreamName.append(TmpVarStreamName)
+			
+			#StreamString+=str(ConfigParams['NumStreaminVar'][i])+'_'
 		for i in range(ConfigParams['NumVars']-1):
-			StreamString+=str(ConfigParams['NumStreaminVar'][i])+'_'
+			StreamString+=str(VarStreamName[i])+'_'
 		
-		StreamString+=str(ConfigParams['NumStreaminVar'][ConfigParams['NumVars']-1])
+		StreamString+=str(VarStreamName[ConfigParams['NumVars']-1])
 		
 		IterString='_'
 			
