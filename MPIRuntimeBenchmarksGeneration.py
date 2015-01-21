@@ -319,7 +319,7 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
     ThisLoop.append(' printf("app '+str(FuncNamePrint)+' "); ');
     ThisLoop.append('   for(ii=0; ii<MPI_Size; ii++) ')
     #AVS
-    ThisLoop.append(' printf (" %f ",time_buf[ii]); ')
+    ThisLoop.append(' printf (" time: %f ",time_buf[ii]); ')
     #ThisLoop.append('      printf("\t time: %f\\n\t Starttime: %lf\\n\t Endtime: %lf  ", time_buf[ii],stime,etime); ')
     ThisLoop.append('      printf("\\n"); ')
     ThisLoop.append('} ')
@@ -1747,7 +1747,8 @@ def main(argv):
 			for CurrStreamNum in range(ConfigParams['NumStreaminVar'][CurrVar]):
 				OverflowDetectMask='Overflow_Var'+str(CurrVar)+'_Stream'+str(CurrStreamNum)
 				#OverflowDetectMaskDecl=str(SizeDataType)+' Overflow_Var'+str(CurrVar)+str(CurrStreamNum)' = '+str(OverflowDetectValue)+' ;'
-				OverflowDetectMaskDecl=str(SizeDataType)+' Overflow_Var'+str(CurrVar)+'_Stream'+str(CurrStreamNum)+' = '+str(ConfigParams['StrideVar'][CurrVar][CurrStream]['OverflowSize'])+';'
+				#print "\t CurrStreamNum : "+str(CurrStreamNum)+" Overflow: "+str(ConfigParams['StrideVar'][CurrVar][CurrStreamNum]['OverflowSize'])
+				OverflowDetectMaskDecl=str(SizeDataType)+' Overflow_Var'+str(CurrVar)+'_Stream'+str(CurrStreamNum)+' = '+str(ConfigParams['StrideVar'][CurrVar][CurrStreamNum]['OverflowSize'])+';'
 				if debug:
 					print "\n\t Var: "+str(CurrVar)+" overflow declaration: "+str(OverflowDetectMaskDecl)
 				ConfigParams['GlobalVar']['LastDimOverflowVar'][CurrVar].append(OverflowDetectMask)
@@ -2165,7 +2166,7 @@ def main(argv):
 			NestedLoopCount=[ 0*Idx for Idx in range(ConfigParams['NumStreaminVar'][i])]
 			print "\t len(NesLoopCount) "+str(len(NestedLoopCount))+" ConfigParams['NumStreaminVar'][i] "+str(ConfigParams['NumStreaminVar'][i])
 			for CurrStreamNum in range(ConfigParams['NumStreaminVar'][i]):
-				print "\t Nes-Loop: "+str(ConfigParams['StrideVar'][i][CurrStreamNum]['NestedLoop'])
+				#print "\t Nes-Loop: "+str(ConfigParams['StrideVar'][i][CurrStreamNum]['NestedLoop'])
 				NestedLoopCount[ConfigParams['StrideVar'][i][CurrStreamNum]['NestedLoop']]+=1
 			TmpVarStreamName=''
 			for NumStreamInNestedLoop in (NestedLoopCount):

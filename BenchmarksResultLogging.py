@@ -145,20 +145,21 @@ def ObtainTopLoops(FileName,NumofProcs,PercentThreshold=1.0):
 	
 def WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,
 	       PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,
-	       VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim):
+	       VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,
+	       AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection):
 	if(CurrStatsFile):
 		CurrStatsFile.write("\n\t Average run times: ") ; 
 		if(AverageCalc==0):
-			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime ")
+			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average runtime \t ProcToleranceFlag \t IterToleranceFlag ")
 			for CurrFile in FileNameCollection:
 				if(CurrFile in AverageRuntimeCollection):
-					CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile]))
+					CurrStatsFile.write("\n\t "+str(CurrFile)+"\t\t "+str(AverageRuntimeCollection[CurrFile])+"\t "+str(AverageRuntimeNontolerantProcsCollection[CurrFile])+"\t "+str(AverageRuntimeNontolerantIterCollection[CurrFile]))
 		else:
-			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Freq\t\t Iters\t\t  Average runtime ")
+			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Freq\t\t Iters\t\t  Average runtime  \t ProcToleranceFlag \t IterToleranceFlag ")
 			for CurrFile in FileNameCollection:
 				if((CurrFile in AverageRuntimeCollection) and (CurrFile in ItersCollection) ):
 					for CurrFreq in (AverageRuntimeCollection[CurrFile]):
-						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrFreq)+"\t "+str(ItersCollection[CurrFile])+"\t "+str(AverageRuntimeCollection[CurrFile][CurrFreq]) )
+						CurrStatsFile.write("\n\t "+str(CurrFile)+"\t "+str(CurrFreq)+"\t "+str(ItersCollection[CurrFile])+"\t "+str(AverageRuntimeCollection[CurrFile][CurrFreq])+"\t "+str(AverageRuntimeNontolerantProcsCollection[CurrFile])+"\t "+str(AverageRuntimeNontolerantIterCollection[CurrFile]) )
 		if(PapiCacheSim>0):
 			CurrStatsFile.write("\n\t PapiCacheSim result: ");
 			CurrStatsFile.write("\n\t\t Exe: \t\t\t\t Average values of counters ")
@@ -233,28 +234,89 @@ def EmailMsg(EmailID,Msg,Subject='Update!!'):
 	print "\t Cmd: "+str(EmailCmd)
 	print "\t Output: "+str(EmailOutput)
 
-def ExtractRuntime(RunOutputFile):
-	RunOutput=open(RunOutputFile)
-	for CurrLine in RunOutput:
-	        #print "\n\t CurrLine: "+str(CurrLine)
-	        CheckTime=re.match('^\s*.*app.*time\:',CurrLine)
-	        #CheckTime=re.match('\s*Run\-time',CurrLine)
-	        if CheckTime:
-	                #print "\n\t CurrLine: "+str(CurrLine)
-	                CheckRuntime=re.match('\s*.*app.*time\:\s*(\d+)*\.(\d+)*',CurrLine) # 
-	                #CheckRuntime=re.match('\s*.*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) 
-	                if CheckRuntime:
-	                        #CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
-	                        Temp=CheckRuntime.group(1)+'.'+CheckRuntime.group(2)
-	                        IterRuntime=float(Temp)
-	                        print "\n\t--Runtime--: "+str(IterRuntime)
-				return IterRuntime
-				RunOutput.close()
-	                else:
-	                        print "\n\t ERROR: Cannot extract runtime! \n" 
-	                        IterRuntime=float(0.0)
-				return IterRuntime				
-				#sys.exit()    
+
+def ExtractRuntime(RunOutputFileList,NumProcs,FileName,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection):
+	ItersTime=[]
+	for IterIdx,CurrRunOutputFile in enumerate(RunOutputFileList):
+		RunOutput=open(CurrRunOutputFile)
+		print "\t IterIdx: "+str(IterIdx)+" CurrRunOutputFile "+str(CurrRunOutputFile)+" len(RunOutputFileList): "+str(len(RunOutputFileList))
+		for CurrLine in RunOutput:
+	        	#print "\n\t CurrLine: "+str(CurrLine)
+		        CheckTime=re.match('^\s*.*app.*time\:',CurrLine)
+		        #CheckTime=re.match('\s*Run\-time',CurrLine)
+	        	if CheckTime:
+	                	#print "\n\t CurrLine: "+str(CurrLine)
+		                CheckRuntime=re.match('\s*.*app.*time\:\s*(\d+)*\.(\d+)*',CurrLine) # 
+		                #CheckRuntime=re.match('\s*.*Run\-time.*\:\s*(\d+)*\.(\d+)*',CurrLine) 
+				IterRuntime=[]
+				FoundAppTime=False
+				if CheckRuntime:
+					FoundAppTime=True
+				else:
+					print "\t INFO: IterIdx: "+str(IterIdx)+" cannot find runtime!! "
+					RunOutput.close()
+					break
+	                	if CheckRuntime:
+					BreakdownTimeForProcs=re.split(':',CurrLine)
+					print "\t CurrLine: "+str(CurrLine)
+					if(len(BreakdownTimeForProcs)>(NumProcs)):
+						print "\t BreakdownTimeForProcs: "+str(BreakdownTimeForProcs)
+						for CurrChunk in (BreakdownTimeForProcs):
+							ExtractTime=re.match('\s*(\d+)*\.(\d+)*',CurrChunk)
+							if (ExtractTime):
+								Temp=str(ExtractTime.group(1))+'.'+str(ExtractTime.group(2))
+								print "\t Runtime-- "+str(Temp)
+								IterRuntime.append(float(Temp))
+					else:
+						print "\t ERROR: len(BreakdownTimeForProcs): "+str(len(BreakdownTimeForProcs))+" where as NumProcs is "+str(NumProcs)
+						sys.exit()
+	                	        print "\n\t--Runtime--: "+str(IterRuntime[0])
+					RunOutput.close()
+					break
+#####
+		TExceededTolerance=0
+		CumulTime=0.0
+		for CurrProcTime in IterRuntime:
+		        CumulTime+=CurrProcTime
+		        for InnerLoopCurrProcTime in IterRuntime:
+		                Temp=abs(CurrProcTime-InnerLoopCurrProcTime)/(InnerLoopCurrProcTime)
+		                if(Temp>0.05):
+		                        TExceededTolerance+=1
+		AvgTime=0     
+		ExceededTolerance=0
+		CumulTime=0.0
+		for Idx,CurrProcTime in enumerate(IterRuntime): 
+		        CumulTime+=(CurrProcTime)
+		        AvgTime=CumulTime/(Idx+1)
+		        if(AvgTime>0):
+		                Temp=abs(CurrProcTime-AvgTime)/AvgTime
+		        else:
+		                print "\t ERROR: Iter: "+str(i)+" Proc "+str(Idx)+" CurrProcTime "+str(CurrProcTime)+" CumulTime "+str(CumulTime)+" AvgTime "+str(AvgTime)+" AvgTime is zero! "
+		                sys.exit()
+     
+		        if(Temp>0.05):
+		                ExceededTolerance+=1
+		                print "\t Tolerance "+str(Temp)+" Proc "+str(Idx)+" Avg "+str(AvgTime)+" CurrProcTime "+str(CurrProcTime)
+		if((ExceededTolerance>0) ):
+		        AverageRuntimeNontolerantProcsCollection[FileName]+=ExceededTolerance
+     
+		CumulTime/=NumProcs
+		ItersTime.append(CumulTime)
+		print "\t Iter: "+str(IterIdx)+" ProcExceededTolerance "+str(ExceededTolerance)+" TExceededTolerance "+str(TExceededTolerance)
+	
+	CumulTime=0
+	ExceededTolerance=0
+	AvgTime=0
+	for Idx,CurrIterTime in enumerate(ItersTime):
+		CumulTime+=CurrIterTime
+		AvgTime=CumulTime/(Idx+1)
+		Temp=abs(CurrIterTime-AvgTime)/AvgTime
+		if(Temp>0.05):
+			ExceededTolerance+=1
+		print "\t Iter: "+str(Idx)+" ExceededTolerance "+str(ExceededTolerance)
+	AverageRuntimeNontolerantIterCollection[FileName]=ExceededTolerance
+####
+	return AvgTime
 	
 def main(argv):
 	SrcFileName=''
@@ -285,52 +347,52 @@ def main(argv):
 			sys.exit()
 		elif opt in ("-l", "--list"):
 			SrcFileName=arg
-			print "\n\t Source file is "+str(SrcFileName)+"\n";
+			print "\t Source file is "+str(SrcFileName)+"\n";
 		elif opt in ("-d", "--debug"):
 			debug=int(arg)
-			print "\n\t Debug option is "+str(debug)+"\n";	
+			print "\t Debug option is "+str(debug)+"\n";	
 		elif opt in ("-r"):
 			reuse=RemoveWhiteSpace(arg)
-			print "\n\t Reuse info: "+str(reuse)+"\n"
+			print "\t Reuse info: "+str(reuse)+"\n"
 		elif opt in ("-s"):
 			spatial=RemoveWhiteSpace(arg)
-			print "\n\t Spatial info: "+str(spatial)+" arg "+str(arg)+"\n"
+			print "\t Spatial info: "+str(spatial)+" arg "+str(arg)+"\n"
 		elif opt in ("-a"):
 			AverageRun=int(RemoveWhiteSpace(arg))
-			print "\n\t AverageRun: "+str(AverageRun)+"\n"
+			print "\t AverageRun: "+str(AverageRun)+"\n"
 		elif opt in ("-c"):
 			CacheSimulation=int(RemoveWhiteSpace(arg))
-			print "\n\t CacheSimulation: "+str(CacheSimulation)+"\n"
+			print "\t CacheSimulation: "+str(CacheSimulation)+"\n"
 		elif opt in ("-p"):
 			NumofProcs=int(RemoveWhiteSpace(arg))
-			print "\n\t Number of processors: "+str(NumofProcs)+"\n"
+			print "\t Number of processors: "+str(NumofProcs)+"\n"
 		elif opt in ("-e","--energysim"):
 			EnergySim=int(RemoveWhiteSpace(arg))
-			print "\n\t Energy sim option: "+str(EnergySim)+"\n"
+			print "\t Energy sim option: "+str(EnergySim)+"\n"
 		elif opt in ("-n"):
 			NumCounters=int(RemoveWhiteSpace(arg))
-			print "\n\t Number of counters: "+str(NumCounters)+"\n"
+			print "\t Number of counters: "+str(NumCounters)+"\n"
 		elif opt in ("-o"):
 			OutputFileName=RemoveWhiteSpace(arg)
-			print "\n\t Output file name is: "+str(OutputFileName)
+			print "\t Output file name is: "+str(OutputFileName)
 		elif opt in ("-v","--vector"):
 			VectorExtract=int(RemoveWhiteSpace(arg))
-			print "\n\t Vector extract option is: "+str(VectorExtract)
+			print "\t Vector extract option is: "+str(VectorExtract)
 		elif opt in ("-t", "--vectorparamstart"):
 			VectorParamStart=int(RemoveWhiteSpace(arg))
-			print "\n\t VectorParamStart option is "+str(VectorParamStart)+"\n";	
+			print "\t VectorParamStart option is "+str(VectorParamStart)+"\n";	
 		elif opt in ("-u", "--numvectorparams"):
 			NumVectorParams=int(RemoveWhiteSpace(arg))
-			print "\n\t NumVectorParams option is "+str(NumVectorParams)+"\n";	
+			print "\t NumVectorParams option is "+str(NumVectorParams)+"\n";	
 		elif opt in ("-b", "--energymeasure"):
 			EnergyMeasure=int(RemoveWhiteSpace(arg))
-			print "\n\t EnergyMeasure option is "+str(EnergyMeasure)+"\n";	
+			print "\t EnergyMeasure option is "+str(EnergyMeasure)+"\n";	
 		elif opt in ("-d", "--maxiters"):
 			MaxIters=int(RemoveWhiteSpace(arg))
-			print "\n\t MaxIters option is "+str(MaxIters)+"\n";				
+			print "\t MaxIters option is "+str(MaxIters)+"\n";				
 		elif opt in ("-x","--papicachesim"):
 			PapiCacheSim=int(RemoveWhiteSpace(arg))
-			print "\n\t PapiCacheSim option is "+str(PapiCacheSim)+"\n"
+			print "\t PapiCacheSim option is "+str(PapiCacheSim)+"\n"
 		elif opt in ("-y","--averagecalc"):
 			AverageCalc=int(RemoveWhiteSpace(arg))
 			print "\t AverageCalc option is "+str(AverageCalc)+"\n"
@@ -339,32 +401,33 @@ def main(argv):
 
 	# If execution has come until this point, the script should have already identified the file with sourcefiles.
 	if(SrcFileName==''):
-		print "\n\t Nodpa!! "
 		usage()
 	if( (CacheSimulation==0) and (spatial=='') and (reuse=='')):
 		spatial=0 #"16,32"
 		reuse=0 #'16'
-		print "\n\t INFO: Using default spatial value: "+str(spatial)+" reuse value "+str(16)
+		print "\t INFO: Using default spatial value: "+str(spatial)+" reuse value "+str(16)
 	if(AverageRun==0):
 		AverageRun=0
-		print "\n\t INFO: Using default average run value: "+str(AverageRun)
+		print "\t INFO: Using default average run value: "+str(AverageRun)
 	else:
 		if(AverageCalc==''):
 			print "\t ERROR: AverageCalc is not set while average run is not zero! "
 			sys.exit()
 	if(NumofProcs==''):
 		NumofProcs=1
-		print "\n\t INFO: Using default number of processors is: "+str(NumofProcs)
-
+		print "\t INFO: Using default number of processors is: "+str(NumofProcs)
+	elif(NumofProcs<1):
+		print "\t ERROR: NumofProcs is "+str(NumofProcs)+" which is less than 1 "
+		sys.exit()
 	if(NumCounters==''):
 		NumCounters=0
-		print "\n\t INFO: Using default flag for NumCounter: "+str(NumCounters)
+		print "\t INFO: Using default flag for NumCounter: "+str(NumCounters)
 	if(OutputFileName==''):
 		OutputFileName='MasterStatsFile.log'
-		print "\n\t INFO:  Using default output file name: "+str(OutputFileName)
+		print "\t INFO:  Using default output file name: "+str(OutputFileName)
 	if(VectorExtract==''):
 		VectorExtract=0
-		print "\n\t INFO: Using default Vector extract option: "+str(VectorExtract)
+		print "\t INFO: Using default Vector extract option: "+str(VectorExtract)
 	else:
 		if( (VectorParamStart=='') or (NumVectorParams=='') ):
 			VectorParamStart=23
@@ -445,6 +508,8 @@ def main(argv):
 	#AverageRun=5
 	#AverageCalc=2
 	AverageRuntimeCollection={}
+	AverageRuntimeNontolerantProcsCollection={}
+	AverageRuntimeNontolerantIterCollection={}
 	PowerValueCollection={}
 	RaplPowerValueCollection={}
 	PredictionVectorParamsCollection={}
@@ -530,7 +595,7 @@ def main(argv):
 				#print "\n\t TempStatsFileName: "+str(TempStatsFileName)
 				CurrSrcFileParams[idx]['FileName']=FileName
 				if(CurrStatsFileName!=TempStatsFileName):
-					WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim)
+					WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 					if(CurrStatsFile):
 						CurrStatsFile.write("\n\n")
 						CurrStatsFile.close()
@@ -558,14 +623,55 @@ def main(argv):
 			RuntimeCollection=[]
 			AverageRuntime=0.00000000010000001
 			if(AverageCalc==0):
+				ItersTime=[]
+				AverageRuntimeNontolerantProcsCollection[FileName]=0
+				RunOutputFileNameCollection=[]
 				for i in range(AverageRun):
 					RunCmd='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+' > '+str(RunOutputFile)
 					commands.getoutput(RunCmd)
-					IterRuntime=ExtractRuntime(RunOutputFile)
-					AverageRuntime+=IterRuntime									
-				if(AverageRun>0):
-					AverageRuntime/=AverageRun
-				AverageRuntimeCollection[FileName]=AverageRuntime
+					RunOutputFileNameCollection.append(RunOutputFile)
+				AvgTime=ExtractRuntime(RunOutputFileNameCollection,NumofProcs,FileName,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
+				"""	TExceededTolerance=0
+					CumulTime=0.0
+					for CurrProcTime in IterRuntime:
+						CumulTime+=CurrProcTime
+						for InnerLoopCurrProcTime in IterRuntime:
+							Temp=abs(CurrProcTime-InnerLoopCurrProcTime)/(InnerLoopCurrProcTime)
+							if(Temp>0.05):
+								TExceededTolerance+=1
+					AvgTime=0					
+					ExceededTolerance=0
+					CumulTime=0.0
+					for Idx,CurrProcTime in enumerate(IterRuntime):	
+						CumulTime+=(CurrProcTime)
+						AvgTime=CumulTime/(Idx+1)
+						if(AvgTime>0):
+							Temp=abs(CurrProcTime-AvgTime)/AvgTime
+						else:
+							print "\t ERROR: Iter: "+str(i)+" Proc "+str(Idx)+" CurrProcTime "+str(CurrProcTime)+" CumulTime "+str(CumulTime)+" AvgTime "+str(AvgTime)+" AvgTime is zero! "
+							sys.exit()
+							
+						if(Temp>0.05):
+							ExceededTolerance+=1
+							print "\t Tolerance "+str(Temp)+" Proc "+str(Idx)+" Avg "+str(AvgTime)+" CurrProcTime "+str(CurrProcTime)
+					if((ExceededTolerance>0) ):
+						AverageRuntimeNontolerantProcsCollection[FileName]+=ExceededTolerance
+												
+					CumulTime/=NumofProcs
+					ItersTime.append(CumulTime)
+					print "\t Iter: "+str(i)+" ProcExceededTolerance "+str(ExceededTolerance)+" TExceededTolerance "+str(TExceededTolerance)
+				CumulTime=0
+				ExceededTolerance=0
+				AvgTime=0
+				for Idx,CurrIterTime in enumerate(ItersTime):
+					CumulTime+=CurrIterTime
+					AvgTime=CumulTime/(Idx+1)
+					Temp=abs(CurrIterTime-AvgTime)/AvgTime
+					if(Temp>0.05):
+						ExceededTolerance+=1
+					print "\t Iter: "+str(Idx)+" ExceededTolerance "+str(ExceededTolerance)
+				AverageRuntimeNontolerantIterCollection[FileName]=ExceededTolerance"""
+				AverageRuntimeCollection[FileName]=AvgTime		
 				FileNameCollection.append(FileName)
 				MasterFileNameCollection.append(FileName)	
 			if(PapiCacheSim>0):
@@ -755,7 +861,7 @@ def main(argv):
 						ReplaceNumLoops(FileName,Iters)#ReplaceNumLoops(FileName,Iters)
 						ItersCollection[FileName]=Iters
 						Compile(FileName,LibPapiPath)
-						#print "\n\t **************************** WARNING: ReplaceNumLoops has a dummy iteration count!!!! ********************************* "
+						#print "\n\t **************************** WARNING: ReplaceNumLoops has a dummy iteration count!!!! ********************************* "llFreqs[CurrFreq])
 						#RunOutput=commands.getoutput('./'+str(FileName))
 						#print "\t RunOutput: "+str(RunOutput)
 							
@@ -780,12 +886,7 @@ def main(argv):
 							for CurrFreq in AllFreqs:
 								AvgRuntime=0.0
 								NumFiles=len(AllFreqs[CurrFreq])
-								for CurrFile in (AllFreqs[CurrFreq]):
-									TempRuntime=ExtractRuntime(CurrFile)
-									print "\t File: "+str(CurrFile)+" Runtime "+str(TempRuntime)+" AvgRuntime) "+str(AvgRuntime)
-									AvgRuntime+=TempRuntime
-								if(NumFiles>0):
-									AvgRuntime/=NumFiles
+								AvgRuntime=ExtractRuntime((AllFreqs[CurrFreq]),16,FileName,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 								print "\t Freq- "+str(CurrFreq)+" AvgRuntime "+str(AvgRuntime)
 								AverageRuntimeCollection[FileName][CurrFreq]=AvgRuntime
 
@@ -1014,10 +1115,10 @@ def main(argv):
 		print "\t Could not find the SrcFile: "+str(CurrSrcFile)
 		print "\t LsOutput: "+str(LsOutput)
 	if(CurrStatsFile):
-		WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim)
+		WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 		CurrStatsFile.write("\n\n\n")
 		CurrStatsFile.close()#"""
-	WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim)
+	WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 	MasterStatsFile.write("\n\n")
 	MasterStatsFile.close()
 
