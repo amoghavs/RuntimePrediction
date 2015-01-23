@@ -13,12 +13,14 @@ def fopen(FileName,options=''):
 			return FileHandle
 		except IOError:
 		 	print 'cannot open', FileName
+			return 'IOERROR'
 	else:
 		try:
 			FileHandle=open(FileName,options)
 			return FileHandle
 		except IOError:
 			print 'cannot open', FileName
+			return 'IOERROR'
 
 	
 def RemoveWhiteSpace(Input):
@@ -77,7 +79,8 @@ def ExtractFilesAndFreqs(LsOutput):
 	return AllFreqs
 	
 def SortBBs(SrcFileName,OutputFileName,PercentThreshold):
-	InFile=open(SrcFileName)
+ InFile=fopen(SrcFileName)
+ if(InFile!='IOERROR'):
 	BBFile=InFile.readlines()
 	InFile.close()
 	
@@ -114,7 +117,7 @@ def SortBBs(SrcFileName,OutputFileName,PercentThreshold):
 	#for Idx,CurrBBTuple in enumerate(CollectTopLoopInfo):	
 	#	print "\n\t BB: "+str(CurrBBTuple[BBIdx])+" Percent: "+str(CurrBBTuple[PercentIdx])
 
-	OutputFile=open(OutputFileName,'w')
+	OutputFile=fopen(OutputFileName,'w')
 	SortedBBsCollection=[]
 	for Idx,CurrBBTuple in enumerate(CollectTopLoopInfo):
 		if(CurrBBTuple[PercentIdx] > PercentThreshold):
@@ -123,7 +126,10 @@ def SortBBs(SrcFileName,OutputFileName,PercentThreshold):
 			SortedBBsCollection.append(CurrBBTuple[BBIdx])
 
 	return SortedBBsCollection
-	
+ else:
+	Meh=[]
+	return Meh	
+
 def ReplaceNumLoops(Input,ReplaceIter):
 	ReplaceIter="perl -i -pe 's/NumLoops_Var0\ \=/NumLoops_Var0\ \= "+str(ReplaceIter)+"\;\/\//g' "+str(Input)+'.c'
 	print "\t ReplaceIter: "+str(ReplaceIter)
@@ -260,9 +266,10 @@ def ExtractRuntime(RunOutputFileList,NumProcs,FileName,AverageRuntimeNontolerant
 	ItersTime=[]
 	AverageRuntimeNontolerantProcsCollection[FileName]=0
 	for IterIdx,CurrRunOutputFile in enumerate(RunOutputFileList):
-		RunOutput=open(CurrRunOutputFile)
-		print "\t IterIdx: "+str(IterIdx)+" CurrRunOutputFile "+str(CurrRunOutputFile)+" len(RunOutputFileList): "+str(len(RunOutputFileList))
-		IterRuntime=[]
+	 RunOutput=fopen(CurrRunOutputFile)
+	 print "\t IterIdx: "+str(IterIdx)+" CurrRunOutputFile "+str(CurrRunOutputFile)+" len(RunOutputFileList): "+str(len(RunOutputFileList))
+	 IterRuntime=[]
+	 if(RunOutput!='IOERROR'):	
 		for CurrLine in RunOutput:
 	        	#print "\n\t CurrLine: "+str(CurrLine)
 		        CheckTime=re.match('^\s*.*app.*time\:',CurrLine)
@@ -326,7 +333,8 @@ def ExtractRuntime(RunOutputFileList,NumProcs,FileName,AverageRuntimeNontolerant
 		CumulTime/=NumProcs
 		ItersTime.append(CumulTime)
 		print "\t Iter: "+str(IterIdx)+" ProcExceededTolerance "+str(ExceededTolerance)+" TExceededTolerance "+str(TExceededTolerance)
-	
+         else:
+		print "\t IOError, omitting "+str(CurrRunOutputFile)+" from consideration "
 	CumulTime=0
 	ExceededTolerance=0
 	AvgTime=0
@@ -489,9 +497,14 @@ def main(argv):
 		if(AverageRun<2):
 			print "\t ERROR: PapiCacheSim needs average run to be greater than 2" 
 			sys.exit()
-	SrcFileHandle=open(SrcFileName)
-	SrcFile=SrcFileHandle.readlines()
-	SrcFileHandle.close()
+	SrcFileHandle=fopen(SrcFileName)
+	ScFile=''
+	if(SrcFileHandle!='IOERROR'):
+		SrcFile=SrcFileHandle.readlines()
+		SrcFileHandle.close()
+	else:
+		print "\t ERROR: Cannot find file "+str(SrcFileHandle)
+		sys.exit()
 
 	NumSourceFiles=len(SrcFile)
 	for idx,CurrLine in enumerate(SrcFile):
@@ -552,9 +565,11 @@ def main(argv):
 		for CurrCounter in range(NumCounters):
 			CounterEnviVar='HWC'+str(CurrCounter)
 			commands.getoutput('echo $'+str(CounterEnviVar)+' > '+str(OutputFile))
-			IpFile=open(OutputFile)
-			ReadVar=IpFile.readlines()
-			IpFile.close()
+			IpFile=fopen(OutputFile)
+			ReadVar=[]
+			if(IpFile!='IOERROR'):
+				ReadVar=IpFile.readlines()
+				IpFile.close()
 			if(len(ReadVar)>1):
 				print "\n\t Something is fishy out here, cos length of ReadVar's output is more than a line "
 				sys.exit()
@@ -571,7 +586,7 @@ def main(argv):
 	JustVectorExtractionNeeded= ( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) )
 	print "\n\t SimulationNeeded: "+str(SimulationNeeded)+" InfoExtractionNeeded: "+str(InfoExtractionNeeded)+" JustVectorExtractionNeeded "+str(JustVectorExtractionNeeded)
 	
-	#MasterStatsFile=open(OutputFileName,'w')
+	#MasterStatsFile=fopen(OutputFileName,'w')
 	MasterFileNameCollection=[]
 	LibPapiPath='/opt/papi/lib/libpapi.so -I /opt/papi/include/ '
 	EmailID=[]
@@ -589,7 +604,7 @@ def main(argv):
 		ExtractFileName=re.match('\s*(.*)\.c',CurrSrcFile)
 		if(idx%10==0):
 			if(idx>1):
-				MasterStatsFile=open(OutputFileName,'w')
+				MasterStatsFile=fopen(OutputFileName,'w')
 				WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 				MasterStatsFile.write("\n\n")
 				MasterStatsFile.close()
@@ -634,7 +649,7 @@ def main(argv):
 				#		CurrStatsFile.close()
 				#	
 				#	CurrStatsFileName=TempStatsFileName
-				#	CurrStatsFile=open(CurrStatsFileName,'w')
+				#	CurrStatsFile=fopen(CurrStatsFileName,'w')
 				#	#AverageRuntimeCollection={}
 				#	#PowerValueCollection={}
 				#	FileNameCollection=[]						
@@ -795,7 +810,10 @@ def main(argv):
 
                                        		RunCmd='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+' > '+str(RunOutputFile)
                                        		commands.getoutput(RunCmd)
-                                       		RunOutput=open(RunOutputFile)
+                                       		RunOutput=fopen(RunOutputFile)
+						if(RunOutput=='IOERROR'):
+							print "\t ERROR: Cannot open file "+Str(RunOutputFile)
+							RunOutput=[]
                                        		for CurrLine in RunOutput:
                                        		        #print "\n\t CurrLine: "+str(CurrLine)
                                        		        CheckCounters=re.match('^\s*Hardware\s*counters\s*\:',CurrLine)
@@ -838,9 +856,11 @@ def main(argv):
 						commands.getoutput(ObtainPowerValues)
 						
 						EnergyStatsFileName=str(FileName)+'.meta_0.lpiinst'
-						IpFile=open(EnergyStatsFileName)
-						EnergyStatsFile=IpFile.readlines()
-						IpFile.close()	
+						IpFile=fopen(EnergyStatsFileName)
+						EnergyStatsFile=''
+						if(IpFile!='IOError'):
+							EnergyStatsFile=IpFile.readlines()
+							IpFile.close()	
 						
 						BBIDFound=0
 						BBIDline=-1
@@ -929,7 +949,8 @@ def main(argv):
 						for CurrFreq in WattsFreq:
 							WattsNotYetFound=True
 							for CurrFile in WattsFreq[CurrFreq]:
-								IpFile=open(CurrFile)
+							 IpFile=fopen(CurrFile)
+							 if(IpFile!='IOERROR'):
 								CurrFileContents=IpFile.readlines()
 								IpFile.close()
 								#print "\t File: "+str(CurrFile)+" #lines "+str(len(CurrFileContents))
@@ -970,7 +991,8 @@ def main(argv):
 							print "\t RaplFreq: "+str(CurrFreq)
 							RaplWattsNotYetFound=True
  							for CurrFile in RaplWattsFreq[CurrFreq]:
-								IpFile=open(CurrFile)
+							 IpFile=fopen(CurrFile)
+							 if(IpFile!='IOERROR'):
 								CurrFileContents=IpFile.readlines()
 								IpFile.close()
 								print "\t File: "+str(CurrFile)+" #lines "+str(len(CurrFileContents))
@@ -1061,7 +1083,7 @@ def main(argv):
 
 						for CurrSW in SpatialWindow:
 						
-							SimRunScript=open('SimRun.sh','w')
+							SimRunScript=fopen('SimRun.sh','w')
 							print "\n\t CurrSW: "+str(CurrSW)
 							SimRunScript.write('\n\t export METASIM_SAMPLE_ON=1 ')
 							SimRunScript.write('\n\t export METASIM_SAMPLE_OFF=0 ')			
@@ -1082,7 +1104,7 @@ def main(argv):
 								CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
 							for CurrExt in FilesToExtract:
 								CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
-								DistFileHandle=open(CurrExtFile)
+								DistFileHandle=fopen(CurrExtFile)
 								DistFile=DistFileHandle.readlines()
 					
 								BinsNotFound=1
@@ -1155,7 +1177,7 @@ def main(argv):
 	#	WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 	#	CurrStatsFile.write("\n\n\n")
 	#	CurrStatsFile.close()#"""
-	MasterStatsFile=open(OutputFileName,'w')	
+	MasterStatsFile=fopen(OutputFileName,'w')	
 	WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 	MasterStatsFile.write("\n\n")
 	MasterStatsFile.close()
