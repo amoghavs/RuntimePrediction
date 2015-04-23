@@ -42,7 +42,6 @@ def IsNumber(s):
 def RemoveBraces(Input):
 	temp=re.sub('^\s*\(','',Input)
 	Output=re.sub('\)\s*$','',temp)
-	#print "\n\t RemoveBraces--Input: "+str(Input)+" tmp: "+str(temp)+" Output "+str(Output)
 	return Output
 	
 def Compile(Input,Options=''):
@@ -57,10 +56,8 @@ def ExtractFilesAndFreqs(LsOutput):
 	AllFreqs={}
 	StringSoFar=''
 	Files=[]
-	#print "\t LsOutput: "+str(LsOutput)
 	for CurrChar in LsOutput:
 		if(CurrChar=='\n'):
-			#print "\t StringSoFar: "+str(StringSoFar)
 			Files.append(RemoveWhiteSpace(StringSoFar))
 			StringSoFar=''
 		else:
@@ -71,10 +68,6 @@ def ExtractFilesAndFreqs(LsOutput):
 		Breakdown=re.split('\.',CurrFile)
 		Freq=Breakdown[len(Breakdown)-2]
 		print "\t Freq: {0:s} All: {1:s}".format(Freq,str(Breakdown))
-		#sys.exit()
-		#ExtractFreq=re.match('.*StrideBenchmarks.*\.(.*)\.',CurrFile)
-		#if(ExtractFreq):
-		#Freq=int(ExtractFreq.group(1))
 		if(not(Freq in AllFreqs)):
 			#print "\t Freq: "+str(Freq)	
 			AllFreqs[Freq]=[]
@@ -121,8 +114,6 @@ def SortBBs(SrcFileName,OutputFileName,PercentThreshold):
 					CollectTopLoopInfo.append( (BB,float(Percent)) )
 
 	CollectTopLoopInfo=sorted(CollectTopLoopInfo, key=itemgetter(PercentIdx),reverse=True)
-	#for Idx,CurrBBTuple in enumerate(CollectTopLoopInfo):	
-	#	print "\n\t BB: "+str(CurrBBTuple[BBIdx])+" Percent: "+str(CurrBBTuple[PercentIdx])
 
 	OutputFile=fopen(OutputFileName,'w')
 	SortedBBsCollection=[]
@@ -262,8 +253,6 @@ def WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollectio
 							CurrStatsFile.write("\t "+str(CurrParam))
 				else:
 					print "\n\t Error with extracting param info! "
-		#CurrStatsFile.write("\n\n")
-		#CurrStatsFile.close()
 	
 def EmailMsg(EmailID,Msg,Subject='Update!!'):
  for CurrEmailID in EmailID:
@@ -482,7 +471,6 @@ def main(argv):
 			VectorParamStart=23
 			NumVectorParams=5
 			print "\n\t INFO: Either or both of NumVectorParams or VectorParamsStart are not defined. Using default params-- VectorParamStart: "+str(VectorParamStart)+" NumVectorParams: "+str(NumVectorParams)
-	#EnergyMeasure=0;print "\n\t INFO: By default not using EnergyMeasure method for energy calculation "
 	SpatialWindow=[]
 	if((spatial!='') and (spatial!=0) ):
 		ThisSet=re.split(',',spatial)
@@ -494,10 +482,7 @@ def main(argv):
         ReuseWindow=0
 	if(reuse!=''):
 		print "\n\t Reuse window:"+str(reuse)+"--"
-		ReuseWindow=int(reuse)
-	#else:
-	#	print "\n\t Reuse window:"+str(reuse)+"--"
-	#	ReuseWindow=int(reuse)		
+		ReuseWindow=int(reuse)	
 	if(EnergySim==''):
 		EnergySim=0
 		print "\n\t Using default EnergySim value: "+str(EnergySim)
@@ -557,16 +542,11 @@ def main(argv):
 	#PowerParamsInOrder.append('GTPowerParam1')
 	PowerParamsInOrder.append('DRAMPowerParam1')
 	
-	#for CurrParam in PowerParams:#PowerParamsInOrder.append(CurrParam)
 	
 	CurrSrcFileParams={}
 	CurrStatsFileName=''
 	CurrStatsFile=''
-	#SpatialWindow=[32,128]
 	FilesToRename=['.siminst','.dist','.spatial']
-	#FilesToExtract=['.dist','.spatial']
-	#AverageRun=5
-	#AverageCalc=2
 	AverageRuntimeCollection={}
 	AverageRuntimeNontolerantProcsCollection={}
 	AverageRuntimeNontolerantIterCollection={}
@@ -602,7 +582,9 @@ def main(argv):
 	SimulationNeeded=not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) )
 	InfoExtractionNeeded=( not( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) and (VectorExtract==0) and (AverageCalc!=1) ) )
 	JustVectorExtractionNeeded= ( (ReuseWindow==0) and (spatial==0) and (CacheSimulation==0) and (EnergySim==0) )
-	print "\n\t SimulationNeeded: "+str(SimulationNeeded)+" InfoExtractionNeeded: "+str(InfoExtractionNeeded)+" JustVectorExtractionNeeded "+str(JustVectorExtractionNeeded)
+
+	ExtractSimStats=False
+	print "\n\t SimulationNeeded: "+str(SimulationNeeded)+" InfoExtractionNeeded: "+str(InfoExtractionNeeded)+" JustVectorExtractionNeeded "+str(JustVectorExtractionNeeded)+" ExtractSimStats "+str(ExtractSimStats)
 	
 	#MasterStatsFile=fopen(OutputFileName,'w')
 	MasterFileNameCollection=[]
@@ -613,7 +595,7 @@ def main(argv):
 	EmailID.append('avspadiwal@gmail.com')
 	for idx,CurrSrcFile in enumerate(SrcFile):
 	 print "\n\t CurrSrcFile: "+str(CurrSrcFile)
-	 LsCmd='ls '+str(RemoveWhiteSpace(CurrSrcFile)) #BenchmarksResultLogging.py ' #str(CurrSrcFile)
+	 LsCmd='ls '+str(RemoveWhiteSpace(CurrSrcFile))
 	 TempLsOutput=commands.getoutput(LsCmd)
 	 print "\t BeforeLsCheck: "+str(TempLsOutput)
 	 LsOutput=RemoveWhiteSpace(TempLsOutput)
@@ -622,7 +604,6 @@ def main(argv):
 		print "\t LsOutput: "+str(CurrSrcFile)
 		CurrSrcFileParams[idx]={}
 		SrcFileProvided=False
-		#commands.getoutput('rm -f /mnt/pmfs/* ') # For labyrinth- NVM project.
 		ExtractFileName=re.match('\s*(.*)\.c',CurrSrcFile)
 		if ExtractFileName:
 			SrcFileProvided=True
@@ -642,14 +623,11 @@ def main(argv):
 			else:
 				FileName=RemoveWhiteSpace(CurrSrcFile) 
 			print "\n\t Will run "+str(FileName)+" exe now"
-			#CurrSrcFileParams[idx]['FileName']=FileName
 			FileNameParts=re.split('_',FileName)
 			NumParts=len(FileNameParts)
 			CheckParams=re.match('\s*.*\_Iters\_(.*)\_Vars\_(.*)\_DS\_(.*)\_Alloc\_(.*)\_Dims\_(.*)\_Size\_(.*)\_Random\_(.*)\_Streams\_(.*)\_Ops\_(.*)\_Stride\_(.*)',FileName)
 
 			if CheckParams:
-				#if debug:
-				#print "\n\t Found all of the params! "
 				CurrSrcFileParams[idx]['Iters']=CheckParams.group(1)
 				ItersFileName=int(CheckParams.group(1))
 				CurrSrcFileParams[idx]['Vars']=CheckParams.group(2)
@@ -663,10 +641,8 @@ def main(argv):
 				
 				OpsLength=( len(CheckParams.group(9))/int(CurrSrcFileParams[idx]['Stream']) )+1;
 				CurrSrcFileParams[idx]['OpsLength']=OpsLength
-				#print "OpsLength: "+str(OpsLength)+" Stream "+str(CurrSrcFileParams[idx]['Stream'])
 				TempStatsFileName='Stats'
 				for CurrFeature in CurrSrcFileParams[idx]:
-					#print "\n\t Feature: "+str(CurrFeature)+" value: "+str(CurrSrcFileParams[idx][CurrFeature])
 					TempStatsFileName+='_'+str(CurrFeature)+'_'+str(CurrSrcFileParams[idx][CurrFeature])
 				TempStatsFileName+='.log'
 				#print "\n\t TempStatsFileName: "+str(TempStatsFileName)
@@ -692,50 +668,10 @@ def main(argv):
 					commands.getoutput(RunCmd)
 					RunOutputFileNameCollection.append(RunOutputFile)
 				AvgTime=ExtractRuntime(RunOutputFileNameCollection,NumofProcs,FileName,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
-				"""	TExceededTolerance=0
-					CumulTime=0.0
-					for CurrProcTime in IterRuntime:
-						CumulTime+=CurrProcTime
-						for InnerLoopCurrProcTime in IterRuntime:
-							Temp=abs(CurrProcTime-InnerLoopCurrProcTime)/(InnerLoopCurrProcTime)
-							if(Temp>0.05):
-								TExceededTolerance+=1
-					AvgTime=0					
-					ExceededTolerance=0
-					CumulTime=0.0
-					for Idx,CurrProcTime in enumerate(IterRuntime):	
-						CumulTime+=(CurrProcTime)
-						AvgTime=CumulTime/(Idx+1)
-						if(AvgTime>0):
-							Temp=abs(CurrProcTime-AvgTime)/AvgTime
-						else:
-							print "\t ERROR: Iter: "+str(i)+" Proc "+str(Idx)+" CurrProcTime "+str(CurrProcTime)+" CumulTime "+str(CumulTime)+" AvgTime "+str(AvgTime)+" AvgTime is zero! "
-							sys.exit()
-							
-						if(Temp>0.05):
-							ExceededTolerance+=1
-							print "\t Tolerance "+str(Temp)+" Proc "+str(Idx)+" Avg "+str(AvgTime)+" CurrProcTime "+str(CurrProcTime)
-					if((ExceededTolerance>0) ):
-						AverageRuntimeNontolerantProcsCollection[FileName]+=ExceededTolerance
-												
-					CumulTime/=NumofProcs
-					ItersTime.append(CumulTime)
-					print "\t Iter: "+str(i)+" ProcExceededTolerance "+str(ExceededTolerance)+" TExceededTolerance "+str(TExceededTolerance)
-				CumulTime=0
-				ExceededTolerance=0
-				AvgTime=0
-				for Idx,CurrIterTime in enumerate(ItersTime):
-					CumulTime+=CurrIterTime
-					AvgTime=CumulTime/(Idx+1)
-					Temp=abs(CurrIterTime-AvgTime)/AvgTime
-					if(Temp>0.05):
-						ExceededTolerance+=1
-					print "\t Iter: "+str(Idx)+" ExceededTolerance "+str(ExceededTolerance)
-				AverageRuntimeNontolerantIterCollection[FileName]=ExceededTolerance"""
 				AverageRuntimeCollection[FileName]=AvgTime		
 				FileNameCollection.append(FileName)
 				MasterFileNameCollection.append(FileName)	
-			"""if(PapiCacheSim>0):
+			if(PapiCacheSim>0):
 				NumCounterSets=2
 				CurrCounterValues={}
 				for CurrCounterSets in range(NumCounterSets):
@@ -745,7 +681,6 @@ def main(argv):
 					commands.getoutput(ReplaceSet)
 					Compile(FileName,LibPapiPath)
 					for i in range(AverageRun):
-						#CurrCounterValues[CurrCounterSets][i]={}
 						RunCmd='mpirun -np '+str(NumofProcs)+' ./'+str(FileName)+' > '+str(RunOutputFile)
 						commands.getoutput(RunCmd)
 						RenameOutputFile=' Set'+str(CurrCounterSets)+'_Iter'+str(i)+'_'+str(RunOutputFile)
@@ -795,13 +730,6 @@ def main(argv):
 				for CurrCounterVal in CurrInputCounterValues:
 					print "\t "+str(CurrCounterVal)
 				CounterResultsCollection[FileName]=CurrInputCounterValues
-				DirName=''
-				if( not(InfoExtractionNeeded)):
-					DirName='Dir'+str(FileName)
-					commands.getoutput('mkdir '+str(DirName))
-					CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
-                                        commands.getoutput(CMDMvFiles)
-					print "\t DirName: "+str(DirName) """
 			if(InfoExtractionNeeded):
 				NumProcsStrExtension=''
 				if(NumofProcs<10):
@@ -832,25 +760,19 @@ def main(argv):
 						print "\t ERROR: Cannot open file "+Str(RunOutputFile)
 						RunOutput=[]
 					for CurrLine in RunOutput:
-					        #print "\n\t CurrLine: "+str(CurrLine)
+					        
 					        CheckCounters=re.match('^\s*Hardware\s*counters\s*\:',CurrLine)
 					        if CheckCounters:
-					                #print "\n\t CurrLine: "+str(CurrLine)
 					                CheckCounters=re.match('\s*Hardware\s*counters\s*:(.*)',CurrLine) # 
 						if CheckCounters:
-							#CurrStatsFile.write("\n\t CheckRuntime: "+str(CheckRuntime.group(0)))
-							SplitPowerValues=re.split('\t',CheckCounters.group(1)) #+'.'+CheckCounters.group(2)
+							SplitPowerValues=re.split('\t',CheckCounters.group(1)) 
 							if(len(SplitPowerValues)!=NumofProcs):
 								Temp=[]
 							for CurrPowerValues in SplitPowerValues:
 								if(IsNumber(CurrPowerValues)):
 									Temp.append(CurrPowerValues)	
-									#if verbose:
 									print "\t "+str(CurrPowerValues)
 								PowerValueCollection[FileName]=Temp
-					                        #Temp=float(Temp)
-					                        #AverageRuntime+=Temp
-					                        #print "\n\t--Runtime: "+str(Temp)+"~~"+str(CheckCounters.group(0))
 						else:
 							print "\n\t ERROR: Cannot extract runtime! \n" 
 							sys.exit()    
@@ -871,7 +793,7 @@ def main(argv):
 					commands.getoutput(InsertEnergyProbes)
 					LpInstFileName='LpInst.sh'
 					LpInstFile=open(LpInstFileName,'w')
-					#LpInstFile.write('\n\t export HWC0=PAPI_TOT_INS')
+
 					if(PapiCacheSim==0):
 						LpInstFile.write('\n\t export HWC0=PAPI_SR_INS')	
 						LpInstFile.write('\n\t export HWC1=PAPI_LD_INS')
@@ -923,11 +845,8 @@ def main(argv):
 									BBID=RemoveWhiteSpace(CurrLineBreakdown[0])			
 									print "\n\t BBID found!!! "+str(BBID)
 									
-								#print "\t LenCurrLineBreakdown: "+str(LenCurrLineBreakdown)+" NumCounters "+str(NumCounters)+" CurrLineBreakdown "+str(CurrLineBreakdown)
 								if(LenCurrLineBreakdown==(NumCounters+1)):
 									if ( BBIDFound  and ( LineNum ==(BBIDLine+RelevantThreadStatsFromBBLine)  ) ):
-										#print "\n\t BBID: "+str(BBID)+" LineNum: "+str(LineNum)+" BBIDLineNum: "+str(BBIDLine)
-										#print "\n\t LineNum: "+str(LineNum)+" len(CurrLineBreakdown) "+str(len(CurrLineBreakdown))+" CurrLineBreakdown: "+str(CurrLineBreakdown)
 										CheckThread=re.match('\s*Thread\:.*',CurrLineBreakdown[0])
 										if CheckThread:
 											Temp=[]
@@ -1041,8 +960,6 @@ def main(argv):
 							if(not(FileName in PowerValueCollection)):
 								PowerValueCollection[FileName]={}
 							PowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "
-							#sys.exit()
-						
 
 					RaplWattsFilePattern='raw_rapl.'+str(FileName)+'*'
 					RaplWattsLsOutput=commands.getoutput('ls '+str(RaplWattsFilePattern))
@@ -1067,7 +984,6 @@ def main(argv):
 								for idx,TempCurrLine in enumerate(CurrFileContents):
 									if(idx):
 										CurrLine=RemoveWhiteSpace(TempCurrLine)
-										#print "\t CurrLine: "+str(CurrLine)
 										BreakdownParams=re.split(',',CurrLine)
 										#if(not(float(CurrLine))):
 										if(len(BreakdownParams)!=NumPowerParams):
@@ -1084,18 +1000,17 @@ def main(argv):
 													print "\t Not a float :-o "+str(CurrLine)
 													break		
 								if(AllNums and ProperFormat):
-									#AvgPower=float(TotalPowerSamples/len(CurrFileContents))
 									NumSamples=len(CurrFileContents)-1
 									if(NumSamples>0):
 										StrAvgPower=''
 										for CurrParam in PowerParamsInOrder:
 											SumOfPowerValues[CurrParam]/=NumSamples
 											StrAvgPower+='\t'+str(round(SumOfPowerValues[CurrParam],5))
-										#print "\t PowerParam-- "+str(CurrParam)+'  Value '+str(SumOfPowerValues[CurrParam])
+
 										print "\t File: "+str(CurrFile)+" Power: "+str(StrAvgPower)
 										if(not(FileName in RaplPowerValueCollection)):
 											RaplPowerValueCollection[FileName]={}
-										RaplPowerValueCollection[FileName][CurrFreq]=StrAvgPower #SumOfPowerValues
+										RaplPowerValueCollection[FileName][CurrFreq]=StrAvgPower
 										RaplWattsNotYetFound=False
 										
 									else:
@@ -1106,17 +1021,7 @@ def main(argv):
 							print "\t ERROR: Not able to extract RaplWatts for frequency "+str(CurrFreq)
 							if(not(FileName in RaplPowerValueCollection)):
 								RaplPowerValueCollection[FileName]={}
-							RaplPowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "
-							#sys.exit()
-
-						if(CacheSimulation==0):
-							DirName='Dir'+str(FileName)
-							commands.getoutput('mkdir '+str(DirName))
-							CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)    
-							commands.getoutput(CMDMvFiles)
-							CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
-							commands.getoutput(CMDMvFiles)
-							CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
+							RaplPowerValueCollection[FileName][CurrFreq]="\t power measure not found!!! "							
 
 				if(SimulationNeeded):
 					if(SortedBBsList==''):
@@ -1133,7 +1038,6 @@ def main(argv):
 					if(ReuseWindow!=0):
 						FilesToExtract.append('.dist')
 					if(spatial!=''):
-						#if(spatial!=0):
 						if((len(SpatialWindow)==1) and (SpatialWindow[0]==0)):
 							FilesToExtract.append('.spatial')
 					for CurrSW in SpatialWindow:
@@ -1157,36 +1061,41 @@ def main(argv):
 						SimLsOutput=commands.getoutput('ls Sim*')
 						commands.getoutput('cp SimRun.sh DontDeleteSimRunScript.log')
 						print "\t Boo-Yeah did I simulate-- {0:s} ".format(SimLsOutput)		
-						"""if(CurrStatsFile!=''):
-							CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
-						for CurrExt in FilesToExtract:
-							CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
-							DistFileHandle=fopen(CurrExtFile)
-							DistFile=DistFileHandle.readlines()			
-							BinsNotFound=1
-							KeepCopying=1
-							CurrStatsFile.write("\n\t Extension: "+str(CurrExt)+"\n")
-							#print("\n\t Extension: "+str(CurrExt)+"\n")
-							for CurrLine in DistFile:
-								if BinsNotFound:
-									CheckBins=re.match('\s*Bin\s*Count',CurrLine)
-									if CheckBins:
-										BinsNotFound=0
-								else:
-									CheckTotal=re.match('\s*Total\s*Count\:',CurrLine)
-									if not(CheckTotal):
-										if KeepCopying:
-											CurrStatsFile.write("\t "+str(CurrLine))
+						
+						if(ExtractSimStats):
+							if(CurrStatsFile!=''):
+								CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
+							for CurrExt in FilesToExtract:
+								CurrExtFile=FileName+'.r00000000.t00000001'+str(CurrExt)
+								DistFileHandle=fopen(CurrExtFile)
+								DistFile=DistFileHandle.readlines()			
+								BinsNotFound=1
+								KeepCopying=1
+								CurrStatsFile.write("\n\t Extension: "+str(CurrExt)+"\n")
+
+								for CurrLine in DistFile:
+									if BinsNotFound:
+										CheckBins=re.match('\s*Bin\s*Count',CurrLine)
+										if CheckBins:
+											BinsNotFound=0
 									else:
-										KeepCopying=0
-											
-						FilePrefix='SW_'+str(CurrSW)+'_'
-						#commands.getoutput(
-						for CurrExtension in FilesToRename:
-							CurrName=FileName+'.r00000000.t00000001'+str(CurrExtension)
-							MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
-						#print "\n\t MVCommand: "+str(MVCommand)
-							commands.getoutput(MVCommand) """
+										CheckTotal=re.match('\s*Total\s*Count\:',CurrLine)
+										if not(CheckTotal):
+											if KeepCopying:
+												CurrStatsFile.write("\t "+str(CurrLine))
+										else:
+											KeepCopying=0
+												
+							FilePrefix='SW_'+str(CurrSW)+'_'
+							ProcPrefixName='t000000'
+							if(NumProcs<10):
+								ProcPrefixName+='0'+str(NumProcs)
+							elif(NumProcs<100):
+								ProcPrefixName+=str(NumProcs)
+							for CurrExtension in FilesToRename:
+								CurrName=FileName+'.r00000000.'+str(ProcPrefixName)+str(CurrExtension)
+								MVCommand='mv '+str(CurrName)+' '+str(FilePrefix)+str(CurrName)
+								commands.getoutput(MVCommand) 
 
 				if(not(VectorExtract==0)):
 					if(SortedBBsList==''):
@@ -1213,35 +1122,22 @@ def main(argv):
 							print "\t Idx: "+str(Idx)+" Param: "+str(BreakGrepOutput[Idx])
 							Temp.append(BreakGrepOutput[Idx])
 						AllBBsStats.append(Temp)
-					PredictionVectorParamsCollection[FileName]=AllBBsStats
-						#+' 24,idu: '+str(BreakGrepOutput[26])	
-					#sys.exit()	
-					if(JustVectorExtractionNeeded):
-						DirName='Dir'+str(FileName)
-						commands.getoutput('mkdir '+str(DirName))
-						CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
-						commands.getoutput(CMDMvFiles)
-						CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
-						commands.getoutput(CMDMvFiles)	
-						CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)					
+					PredictionVectorParamsCollection[FileName]=AllBBsStats				
 								
-				DirName='Dir'+str(FileName)
-				CMDMkdir='mkdir '+str(DirName)
-				commands.getoutput(DirName)
-				CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
-				commands.getoutput(CMDMvFiles)
-				print "\t CMDMvFiles: "+str(CMDMvFiles)
-				CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
-				commands.getoutput(CMDMvFiles)
-				CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
+			DirName='Dir'+str(FileName)
+			CMDMkdir='mkdir '+str(DirName)
+			commands.getoutput(DirName)
+			CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
+			commands.getoutput(CMDMvFiles)
+			print "\t CMDMvFiles: "+str(CMDMvFiles)
+			CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
+			commands.getoutput(CMDMvFiles)
+			CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
 							
 	 else:
 		print "\t Could not find the SrcFile: "+str(CurrSrcFile)
 		print "\t LsOutput: "+str(LsOutput)
-	#if(CurrStatsFile):
-	#	WriteStats(CurrStatsFile,FileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
-	#	CurrStatsFile.write("\n\n\n")
-	#	CurrStatsFile.close()#"""
+
 	MasterStatsFile=fopen(OutputFileName,'w')	
 	WriteStats(MasterStatsFile,MasterFileNameCollection,EnviVars,AverageRuntimeCollection,PowerValueCollection,RaplPowerValueCollection,PredictionVectorParamsCollection,ItersCollection,EnergySim,EnergyMeasure,VectorExtract,PowerParams,PowerParamsInOrder,VectorParamStart,NumVectorParams,AverageCalc,CounterResultsCollection,PapiCacheSim,AverageRuntimeNontolerantProcsCollection,AverageRuntimeNontolerantIterCollection)
 	MasterStatsFile.write("\n\n")
