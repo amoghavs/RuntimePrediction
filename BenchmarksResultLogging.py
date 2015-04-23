@@ -108,16 +108,17 @@ def SortBBs(SrcFileName,OutputFileName,PercentThreshold):
 		else:
 			#print " #Fields "+str(len(Fields))+" #TopLoopCheck "+str(len(TopLoopCheck))+"\t LineNum "+str(LineNum) 
 			#print "\t CurrLine: "+str(CurrLine)
-			if(len(TopLoopCheck)==9): # This used to be 6 in labyrinth's version.
-				#print " #Fields "+str(len(Fields))+" #TopLoopCheck "+str(len(TopLoopCheck))
-				#print "\t Fields: "+str(Fields)
+			if(len(TopLoopCheck)==6): # This used to be 6 in labyrinth's version.
+				print " #Fields "+str(len(Fields))+" #TopLoopCheck "+str(len(TopLoopCheck))
+				print "\t Fields: "+str(Fields)
 				TmpBB=Fields[BBIdx].split(':')
 				BB=''
 				Percent=RemoveWhiteSpace(Fields[PercentIdx])
-				if(len(TmpBB)==2):
-					BB=TmpBB[1]
-				print "\n\t Percent: "+str(float(Percent))
-				CollectTopLoopInfo.append( (BB,float(Percent)) )
+				if(IsNumber(Percent)):
+					if(len(TmpBB)==2):
+						BB=TmpBB[1]
+					print "\n\t Percent: "+str(float(Percent))
+					CollectTopLoopInfo.append( (BB,float(Percent)) )
 
 	CollectTopLoopInfo=sorted(CollectTopLoopInfo, key=itemgetter(PercentIdx),reverse=True)
 	#for Idx,CurrBBTuple in enumerate(CollectTopLoopInfo):	
@@ -167,9 +168,10 @@ def ObtainTopLoops(FileName,NumofProcs,PercentThreshold=1.0):
 		elif(StrLen==4):
 			LoopViewStrNotReady=0
 		else:
-			print "ERROR: Some logical must have happened! "
+			print "ERROR: Some logical error must have happened! "
 			sys.exit()
-	LoopViewStr=str(FileName)+'_standard_'+str(LoopViewStr)+'.LoopView'
+
+	LoopViewStr=str(FileName)+'_standard_'+str(LoopViewStr)+'.r0.LoopView'
 	SortedBBsList='BBsSorted_'+str(FileName)+'.log'
 	SortedBBsCollection=SortBBs('processed/'+str(LoopViewStr),SortedBBsList,PercentThreshold)
 	jRunReport='jRunTool --application '+str(FileName)+' --dataset standard --cpu_count '+str(NumofProcs)+' --processed_dir processed --scratch_dir scratch --raw_pmactrace `pwd` --sysid 130 --functions default --loops default --report blockvector  > Duh2.log '
@@ -881,8 +883,8 @@ def main(argv):
 					else:
 							LpInstFile.write('\n\t export HWC0=PAPI_TOT_INS')	
 
-						LpInstFile.write('\nmpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.lpiinst > Duh3.log ')
-						LpInstFile.close()
+					LpInstFile.write('\nmpirun -np '+str(NumofProcs)+' ./'+str(FileName)+'.lpiinst > Duh3.log ')
+					LpInstFile.close()
 					for i in range(AverageRun):
 						 print "\t Iter: "+str(i)+" cmd: sh "+str(LpInstFileName)
 						 commands.getoutput('sh '+str(LpInstFileName))
@@ -1121,7 +1123,8 @@ def main(argv):
 						(SortedBBsCollection,SortedBBsList)=ObtainTopLoops(FileName,NumofProcs)
 					CMDPebilSim='pebil --typ sim --inp '+str(SortedBBsList)+' --app '+str(FileName)
 					print "\n\t CMDPebilSim: "+str(CMDPebilSim) 
-					commands.getoutput(CMDPebilSim)
+					PebilCreateSimOutput=commands.getoutput(CMDPebilSim)
+					print "\t PebilCreateSimOutput: {0:s} ".format(PebilCreateSimOutput)
 					SimInstFile=str(FileName)+'.siminst'
 					DirName='Dir'+str(FileName)
 					CMDMkdir='mkdir '+str(DirName)
@@ -1137,20 +1140,23 @@ def main(argv):
 					
 						SimRunScript=fopen('SimRun.sh','w')
 						print "\n\t CurrSW: "+str(CurrSW)
-						SimRunScript.write('\n\t export METASIM_SAMPLE_ON=1 ')
-						SimRunScript.write('\n\t export METASIM_SAMPLE_OFF=0 ')			
+						SimRunScript.write('\n\t export METASIM_SAMPLE_ON=1')
+						SimRunScript.write('\n\t export METASIM_SAMPLE_OFF=0')			
 						MetasimReuseWindow='export METASIM_REUSE_WINDOW='+str(ReuseWindow)
 						SimRunScript.write("\n\t "+str(MetasimReuseWindow))
 						SimRunScript.write('\n\t export METASIM_SPATIAL_WINDOW='+str(CurrSW))
 						MetasSimCacheSim='export METASIM_CACHE_SIMULATION='+str(CacheSimulation)
 						SimRunScript.write('\n\t '+str(MetasSimCacheSim))			
 						SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=0 ')	
-						SimRunScript.write('\n\t export METASIM_SAMPLE_MAX=10000000')
+						SimRunScript.write('\n\t export METASIM_SAMPLE_MAX=1000000')
 						SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
 						SimRunScript.write('\n\t mpirun -np '+str(NumofProcs)+' ./'+str(SimInstFile))	
 						SimRunScript.write('\n\n')							
 						SimRunScript.close()
-						commands.getoutput('sh SimRun.sh > SimInstOutput.log ')					
+						commands.getoutput('sh SimRun.sh > SimInstOutput.log ')			
+						SimLsOutput=commands.getoutput('ls Sim*')
+						commands.getoutput('cp SimRun.sh DontDeleteSimRunScript.log')
+						print "\t Boo-Yeah did I simulate-- {0:s} ".format(SimLsOutput)		
 						"""if(CurrStatsFile!=''):
 							CurrStatsFile.write("\n\t Spatial Window: "+str(CurrSW)+"\n")
 						for CurrExt in FilesToExtract:
