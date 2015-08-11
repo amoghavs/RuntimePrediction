@@ -290,20 +290,22 @@ def ExtractRuntime(RunOutputFileList,NumProcs,FileName,AverageRuntimeNontolerant
 						RunOutput.close()
 						break
 					if CheckRuntime:
-						#BreakdownTimeForProcs=re.split('\ \ ',CheckRuntime.group(1))
-						BreakdownTimeForProcs=re.split(':',CurrLine)
-						print "\t CurrLine: "+str(CurrLine)+"\t Breakdown "+str(BreakdownTimeForProcs)
-						if(len(BreakdownTimeForProcs)>(NumProcs)):
-							print "\t BreakdownTimeForProcs: "+str(BreakdownTimeForProcs)
-							for CurrChunk in (BreakdownTimeForProcs):
-								ExtractTime=re.match('\s*(\d+)*\.(\d+)*',CurrChunk)
-								if (ExtractTime):
-									Temp=str(ExtractTime.group(1))+'.'+str(ExtractTime.group(2))
-									#print "\t Runtime-- "+str(Temp)
-									IterRuntime.append(float(Temp))
+						BreakdownTimeForProcs1=re.split('\ \ ',CheckRuntime.group(1))
+						BreakdownTimeForProcs2=re.split(':',CurrLine)
+						if(len(BreakdownTimeForProcs1)>NumProcs):
+							BreakdownTimeForProcs=BreakdownTimeForProcs1
+						elif(len(BreakdownTimeForProcs2)>NumProcs):
+							BreakdownTimeForProcs=BreakdownTimeForProcs2
 						else:
-							print "\t ERROR: len(BreakdownTimeForProcs): "+str(len(BreakdownTimeForProcs))+" where as NumProcs is "+str(NumProcs)
-							sys.exit()
+							print "\t ERROR: len(BreakdownTimeForProcs) is not atleast as much as NumProcs which is "+str(NumProcs)
+		
+						print "\t BreakdownTimeForProcs: "+str(BreakdownTimeForProcs)
+						for CurrChunk in (BreakdownTimeForProcs):
+							ExtractTime=re.match('\s*(\d+)*\.(\d+)*',CurrChunk)
+							if (ExtractTime):
+								Temp=str(ExtractTime.group(1))+'.'+str(ExtractTime.group(2))
+								#print "\t Runtime-- "+str(Temp)
+								IterRuntime.append(float(Temp))
 		                	        print "\n\t--Runtime--: "+str(IterRuntime[0])
 						RunOutput.close()
 						break
@@ -333,7 +335,7 @@ def ExtractRuntime(RunOutputFileList,NumProcs,FileName,AverageRuntimeNontolerant
 			if((ExceededTolerance>0) ):
 			        AverageRuntimeNontolerantProcsCollection[FileName]+=ExceededTolerance
 	     
-			CumulTime/=NumProcs
+			#CumulTime/=NumProcs
 			if(len(IterRuntime)>0):
 				CumulTime/=len(IterRuntime)
 			else:
@@ -588,8 +590,8 @@ def main(argv):
 	
 	#MasterStatsFile=fopen(OutputFileName,'w')
 	MasterFileNameCollection=[]
-	#LibPapiPath='/opt/papi/lib/libpapi.so -I /opt/papi/include/ '
-	LibPapiPath=' -O2 /usr/local/lib/libpapi.so -I /usr/local/include '
+	LibPapiPath=' -O3 /opt/papi/lib/libpapi.so -I /opt/papi/include/ '
+	#LibPapiPath=' -O3 /usr/local/lib/libpapi.so -I /usr/local/include '
 	print "\t WARNING: LibPapiPath is {0:s} ".format(LibPapiPath)
 	EmailID=[]
 	EmailID.append('avspadiwal@gmail.com')
@@ -604,7 +606,7 @@ def main(argv):
 		print "\t LsOutput: "+str(CurrSrcFile)
 		CurrSrcFileParams[idx]={}
 		SrcFileProvided=False
-		ExtractFileName=re.match('\s*(.*)\.c',CurrSrcFile)
+		ExtractFileName=re.match('\s*(.*)\.c$',CurrSrcFile)
 		if ExtractFileName:
 			SrcFileProvided=True
 		else:
@@ -777,14 +779,14 @@ def main(argv):
 							print "\n\t ERROR: Cannot extract runtime! \n" 
 							sys.exit()    
 					
-					if(CacheSimulation==0):
+					"""if(CacheSimulation==0):
 					         DirName='Dir'+str(FileName)
 					         commands.getoutput('mkdir '+str(DirName))
 					         CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
 					         commands.getoutput(CMDMvFiles)
 					         CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
 					         commands.getoutput(CMDMvFiles)
-					         CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
+					         CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)"""
  
 				elif(EnergyMeasure==1):
 					(SortedBBsCollection,SortedBBsList)=ObtainTopLoops(FileName,NumofProcs)
@@ -872,14 +874,14 @@ def main(argv):
 								Before=PowerValueCollection[FileName][CurrBB][CounterIdx]
 								PowerValueCollection[FileName][CurrBB][CounterIdx]/=(NumofProcs*AverageRun)
 								print "\t CurrBB: "+str(CurrBB)+"\t Counter-idx: "+str(CounterIdx)+"\t Counter-value: "+str(PowerValueCollection[FileName][CurrBB])+"\t Before: "+str(Before)
-					if(CacheSimulation==0):
+					"""if(CacheSimulation==0):
 						DirName='Dir'+str(FileName)
 						commands.getoutput('mkdir '+str(DirName))
 						CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)	
 						commands.getoutput(CMDMvFiles)
 						CMDMvFiles=' mv *'+str(FileName)+' '+str(DirName)
 						commands.getoutput(CMDMvFiles)
-						CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
+						CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)"""
 
 				elif((EnergyMeasure==2) or (AverageCalc==1)):	
 
@@ -1031,9 +1033,9 @@ def main(argv):
 					PebilCreateSimOutput=commands.getoutput(CMDPebilSim)
 					print "\t PebilCreateSimOutput: {0:s} ".format(PebilCreateSimOutput)
 					SimInstFile=str(FileName)+'.siminst'
-					DirName='Dir'+str(FileName)
-					CMDMkdir='mkdir '+str(DirName)
-					commands.getoutput(CMDMkdir)
+					#DirName='Dir'+str(FileName)
+					#CMDMkdir='mkdir '+str(DirName)
+					#commands.getoutput(CMDMkdir)
 					FilesToExtract=[]
 					if(ReuseWindow!=0):
 						FilesToExtract.append('.dist')
@@ -1052,7 +1054,7 @@ def main(argv):
 						MetasSimCacheSim='export METASIM_CACHE_SIMULATION='+str(CacheSimulation)
 						SimRunScript.write('\n\t '+str(MetasSimCacheSim))			
 						SimRunScript.write('\n\t export METASIM_ADDRESS_RANGE=0 ')	
-						SimRunScript.write('\n\t export METASIM_SAMPLE_MAX=1000000')
+						SimRunScript.write('\n\t export METASIM_SAMPLE_MAX=10000000')
 						SimRunScript.write('\n\t ls '+str(FileName)+'*'+' > SimInstOutput.log')
 						SimRunScript.write('\n\t mpirun -np '+str(NumofProcs)+' ./'+str(SimInstFile))	
 						SimRunScript.write('\n\n')							
@@ -1123,14 +1125,15 @@ def main(argv):
 							Temp.append(BreakGrepOutput[Idx])
 						AllBBsStats.append(Temp)
 					PredictionVectorParamsCollection[FileName]=AllBBsStats				
-								
+											
 			DirName='Dir'+str(FileName)
 			CMDMkdir='mkdir '+str(DirName)
-			commands.getoutput(DirName)
-			CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)
-			commands.getoutput(CMDMvFiles)
+			print "\t CMDMkdir: %s and result: %s "%(CMDMkdir,commands.getoutput(CMDMkdir))
+			#CMDMvFiles=' mv *'+str(FileName)+'* '+str(DirName)+'/'
+			#commands.getoutput(CMDMvFiles)
+			#print "\t CMDMvFiles: "+str(CMDMvFiles)
+			CMDMvFiles=' mv '+str(FileName)+'.r000* '+str(FileName)+'.jbb* '+str(FileName)+'.sim* '+str(FileName)+'.lpp* '+str(DirName)+'/'
 			print "\t CMDMvFiles: "+str(CMDMvFiles)
-			CMDMvFiles=' mv *'+str(FileName)+'.* '+str(DirName)
 			commands.getoutput(CMDMvFiles)
 			CMDCpLoopVectors=' cp loopVectors.rALL  '+str(DirName);commands.getoutput(CMDCpLoopVectors)
 							

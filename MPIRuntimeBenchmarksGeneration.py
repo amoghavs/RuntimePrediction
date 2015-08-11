@@ -1,4 +1,4 @@
- #!/usr/bin/python
+ #! /usr/bin/python
 
 #### Pending items:
 # * To allocate stride*limit number of elements. -  Done
@@ -260,14 +260,14 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 				VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
 				VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
 				StreamVarFound=1
-			elif(ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]=='d'):
-				if(ConfigParams['DifferentOperand'][VarNum]>0):
-					VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
-					VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
-				elif(DiffVarFound==0):
-					VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
-					VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
-					DiffVarFound=1
+			elif( (ConfigParams['StrideVar'][VarNum][CurrStream]['OperandsInfo'][CurrOperand][0]=='d') and (DiffVarFound==0) ):
+				#if(ConfigParams['DifferentOperand'][VarNum]>0):
+				#	VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
+				#	VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
+				#elif(DiffVarFound==0):
+				VarFuncDeclString+=ConfigParams['VarDecl'][VarNum][CurrStream][CurrOperand]+','
+				VarDeclString+=ConfigParams['VarOperands'][VarNum][CurrStream][CurrOperand]+',' 
+				DiffVarFound=1
     else:
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 			CurrOperand=0
@@ -332,9 +332,9 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 	PopCode+=11
     
     if(ConfigParams['alloc'][VarNum]=='d' or ConfigParams['alloc'][VarNum]=='dynamic'):
-	    FuncDecl='long int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' long int Stride, int Sum )'
+	    FuncDecl='long int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' long int Stride, long int Sum )'
     else:
-    	    FuncDecl='long int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' long int Stride, int Sum )'
+    	    FuncDecl='long int Func'+str(A)+'Stride'+str(Stride)+"Dim"+str(StrideDim)+'('+VarFuncDeclString+' long int Stride, long int Sum )'
     ThisLoop.append(FuncDecl)
     ThisLoop.append('{')
     ThisLoop.append(str(ConfigParams['indices'][len(ConfigParams['indices'])-1]))
@@ -823,7 +823,8 @@ def StridedLoopInFunction(Stride,StrideDim,A,VarNum,ConfigParams,debug):
 		LHSVariableCurrStream=(RandomAccessVarPerStream[CurrStream])
 	else:
 		for CurrDim in range(NumDims):
-			LHSVariableCurrStream+='['+str(LHSIndicesPerStream[CurrStream][CurrDim])+']'
+			#LHSVariableCurrStream+='['+str(LHSIndicesPerStream[CurrStream][CurrDim])+']'
+			LHSVariableCurrStream= str(AccumVar[CurrStream])+'+'
 			
  	if(ConfigParams['RandomAccess'][VarNum]):	
 		#Method3:
@@ -913,8 +914,9 @@ def main(argv):
 	verbose=False   
 	for opt, arg in opts:
 	   if opt == '-h':
-	      print 'test.py -i <inputfile> -o <outputfile>'
-	      sys.exit()
+	      #print 'test.py -i <inputfile> -o <outputfile>'
+	      #sys.exit()
+	      usage()
 	   elif opt in ("-c", "--config"):
 	      config=arg
 	      print "\n\t Config file is "+str(config)+"\n";
@@ -1397,7 +1399,7 @@ def main(argv):
 								if debug:
 						       			print "\n\t Alloc for dim "+str(CurrDim)+" is "+str(CurrInit)+"\n" 					
 						if(CurrDim != ConfigParams['NumVars']):
-							print "\n\t The init expression is not specified for each variable. It is specified only for "+str(CurrDim)+ " dimensions while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
+							print "\n\t The init expression is not specified for each variable. It is specified only for "+str(CurrDim)+ " variables while number of variables specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
 						else:
 							InitNotFound=0	
@@ -1410,19 +1412,19 @@ def main(argv):
 						LineNotProcessed=0
 						VarCount=0;
 						for CurrOpDiff in OpDiff:
-							CheckSpace=re.match(r'^\s*$',str(CurrInit))
+							CheckSpace=re.match(r'^\s*$',str(CurrOpDiff))
 						        if(CheckSpace):
 						       		if debug:
-						       			print "\n\t For init parameter, the input is not in the appropriate format. Please check! \n"
+						       			print "\n\t For OpDiff parameter, the input is not in the appropriate format. Please check! \n"
 						       		sys.exit(0)						
 							else:
-								CurrOpDiff=int(RemoveWhiteSpace(CurrOpDiff))#re.sub(r'\s*$','',CurrInit)
+								CurrOpDiff=int(RemoveWhiteSpace(CurrOpDiff))
 								ConfigParams['OpDiff'].append(CurrOpDiff);
 								VarCount+=1				
 								if debug:
 						       			print "\n\t OpDiff for var "+str(CurrDim)+" is "+str(CurrOpDiff)+"\n" 					
 						if(VarCount!= ConfigParams['NumVars']):
-							print "\n\t The opdiff expression is not specified for each variable. It is specified only for "+str(VarCount)+ " number of variables while number of dimensions specified is "+str(ConfigParams['NumVars'])+"\n";
+							print "\n\t The opdiff expression is not specified for each variable. It is specified only for "+str(VarCount)+ " number of variables while number of variables specified is "+str(ConfigParams['NumVars'])+"\n";
 							sys.exit(0)
 						else:
 							OpDiffNotFound=0	
@@ -1782,6 +1784,7 @@ def main(argv):
 			else:	
 				if(not(index in ConfigParams['StreamWideOperand'])):
 					ConfigParams['StreamWideOperand'][index]={}
+					ConfigParams['StreamWideDiffOperand'][index]={}
 				ConfigParams['VarOperands'][index]={}
 				ConfigParams['VarDecl'][index]={}
   				VarDeclStmt=[]
@@ -1976,18 +1979,23 @@ def main(argv):
 #####								
 							elif(not(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='c')):
 								if(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='d'):
-									if(ConfigParams['DifferentOperand'][index]==0):
-										if(DifferentOperandDeclared==0):
-											var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)
-											Declare=1
-											ConfigParams['StreamWideDiffOperand'][index]=var
-											ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var
-											DifferentOperandDeclared=1
-										else:
-											ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=ConfigParams['StreamWideDiffOperand'][index]
-									else:
-										var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)	
+									#print "\t Boo-yeah: ConfigParams['DifferentOperand'][index] "+str(ConfigParams['DifferentOperand'][index])+" DifferentOperandDeclared "+str(DifferentOperandDeclared)
+									#if(ConfigParams['DifferentOperand'][index]==0):
+									if(DifferentOperandDeclared==0):
+										var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)
 										Declare=1
+										ConfigParams['StreamWideDiffOperand'][index][CurrStream]=var
+										ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var
+										DifferentOperandDeclared=1
+										print "\t 1. Boo-yeah!! var: "+str(var)+"\t CurrOperand "+str(CurrOperand)
+									else:
+										ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=ConfigParams['StreamWideDiffOperand'][index][CurrStream]
+										print "\t 2. Boo-yeah!! "+"\t CurrOperand "+str(CurrOperand)+" var -- "+str(ConfigParams['StreamWideDiffOperand'][index][CurrStream])
+									#else:
+									#	var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)	
+									#	ConfigParams['StreamWideDiffOperand'][index]=var
+									#	print "\t 3. Boo-yeah!! var: "+str(var)
+									#	Declare=1
 								elif(ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][0]=='s'):
 									if(SameOperandDeclared==0):
 										var=' Var'+str(index)+'_Stream'+str(CurrStream)+'_Operand'+str(CurrOperand)
@@ -2004,6 +2012,7 @@ def main(argv):
 							
 							if(Declare):
 								ConfigParams['VarOperands'][index][CurrStream][CurrOperand]=var
+								#print "\t CurrOperand: "+str(CurrOperand)+"\t ConfigParams['VarOperands'][index][CurrStream][CurrOperand] "+str(ConfigParams['VarOperands'][index][CurrStream][CurrOperand]) 
 								if(not(index in ConfigParams['InitVar'])):
 									ConfigParams['InitVar'][index]=[]
 								ConfigParams['InitVar'][index].append(ConfigParams['VarOperands'][index][CurrStream][CurrOperand])
@@ -2059,7 +2068,7 @@ def main(argv):
 										else:
 											MallocEqn=ConfigParams['VarOperands'][index][CurrStream][CurrOperand]+MallocLHS+'= ('+Var+prefix+')'+' malloc('+ConfigParams['GlobalVar']['DimsSize'][i+1]+' * sizeof('+ConfigParams['StrideVar'][index][CurrStream]['OperandsInfo'][CurrOperand][1]+suffix+'))'+';'		
 									   	if debug:
-												print "\t The malloc equation is: "+str(MallocEqn)+"\n"
+											print "\t The malloc equation is: "+str(MallocEqn)+"\n"
 										DynAlloc.append(MallocEqn)
 										for j in range(NumForLoops):
 											DynAlloc.append('}')
@@ -2257,7 +2266,12 @@ def main(argv):
 				ThisStreamInit=[]
 				#for CurrVarName in (ConfigParams['InitVar'][VarNum]):
 				Temp=InitVar(CurrVarName,VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
-				ThisStreamInit.append(Temp)
+				ThisStreamInit.append(Temp)				
+				if( VarNum in ConfigParams['StreamWideDiffOperand']):
+					if( CurrStream in ConfigParams['StreamWideDiffOperand'][VarNum]):
+						print "\t ConfigParams['StreamWideDiffOperand']:  "+str(ConfigParams['StreamWideDiffOperand'][VarNum])				
+						Temp=InitVar(ConfigParams['StreamWideDiffOperand'][VarNum][CurrStream],VarNum,CurrStream,ConfigParams,WorkingVars,debug)	
+						ThisStreamInit.append(Temp)
 				ThisVarInit.append(ThisStreamInit)
 			else:
 				ThisStreamInit=[]
@@ -2417,6 +2431,7 @@ def main(argv):
 	if(PAPIInstNeeded>0):
 		WriteArray(PAPIInitCode,WriteFile)
 	for VarNum in range(ConfigParams['NumVars']):
+		print "\t VarNum: %d NumStreams: %d "%(VarNum,ConfigParams['NumStreaminVar'][VarNum])
 		for CurrStream in range(ConfigParams['NumStreaminVar'][VarNum]):
 			for CurrArray in (InitLoop[VarNum][CurrStream]):
 				WriteArray(CurrArray,WriteFile)
@@ -2451,7 +2466,7 @@ def main(argv):
 	#print "\n\t "+str(PrintFlushVar)
 			#print "\n\t VarNum: "+str(VarNum)
 			
-	WriteFile.write('\n\t printf("\\n");')
+	WriteFile.write('\n\t printf("\\n Sum: %ld ",Sum);')
 	WriteFile.write('\n\tMPI_Finalize();')
 	WriteFile.write("\n\t return 0;")
 	WriteFile.write("\n\t}")

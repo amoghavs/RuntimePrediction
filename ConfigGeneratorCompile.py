@@ -72,12 +72,11 @@ def IterationsCombination(LoopIterations,NumVars):
 				Temp=copy.deepcopy(CurrLoopIterationsSet)
 				Temp.append((CurrLoopIterationsNum))
 				TempOutputSet.append(Temp)
-				#print "\n\t Temp: "+str(Temp)+" CurrLoopIterationsNum "+str(CurrLoopIterationsNum)+" len(TempOutputSet): "+str(len(TempOutputSet))+" "
+				print "\n\t Temp: "+str(Temp)+" CurrLoopIterationsNum "+str(CurrLoopIterationsNum)+" len(TempOutputSet): "+str(len(TempOutputSet))+" "
 
 		OutputSet=copy.deepcopy(TempOutputSet)
 		TempOutputSet=[]
-		#print "\n\t CurrVar: "+str(CurrVar)+" len(OutputSet): "+str(len(OutputSet))
-				
+		print "\n\t CurrVar: "+str(CurrVar)+" len(OutputSet): "+str(len(OutputSet))
 	return OutputSet;		
 
 			
@@ -387,9 +386,9 @@ def main():
 	Min['Vars']=1
 	Max['Dims']=1
 	Min['Dims']=1
-	Max['NumStream']=1
-	Min['NumStream']=1
-	Max['Stride']=3 # ie., 2^4
+	Max['NumStream']=2
+	Min['NumStream']=2
+	Max['Stride']=5 # ie., 2^4
 	Min['Stride']=0 # ie., 2^0=1
 	Alloc=[['d']] #,'d','d','d']]    
 	Init=['index0+4']#,'index0','index0','index0']
@@ -398,7 +397,7 @@ def main():
 	RandomAccess=[[0]] # 1,1,1]]
 	PAPIInst=[0] # 0,1,0
 	#SpatWindow=[8,16,32];
-	LoopIterationBase=100;
+	LoopIterationBase=75;
 	#LoopIterationsExponent=[[1,1.2,1.4],[1,1.5],[1,1.3],[1]];
 	LoopIterationsExponent=[[1]]# ,[1],[1],[1]];
 	DifferentOperandsFlag=[0]#1,0,0 0: All "different" operand are same, 1: All "different" operand are different
@@ -422,7 +421,7 @@ def main():
 	Max['Size']=23
 	
 	SuccessiveOperandDiff=[8] #ie., Op1[i]+Op1[i+SuccessiveOperandDiff*1]+Op1[i+SuccessiveOperandDiff*2]+..+Op1[i+SuccessiveOperandDiff*n]
-	Max['NumOperands']=[3] #,2,1,4]
+	Max['NumOperands']=[2] #,2,1,4]
 	Min['NumOperands']=[1] #,1,1,1] #Min: Should be >= 1 
 
 	OpComboKeys=[(0,'c'),(1,'d'),(2,'s')]
@@ -430,7 +429,7 @@ def main():
 	#OpComboKeys=['c','d','s'] #  'c': constant, 's': same, 'd': different	
 	
 	Min['OperandsCombo']=[('c',1),('s',1),('d',0)]
-	Min['OperandsCombo']=[('c',1),('s',1),('d',1)]
+	Max['OperandsCombo']=[('c',1),('s',1),('d',1)]
 	
 	SameDSTuple=()
 
@@ -446,15 +445,15 @@ def main():
 			OperandsCombo['DS']['s'].append(CurrDS)
 			
 
-	Min['NumOperandsIdx']=1
-	Max['NumOperandsIdx']=4
+	Min['NumOperandsIdx']=2
+	Max['NumOperandsIdx']=3
 
 	Operations={}
 	#Operations['MainOperations']=['+','-','*','/']
 	Operations['Range']={}
 	Operations['Range']['c']=['+']#,'-','*','/']	
-	Operations['Range']['s']=['+','*','/']	
-	Operations['Range']['d']=['+','*','/']	
+	Operations['Range']['s']=['+']#,'*','/']	
+	Operations['Range']['d']=['+']#,'*','/']	
 	
 	Operations['OpComboKeys']=OpComboKeys
 	
@@ -512,7 +511,7 @@ def main():
 	  print "\n\t --NumOperands: Idx"+str(CurrNumOperandsIdx)+" Value "+str(2**CurrNumOperandsIdx)
 	  
 	  Min['OperandsCombo']=[('c',1),('s',1),('d',0)]
-	  Min['OperandsCombo']=[('c',1),('s',1),('d',1)]
+	  Max['OperandsCombo']=[('c',1),('s',1),('d',1)]
 	
 	  Min['OperandsCombo']=[]
 	  Max['OperandsCombo']=[]	  
@@ -525,20 +524,24 @@ def main():
 	  Num['StreamsInHierarchy']={}
 	  Size['StreamsInHierarchy']={}
 	  Num['StreamsInHierarchy'][1]=[1,0,0,0,0] # (RequestedLevel,L1,L2,L3,Mem)
-	  Num['StreamsInHierarchy'][2]=[1,1,0,0,0] # (RequestedLevel,L1,L2,L3,Mem)
-	  Num['StreamsInHierarchy'][3]=[2,0,1,0,0] # (RequestedLevel,L1,L2,L3,Mem)
-	  Num['StreamsInHierarchy'][4]=[2,0,1,1,0]# (RequestedLevel,L1,L2,L3,Mem)
-	  Num['StreamsInHierarchy'][5]=[2,0,2,1,0]
+	  Num['StreamsInHierarchy'][2]=[2,0,0,0,0] # (RequestedLevel,L1,L2,L3,Mem)
+	  Num['StreamsInHierarchy'][4]=[4,0,0,0,0]
+	  Num['StreamsInHierarchy'][8]=[8,0,0,0,0]
+	  #Num['StreamsInHierarchy'][3]=[0,0,0,0,0] # (RequestedLevel,L1,L2,L3,Mem)
+	  #Num['StreamsInHierarchy'][4]=[0,0,0,0,0]# (RequestedLevel,L1,L2,L3,Mem)
+	  #Num['StreamsInHierarchy'][5]=[0,0,0,0,0]
 	  
 	  Min['GlobalNestedLoops']=1
-	  Max['GlobalNestedLoops']=2
+	  Max['GlobalNestedLoops']=1
 	  
 	  StreamwiseNestedLoopDistribution={}
 	  StreamwiseNestedLoopDistribution[1]=[[1],[],[],[],[]] # [Choice-of-nested-loop-for-(RequestedLevel,L1,L2,L3,Mem)] # eg: For a given size [1,2,0,1] ==> 1 stream in NestedLoop-0(NL-0), 2 streams in NL-1, 0 streams in NL-2, 1 stream in NL-3.
-	  StreamwiseNestedLoopDistribution[2]=[[1],[0,1],[],[],[]]
-	  StreamwiseNestedLoopDistribution[3]=[[1,1],[],[1],[],[]]
-	  StreamwiseNestedLoopDistribution[4]=[[1,1],[],[1],[0,1],[]]	
-	  StreamwiseNestedLoopDistribution[5]=[[1,1],[],[1,1],[0,1],[]]
+	  StreamwiseNestedLoopDistribution[2]=[[2],[],[],[],[]]
+	  StreamwiseNestedLoopDistribution[4]=[[4],[],[],[],[]]
+	  StreamwiseNestedLoopDistribution[8]=[[8],[],[],[],[]]
+	  #StreamwiseNestedLoopDistribution[3]=[[],[],[],[],[]]
+	  #StreamwiseNestedLoopDistribution[4]=[[],[],[],[],[]]
+	  #StreamwiseNestedLoopDistribution[5]=[[],[],[],[],[]]
 	  
 	  if( (Min['GlobalNestedLoops']<1) and (Max['GlobalNestedLoops']<1) ):
 	  	print "\t ERROR: Min['NestedLoop'] "+str(Min['GlobalNestedLoop'])+" is less than one! "
@@ -556,6 +559,7 @@ def main():
 		  	for CurrMemLevel in range(len(Num['StreamsInHierarchy'][CurrNumStreams])):
 	  			Tmp.append(0)
 	  		PerStreamNestedLoopConfig[CurrNumStreams].append(Tmp)
+	  		print "\t --- CurrNumStreams "+str(CurrNumStreams)+"\t PerStreamNestedLoopConfig[CurrNumStreams] "+str(PerStreamNestedLoopConfig[CurrNumStreams])
 	  		
 		if(CurrNumStreams in StreamwiseNestedLoopDistribution):
 			for MemLevelofStreamwiseNestedLoopDistribution,CurrMemLevelLoopDistribution in  enumerate(StreamwiseNestedLoopDistribution[CurrNumStreams]):
@@ -586,12 +590,12 @@ def main():
 				
 		for NLNumber,CurrNestedLoopConfig in enumerate(PerStreamNestedLoopConfig[CurrNumStreams]):
 			print "\t $$$$#### CurrNumStreams: "+str(CurrNumStreams)+"\t NestedLoop number: "+str(NLNumber)+"\t "+str(CurrNestedLoopConfig)+"\t TotalStreamsRequested: "+str(TotalStreamsRequested)	  	
-			
+		#sys.exit()	
 	  for OpComboIdx,CurrOpCombo in OpComboKeys:
 	  	
 	  	if(CurrNumOperands > 2):
 	  		if(CurrOpCombo=='c'):
-	  			NumConstantOperands=1
+	  			NumConstantOperands=0
 	  			TempTuple=('c',NumConstantOperands)
 	  			TempTuple1=('c',NumConstantOperands)
 	  			NumOperandsAllocated+=NumConstantOperands
@@ -856,7 +860,10 @@ def main():
 					if ExtractStrideforStream:
 						CurrStrideString=''
 						CurrStrideCombi=''
+						MaxStride=-1
 						for idx,CurrStride in enumerate(ExtractStrideforStream):
+							if(CurrStride>MaxStride):
+								MaxStride=CurrStride
 							if(idx):
 								CurrStrideString+='_'+str(CurrStride)
 								CurrStrideCombi+=','+str(CurrStride)
@@ -865,7 +872,7 @@ def main():
 								CurrStrideCombi+=str(CurrStride)
 								
 						#print "\n\t DCurrStrideString: "+str(CurrStrideString)
-						CurrStrideStringSet.append((CurrStrideString,CurrStrideCombi) )
+						CurrStrideStringSet.append((CurrStrideString,CurrStrideCombi,MaxStride) )
 						StreamConfigCollection[CurrStrideString]={}
 					else:
 						print "\n\t ERROR: Some error with extracting stride for the stream. "
@@ -879,8 +886,7 @@ def main():
  						if( not(CurrNumOperandsString in StreamConfigCollection[CurrStrideString]) ):
 							StreamConfigCollection[CurrStrideString][CurrNumOperandsString]={}
 							
-						for CurrVar in range(NumVars):
-								
+						for CurrVar in range(NumVars):						
 								if(len(ExtractStrideforStream)==NumStreams):
 ## $$$$$$$$$$$$$$$
 									if( not( CurrVar in StreamConfigCollection[CurrStrideString][CurrNumOperandsString] ) ):
@@ -931,8 +937,11 @@ def main():
 										for CurrMemLevel,Idx in enumerate(CurrNestedLoopConfig):
 											if(Idx>0):
 												TempOverflowString=str(NLNumber)+';'+str(Size['StreamsInHierarchy'][NumStreams][CurrMemLevel])
-												print "\t NLNumber "+str(NLNumber)+"\t MemLevel: "+str(CurrMemLevel)+"\t OverflowTemplate: "+str(TempOverflowString)
-												OverflowString.append(TempOverflowString)
+												print "\t NLNumber "+str(NLNumber)+"\t MemLevel: "+str(CurrMemLevel)+"\t OverflowTemplate: "+str(TempOverflowString)+" Idx "+str(Idx)
+												for CurrIterNum in range(Idx):
+													OverflowString.append(TempOverflowString)
+											else:
+												print "\t CurrMemLevel "+str(CurrMemLevel)+"\t Idx "+str(Idx)+"\t NLNumber: "+str(NLNumber)
 								 	for CurrStreamIdx,CurrStreamConfig in enumerate(OverflowString):
 										print "\t Idx: "+str(CurrStreamIdx)+" CurrStreamConfig "+str(CurrStreamConfig)			
 									for CurrNumStream in range(NumStreams):
@@ -959,8 +968,12 @@ def main():
 				for StrideTuple in (CurrStrideStringSet):
 					CurrStrideString=StrideTuple[0]
 					CurrStrideCombi=StrideTuple[1]
+					MaxStride=StrideTuple[2]
 					CombinedStreamConfig[CurrStrideString]={}
-					print "\n\t -- 	CurrStrideString: "+str(CurrStrideString)
+					print "\n\t -- 	CurrStrideString: "+str(CurrStrideString)+"\t CurrStrideCombi "+str(CurrStrideCombi)+" MaxStride "+str(MaxStride)
+					#CurrIterationsString
+					#for i,CurrVarIterations in enumerate(CurrSetIterations):
+					#	print "\t Var: %d CurrVarIteration: %d "%(i,CurrVarIterations)
 					for CurrNumOperandsStringKey in (StreamConfigCollection[CurrStrideString]):
 						Temp=[]
 						CombiAccumulation=[]
@@ -1041,7 +1054,7 @@ def main():
 											if FileName:
 												print "\n\t CurrFile Name is: "+str(FileName.group(1))+'.c'
 												SRCFileName=str(FileName.group(1))+'.c'
-												CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' /usr/local/lib/libpapi.so -o '+str(FileName.group(1))
+												CMDCompileFile='mpicc -g -O3 '+str(SRCFileName)+' /opt/papi/lib/libpapi.so -o '+str(FileName.group(1))
 												print "\n\t CMDCompileFile: "+str(CMDCompileFile)
 												commands.getoutput(CMDCompileFile)
 												SourceFilesLog.write("\n\t "+str(SRCFileName))
